@@ -3,39 +3,210 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Прогресс веса</title>
+  <title>Фитнес Трекер</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
+    :root {
+      --bg-color: #0f1115;
+      --card-bg: #181b22;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --border-color: rgba(255, 255, 255, 0.07);
+    }
+
+    /* Адаптация под светлую тему Telegram, если она включена на ПК */
+    @media (prefers-color-scheme: light) {
+      body.tg-light {
+        --bg-color: #f8fafc;
+        --card-bg: #ffffff;
+        --text-main: #0f172a;
+        --text-muted: #64748b;
+        --border-color: rgba(0, 0, 0, 0.08);
+      }
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
     body {
-      margin: 0; padding: 16px;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background-color: var(--tg-theme-bg-color, #181818);
-      color: var(--tg-theme-text-color, #ffffff);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--tg-theme-bg-color, var(--bg-color));
+      color: var(--tg-theme-text-color, var(--text-main));
+      padding: 16px;
+      width: 100vw;
+      min-height: 100vh;
+      overflow-x: hidden;
     }
-    .card {
-      background: var(--tg-theme-secondary-bg-color, #242424);
-      border-radius: 12px; padding: 14px; margin-bottom: 16px;
+
+    .app-container {
+      max-width: 900px;
+      margin: 0 auto;
+      width: 100%;
     }
+
+    /* Карточки атлетов */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .user-card {
+      background: var(--tg-theme-secondary-bg-color, var(--card-bg));
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      cursor: pointer;
+      transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+    .user-card:hover {
+      transform: translateY(-2px);
+    }
+    .user-card.active {
+      border-color: #3b82f6;
+    }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .user-name {
+      font-weight: 700;
+      font-size: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .weight-display {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 4px;
+    }
+    .weight-display span {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-left: 2px;
+    }
+
+    /* Прогресс-бар */
+    .progress-bar-bg {
+      background: rgba(125, 125, 125, 0.15);
+      border-radius: 8px;
+      height: 6px;
+      overflow: hidden;
+      margin: 10px 0 6px 0;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 8px;
+      transition: width 0.6s ease;
+    }
+    .card-footer {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* Контейнер графика */
+    .chart-card {
+      background: var(--tg-theme-secondary-bg-color, var(--card-bg));
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 18px 16px 14px 12px;
+      width: 100%;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding: 0 6px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .chart-title {
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--text-main);
+    }
+
+    /* Табы-фильтры */
+    .filter-tabs {
+      display: flex;
+      background: rgba(125, 125, 125, 0.12);
+      border-radius: 10px;
+      padding: 3px;
+      gap: 4px;
+    }
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 6px 14px;
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: var(--card-bg);
+      color: var(--text-main);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+
+    /* Адаптивный холст (растягивается на 100% ширины) */
+    .chart-wrapper {
+      position: relative;
+      width: 100%;
+      height: 340px;
+    }
+
     #status-msg {
-      text-align: center; margin-top: 50px; font-size: 15px; color: #aaa;
-      line-height: 1.5; padding: 0 16px;
+      text-align: center;
+      margin-top: 60px;
+      font-size: 15px;
+      color: var(--text-muted);
     }
-    .error-icon { font-size: 38px; margin-bottom: 10px; display: block; }
-    .debug-box {
-      font-family: monospace; font-size: 11px; color: #ff6b6b;
-      margin-top: 14px; background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px;
-      word-break: break-all;
-    }
+    .error-icon { font-size: 40px; margin-bottom: 12px; display: block; }
   </style>
 </head>
 <body>
 
-  <div id="status-msg">Загрузка данных... ⏳</div>
+  <div class="app-container">
+    <div id="status-msg">Синхронизация данных... ⏳</div>
 
-  <div id="content" style="display: none;">
-    <div class="card">
-      <canvas id="weightChart"></canvas>
+    <div id="content" style="display: none;">
+      <!-- Виджеты атлетов -->
+      <div id="cards-container" class="cards-grid"></div>
+
+      <!-- Карточка с графиком -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <span class="chart-title">Динамика веса</span>
+          <div id="filter-tabs" class="filter-tabs">
+            <button class="tab-btn active" onclick="switchView('all')">Все</button>
+          </div>
+        </div>
+        <div class="chart-wrapper">
+          <canvas id="weightChart"></canvas>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -44,110 +215,292 @@
     if (tg) {
       tg.ready();
       tg.expand();
+      if (tg.colorScheme === 'light') document.body.classList.add('tg-light');
     }
 
-    const API_URL = "https://script.google.com/macros/s/AKfycbx3eYPedBPTxSl83O8NuajX-h0sopO4MV3S30nQfyvfXbSnPd3vKsckGl2ibuggxrFDaQ/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbx3eYPedBPTxS18308NuajX-h0sop04MV3S30nQfyvfXbsNpD3vKsckGl2ibuggxrFDaQ/exec";
+
+    let rawData = null;
+    let chartInstance = null;
+    let currentView = 'all';
+
+    const USER_COLORS = [
+      { border: '#10b981', bg: 'rgba(16, 185, 129, 0.15)' }, // Изумрудный
+      { border: '#3b82f6', bg: 'rgba(59, 130, 246, 0.15)' }, // Сапфировый
+      { border: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' }  // Янтарный
+    ];
+
+    function fetchJSONP(url) {
+      return new Promise((resolve, reject) => {
+        const cb = 'gasCb_' + Math.round(100000 * Math.random());
+        let script;
+        const timeout = setTimeout(() => { cleanup(); reject(new Error('Таймаут')); }, 10000);
+
+        function cleanup() {
+          if (window[cb]) delete window[cb];
+          if (script && script.parentNode) script.parentNode.removeChild(script);
+          clearTimeout(timeout);
+        }
+
+        window[cb] = (data) => { cleanup(); resolve(data); };
+        script = document.createElement('script');
+        script.src = `${url}&callback=${cb}`;
+        script.onerror = () => { cleanup(); reject(new Error('Ошибка загрузки')); };
+        document.body.appendChild(script);
+      });
+    }
 
     async function loadData() {
       const statusEl = document.getElementById('status-msg');
       const userId = tg?.initDataUnsafe?.user?.id;
 
       if (!userId) {
-        statusEl.innerHTML = `
-          <span class="error-icon">🔒</span>
-          <b>Приватное приложение</b><br>
-          Откройте график через Telegram-бота.
-        `;
+        statusEl.innerHTML = `<span class="error-icon">🔒</span><b>Приватный доступ</b><br>Запустите через Telegram-бота.`;
         return;
       }
 
       try {
-        const response = await fetch(`${API_URL}?userId=${userId}`, {
-          method: 'GET',
-          redirect: 'follow'
-        });
-
-        const rawText = await response.text();
-        let data;
-        try {
-          data = JSON.parse(rawText);
-        } catch (e) {
-          statusEl.innerHTML = `
-            <span class="error-icon">⚠️</span>
-            <b>Ошибка формата данных</b><br>
-            Google Apps Script вернул HTML вместо JSON.<br>
-            <div class="debug-box">${rawText.substring(0, 150)}...</div>
-          `;
-          return;
-        }
-
-        if (data.error === "unauthorized") {
-          statusEl.innerHTML = `
-            <span class="error-icon">⛔️</span>
-            <b>Доступ запрещен</b><br>
-            Ваш ID (<code>${userId}</code>) не найден в списке участников.
-          `;
-          return;
-        }
-
+        const data = await fetchJSONP(`${API_URL}?userId=${userId}`);
         if (data.error) {
-          statusEl.innerHTML = `
-            <span class="error-icon">⚠️</span>
-            Ошибка сервера: ${data.message}
-          `;
+          statusEl.innerHTML = `<span class="error-icon">⛔️</span>${data.message || 'Ошибка доступа'}`;
           return;
         }
 
+        rawData = data;
         statusEl.style.display = 'none';
         document.getElementById('content').style.display = 'block';
-        renderChart(data);
+
+        buildTabs(data);
+        renderCards(data);
+        renderChart();
 
       } catch (err) {
-        statusEl.innerHTML = `
-          <span class="error-icon">⚠️</span>
-          Ошибка подключения к базе данных.<br>
-          <div class="debug-box">${err.toString()}</div>
-        `;
+        statusEl.innerHTML = `<span class="error-icon">⚠️</span>Ошибка подключения к базе.`;
       }
     }
 
-    function renderChart(users) {
-      const ctx = document.getElementById('weightChart').getContext('2d');
-      const datasets = [];
-      let labels = [];
-
-      const colors = ['#10b981', '#3b82f6', '#f59e0b'];
-      let cIdx = 0;
+    function buildTabs(users) {
+      const tabsContainer = document.getElementById('filter-tabs');
+      tabsContainer.innerHTML = '<button class="tab-btn active" onclick="switchView(\'all\')">Все</button>';
 
       for (const uid in users) {
         const u = users[uid];
-        if (labels.length === 0) {
-          labels = u.entries.map(e => e.dateStr);
+        const btn = document.createElement('button');
+        btn.className = 'tab-btn';
+        btn.innerText = u.name;
+        btn.onclick = () => switchView(uid);
+        tabsContainer.appendChild(btn);
+      }
+    }
+
+    function switchView(viewKey) {
+      currentView = viewKey;
+
+      // Обновляем активный таб
+      const btns = document.querySelectorAll('.tab-btn');
+      btns.forEach(b => {
+        const isMatch = (viewKey === 'all' && b.innerText === 'Все') || 
+                        (rawData[viewKey] && b.innerText === rawData[viewKey].name);
+        b.classList.toggle('active', isMatch);
+      });
+
+      // Подсвечиваем активную карточку
+      const cards = document.querySelectorAll('.user-card');
+      cards.forEach(c => {
+        c.classList.toggle('active', c.dataset.uid === viewKey);
+      });
+
+      renderChart();
+    }
+
+    function renderCards(users) {
+      const container = document.getElementById('cards-container');
+      container.innerHTML = '';
+      let colorIdx = 0;
+
+      for (const uid in users) {
+        const u = users[uid];
+        if (!u.entries || u.entries.length === 0) continue;
+
+        const color = USER_COLORS[colorIdx % USER_COLORS.length].border;
+        const currentWeight = u.entries[u.entries.length - 1].weight;
+        const startWeight = u.start || u.entries[0].weight;
+        const target = u.target;
+
+        let percent = 0;
+        let diffStr = '';
+
+        if (target) {
+          const isLosing = startWeight >= target;
+          const totalDist = Math.abs(startWeight - target);
+          const doneDist = isLosing ? (startWeight - currentWeight) : (currentWeight - startWeight);
+          percent = totalDist > 0 ? (doneDist / totalDist) * 100 : 100;
+          percent = Math.max(0, Math.min(100, Math.round(percent)));
+
+          const leftKg = Math.abs(currentWeight - target).toFixed(1);
+          diffStr = currentWeight === target ? '🎉 Цель взята!' : `Осталось ${leftKg} кг`;
         }
+
+        const card = document.createElement('div');
+        card.className = 'user-card';
+        card.dataset.uid = uid;
+        card.onclick = () => switchView(uid);
+
+        card.innerHTML = `
+          <div class="card-top">
+            <span class="user-name">
+              <span class="status-dot" style="background: ${color}"></span>
+              ${u.name}
+            </span>
+            <span style="font-size: 11px; color: var(--text-muted);">${target ? 'Цель: ' + target + ' кг' : 'Без цели'}</span>
+          </div>
+          <div class="weight-display">${currentWeight}<span>кг</span></div>
+          ${target ? `
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" style="width: ${percent}%; background: ${color}"></div>
+            </div>
+            <div class="card-footer">
+              <span>${diffStr}</span>
+              <span><b>${percent}%</b></span>
+            </div>
+          ` : `
+            <div class="card-footer" style="margin-top: 8px;">
+              <span>Команда: /цель [кг]</span>
+            </div>
+          `}
+        `;
+        container.appendChild(card);
+        colorIdx++;
+      }
+    }
+
+    function renderChart() {
+      const ctx = document.getElementById('weightChart').getContext('2d');
+      if (chartInstance) chartInstance.destroy();
+
+      // Собираем все уникальные даты
+      const allTimestamps = new Set();
+      for (const uid in rawData) {
+        if (rawData[uid].entries) {
+          rawData[uid].entries.forEach(e => allTimestamps.add(e.dateStr));
+        }
+      }
+      const labels = Array.from(allTimestamps);
+
+      const datasets = [];
+      let cIdx = 0;
+
+      for (const uid in rawData) {
+        if (currentView !== 'all' && currentView !== uid) {
+          cIdx++;
+          continue;
+        }
+
+        const u = rawData[uid];
+        if (!u.entries || u.entries.length === 0) {
+          cIdx++;
+          continue;
+        }
+
+        const colorCfg = USER_COLORS[cIdx % USER_COLORS.length];
+
+        // Градиент под графиком
+        const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+        gradient.addColorStop(0, colorCfg.bg);
+        gradient.addColorStop(1, 'rgba(0,0,0,0)');
+
+        // 1. Линия динамики веса
         datasets.push({
           label: u.name,
-          data: u.entries.map(e => e.weight),
-          borderColor: colors[cIdx % colors.length],
-          backgroundColor: colors[cIdx % colors.length],
-          tension: 0.3,
-          borderWidth: 2
+          data: labels.map(l => {
+            const match = u.entries.find(e => e.dateStr === l);
+            return match ? match.weight : null;
+          }),
+          borderColor: colorCfg.border,
+          backgroundColor: gradient,
+          fill: true,
+          tension: 0.35,
+          borderWidth: 3,
+          pointRadius: 5,
+          pointHoverRadius: 7,
+          pointBackgroundColor: colorCfg.border,
+          pointBorderColor: '#ffffff',
+          pointBorderWidth: 1.5,
+          spanGaps: true
         });
+
+        // 2. Линия цели (если выбрана одиночная карточка)
+        if (currentView === uid && u.target) {
+          datasets.push({
+            label: `Цель (${u.target} кг)`,
+            data: labels.map(() => u.target),
+            borderColor: colorCfg.border,
+            borderDash: [6, 6],
+            borderWidth: 2,
+            pointRadius: 0,
+            fill: false
+          });
+        }
+
         cIdx++;
       }
 
-      new Chart(ctx, {
+      chartInstance = new Chart(ctx, {
         type: 'line',
         data: { labels: labels, datasets: datasets },
         options: {
           responsive: true,
-          plugins: { legend: { labels: { color: '#aaa' } } },
+          maintainAspectRatio: false, /* КЛЮЧЕВОЙ ПАРАМЕТР: тянется на 100% ширины */
+          resizeDelay: 50,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: {
+              display: (currentView === 'all'),
+              position: 'top',
+              labels: {
+                boxWidth: 10,
+                boxHeight: 10,
+                usePointStyle: true,
+                color: '#9ca3af',
+                font: { size: 12, weight: '600' }
+              }
+            },
+            tooltip: {
+              backgroundColor: '#1f2937',
+              titleColor: '#f9fafb',
+              bodyColor: '#f3f4f6',
+              padding: 10,
+              cornerRadius: 10,
+              displayColors: true,
+              callbacks: {
+                label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y} кг`
+              }
+            }
+          },
           scales: {
-            x: { ticks: { color: '#888' }, grid: { display: false } },
-            y: { ticks: { color: '#888' }, grid: { color: '#333' } }
+            x: {
+              grid: { display: false },
+              ticks: { color: '#6b7280', font: { size: 11, weight: '500' } }
+            },
+            y: {
+              grid: { color: 'rgba(125, 125, 125, 0.08)', drawBorder: false },
+              ticks: {
+                color: '#6b7280',
+                font: { size: 11, weight: '500' },
+                callback: (val) => val + ' кг'
+              },
+              /* Если выбран один атлет, автоматически зумим диапазон Y */
+              grace: currentView !== 'all' ? '15%' : '5%'
+            }
           }
         }
       });
     }
+
+    // Слушатель изменения размера окна Telegram на ПК
+    window.addEventListener('resize', () => {
+      if (chartInstance) chartInstance.resize();
+    });
 
     loadData();
   </script>
