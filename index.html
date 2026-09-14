@@ -15,7 +15,6 @@
       --border-color: rgba(255, 255, 255, 0.07);
     }
 
-    /* Адаптация под светлую тему Telegram, если она включена на ПК */
     @media (prefers-color-scheme: light) {
       body.tg-light {
         --bg-color: #f8fafc;
@@ -28,36 +27,52 @@
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
+    html, body {
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+    }
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       background-color: var(--tg-theme-bg-color, var(--bg-color));
       color: var(--tg-theme-text-color, var(--text-main));
-      padding: 16px;
-      width: 100vw;
-      min-height: 100vh;
-      overflow-x: hidden;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
     }
 
     .app-container {
-      max-width: 900px;
+      max-width: 1100px;
       margin: 0 auto;
       width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
     }
 
-    /* Карточки атлетов */
-    .cards-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    #content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
       gap: 12px;
-      margin-bottom: 16px;
+    }
+
+    .cards-grid {
+      flex-shrink: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 12px;
     }
 
     .user-card {
       background: var(--tg-theme-secondary-bg-color, var(--card-bg));
       border: 1px solid var(--border-color);
-      border-radius: 16px;
-      padding: 16px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      border-radius: 14px;
+      padding: 14px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
       cursor: pointer;
       transition: transform 0.15s ease, border-color 0.15s ease;
     }
@@ -72,72 +87,75 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
     .user-name {
       font-weight: 700;
-      font-size: 15px;
+      font-size: 14px;
       display: flex;
       align-items: center;
       gap: 8px;
     }
     .status-dot {
-      width: 10px;
-      height: 10px;
+      width: 9px;
+      height: 9px;
       border-radius: 50%;
       display: inline-block;
     }
     .weight-display {
-      font-size: 26px;
+      font-size: 24px;
       font-weight: 800;
       letter-spacing: -0.5px;
-      margin-bottom: 4px;
+      margin-bottom: 2px;
     }
     .weight-display span {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 500;
       color: var(--text-muted);
       margin-left: 2px;
     }
 
-    /* Прогресс-бар */
     .progress-bar-bg {
       background: rgba(125, 125, 125, 0.15);
-      border-radius: 8px;
-      height: 6px;
+      border-radius: 6px;
+      height: 5px;
       overflow: hidden;
-      margin: 10px 0 6px 0;
+      margin: 8px 0 5px 0;
     }
     .progress-bar-fill {
       height: 100%;
-      border-radius: 8px;
+      border-radius: 6px;
       transition: width 0.6s ease;
     }
     .card-footer {
       display: flex;
       justify-content: space-between;
-      font-size: 12px;
+      font-size: 11px;
       color: var(--text-muted);
     }
 
-    /* Контейнер графика */
     .chart-card {
       background: var(--tg-theme-secondary-bg-color, var(--card-bg));
       border: 1px solid var(--border-color);
       border-radius: 16px;
-      padding: 18px 16px 14px 12px;
+      padding: 16px 14px 12px 10px;
       width: 100%;
       box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 260px;
     }
 
     .chart-header {
+      flex-shrink: 0;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
       padding: 0 6px;
       flex-wrap: wrap;
-      gap: 10px;
+      gap: 8px;
     }
     .chart-title {
       font-weight: 700;
@@ -145,11 +163,10 @@
       color: var(--text-main);
     }
 
-    /* Табы-фильтры */
     .filter-tabs {
       display: flex;
       background: rgba(125, 125, 125, 0.12);
-      border-radius: 10px;
+      border-radius: 9px;
       padding: 3px;
       gap: 4px;
     }
@@ -157,8 +174,8 @@
       background: transparent;
       border: none;
       color: var(--text-muted);
-      padding: 6px 14px;
-      border-radius: 7px;
+      padding: 5px 12px;
+      border-radius: 6px;
       font-size: 12px;
       font-weight: 600;
       cursor: pointer;
@@ -170,11 +187,11 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.15);
     }
 
-    /* Адаптивный холст (растягивается на 100% ширины) */
     .chart-wrapper {
       position: relative;
       width: 100%;
-      height: 340px;
+      flex: 1;
+      min-height: 180px;
     }
 
     #status-msg {
@@ -192,10 +209,8 @@
     <div id="status-msg">Синхронизация данных... ⏳</div>
 
     <div id="content" style="display: none;">
-      <!-- Виджеты атлетов -->
       <div id="cards-container" class="cards-grid"></div>
 
-      <!-- Карточка с графиком -->
       <div class="chart-card">
         <div class="chart-header">
           <span class="chart-title">Динамика веса</span>
@@ -218,16 +233,16 @@
       if (tg.colorScheme === 'light') document.body.classList.add('tg-light');
     }
 
-    const API_URL = "https://script.google.com/macros/s/AKfycbx3eYPedBPTxSl83O8NuajX-h0sopO4MV3S30nQfyvfXbSnPd3vKsckGl2ibuggxrFDaQ/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbx3eYPedBPTxS18308NuajX-h0sop04MV3S30nQfyvfXbsNpD3vKsckGl2ibuggxrFDaQ/exec";
 
     let rawData = null;
     let chartInstance = null;
     let currentView = 'all';
 
     const USER_COLORS = [
-      { border: '#10b981', bg: 'rgba(16, 185, 129, 0.15)' }, // Изумрудный
-      { border: '#3b82f6', bg: 'rgba(59, 130, 246, 0.15)' }, // Сапфировый
-      { border: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' }  // Янтарный
+      { border: '#10b981', bg: 'rgba(16, 185, 129, 0.15)' },
+      { border: '#3b82f6', bg: 'rgba(59, 130, 246, 0.15)' },
+      { border: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' }
     ];
 
     function fetchJSONP(url) {
@@ -268,14 +283,16 @@
 
         rawData = data;
         statusEl.style.display = 'none';
-        document.getElementById('content').style.display = 'block';
+
+        const contentEl = document.getElementById('content');
+        contentEl.style.display = 'flex';
 
         buildTabs(data);
         renderCards(data);
         renderChart();
 
       } catch (err) {
-        statusEl.innerHTML = `<span class="error-icon">⚠️</span>Ошибка подключения к базе.`;
+        statusEl.innerHTML = `<span class="error-icon">⚠️</span>Ошибка подключения к базе данных.`;
       }
     }
 
@@ -296,7 +313,6 @@
     function switchView(viewKey) {
       currentView = viewKey;
 
-      // Обновляем активный таб
       const btns = document.querySelectorAll('.tab-btn');
       btns.forEach(b => {
         const isMatch = (viewKey === 'all' && b.innerText === 'Все') || 
@@ -304,7 +320,6 @@
         b.classList.toggle('active', isMatch);
       });
 
-      // Подсвечиваем активную карточку
       const cards = document.querySelectorAll('.user-card');
       cards.forEach(c => {
         c.classList.toggle('active', c.dataset.uid === viewKey);
@@ -361,10 +376,10 @@
             </div>
             <div class="card-footer">
               <span>${diffStr}</span>
-              <span><b>${percent}%</b></span>
+              <span>Прогресс: <b>${percent}%</b></span>
             </div>
           ` : `
-            <div class="card-footer" style="margin-top: 8px;">
+            <div class="card-footer" style="margin-top: 6px;">
               <span>Команда: /цель [кг]</span>
             </div>
           `}
@@ -378,7 +393,6 @@
       const ctx = document.getElementById('weightChart').getContext('2d');
       if (chartInstance) chartInstance.destroy();
 
-      // Собираем все уникальные даты
       const allTimestamps = new Set();
       for (const uid in rawData) {
         if (rawData[uid].entries) {
@@ -404,12 +418,10 @@
 
         const colorCfg = USER_COLORS[cIdx % USER_COLORS.length];
 
-        // Градиент под графиком
-        const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+        const gradient = ctx.createLinearGradient(0, 0, 0, ctx.canvas.clientHeight || 300);
         gradient.addColorStop(0, colorCfg.bg);
         gradient.addColorStop(1, 'rgba(0,0,0,0)');
 
-        // 1. Линия динамики веса
         datasets.push({
           label: u.name,
           data: labels.map(l => {
@@ -429,7 +441,6 @@
           spanGaps: true
         });
 
-        // 2. Линия цели (если выбрана одиночная карточка)
         if (currentView === uid && u.target) {
           datasets.push({
             label: `Цель (${u.target} кг)`,
@@ -450,8 +461,8 @@
         data: { labels: labels, datasets: datasets },
         options: {
           responsive: true,
-          maintainAspectRatio: false, /* КЛЮЧЕВОЙ ПАРАМЕТР: тянется на 100% ширины */
-          resizeDelay: 50,
+          maintainAspectRatio: false,
+          resizeDelay: 0,
           interaction: { mode: 'index', intersect: false },
           plugins: {
             legend: {
@@ -471,7 +482,6 @@
               bodyColor: '#f3f4f6',
               padding: 10,
               cornerRadius: 10,
-              displayColors: true,
               callbacks: {
                 label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y} кг`
               }
@@ -489,7 +499,6 @@
                 font: { size: 11, weight: '500' },
                 callback: (val) => val + ' кг'
               },
-              /* Если выбран один атлет, автоматически зумим диапазон Y */
               grace: currentView !== 'all' ? '15%' : '5%'
             }
           }
@@ -497,9 +506,10 @@
       });
     }
 
-    // Слушатель изменения размера окна Telegram на ПК
     window.addEventListener('resize', () => {
-      if (chartInstance) chartInstance.resize();
+      if (chartInstance) {
+        chartInstance.resize();
+      }
     });
 
     loadData();
