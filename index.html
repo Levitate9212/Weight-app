@@ -6,6 +6,44 @@
   <title>Фитнес Трекер</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- ВЫБОР ЦВЕТОВ ДО ПЕРВОЙ ОТРИСОВКИ СТРАНИЦЫ -->
+  <script>
+    const PALETTES = [
+      [
+        { border: '#9fe62e', glow: 'rgba(159, 230, 46, 0.28)' }, // Фисташка
+        { border: '#38bdf8', glow: 'rgba(56, 189, 248, 0.28)' }  // Небесный циан
+      ],
+      [
+        { border: '#ff375f', glow: 'rgba(255, 55, 95, 0.28)' },  // Коралл
+        { border: '#00f0ff', glow: 'rgba(0, 240, 255, 0.28)' }   // Ледяной циан
+      ],
+      [
+        { border: '#ccff00', glow: 'rgba(204, 255, 0, 0.28)' },  // Кислотный лайм
+        { border: '#bf5af2', glow: 'rgba(191, 90, 242, 0.28)' }  // Неоновая лаванда
+      ],
+      [
+        { border: '#ff9f0a', glow: 'rgba(255, 159, 10, 0.28)' }, // Янтарь
+        { border: '#30d158', glow: 'rgba(48, 209, 88, 0.28)' }   // Изумруд
+      ],
+      [
+        { border: '#ffd60a', glow: 'rgba(255, 214, 10, 0.28)' }, // Солнечный золотой
+        { border: '#5e5ce6', glow: 'rgba(94, 92, 230, 0.28)' }   // Электрик-индиго
+      ],
+      [
+        { border: '#64d2ff', glow: 'rgba(100, 210, 255, 0.28)' }, // Аквамарин
+        { border: '#ff2d55', glow: 'rgba(255, 45, 85, 0.28)' }    // Рубин
+      ]
+    ];
+
+    const currentPalette = PALETTES[Math.floor(Math.random() * PALETTES.length)];
+    const root = document.documentElement;
+    root.style.setProperty('--accent-1', currentPalette[0].border);
+    root.style.setProperty('--accent-2', currentPalette[1].border);
+    root.style.setProperty('--glow-1', currentPalette[0].glow);
+    root.style.setProperty('--glow-2', currentPalette[1].glow);
+  </script>
+
   <style>
     :root {
       --bg-color: #08090a;
@@ -13,11 +51,6 @@
       --text-main: #f3f4f6;
       --text-muted: #8b929a;
       --border-color: rgba(255, 255, 255, 0.07);
-      /* Динамические переменные палитры для заставки и акцентов */
-      --accent-1: #9fe62e;
-      --accent-2: #38bdf8;
-      --glow-1: rgba(159, 230, 46, 0.3);
-      --glow-2: rgba(56, 189, 248, 0.3);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -39,9 +72,6 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    /* =========================================================================
-       🎬 ЭКРАН ЗАСТАВКИ (SPLASH SCREEN С ДИНАМИЧЕСКИМИ ЦВЕТАМИ)
-       ========================================================================= */
     #splash-screen {
       position: fixed;
       inset: 0;
@@ -51,7 +81,7 @@
       align-items: center;
       justify-content: center;
       z-index: 9999;
-      transition: opacity 0.4s ease, visibility 0.4s ease;
+      transition: opacity 0.35s ease, visibility 0.35s ease;
     }
     #splash-screen.hidden {
       opacity: 0;
@@ -66,7 +96,6 @@
       text-align: center;
     }
 
-    /* Неоновые кольца (цвета берутся из CSS-переменных текущей темы) */
     .splash-rings {
       position: relative;
       width: 80px;
@@ -79,16 +108,16 @@
     .splash-ring {
       position: absolute;
       border-radius: 50%;
-      border: 3px solid transparent;
+      border: 3.5px solid transparent;
       animation: splash-spin 1.8s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
     }
-    .splash-ring-outer {
+    #splash-outer {
       width: 80px;
       height: 80px;
       border-top-color: var(--accent-1);
       box-shadow: 0 0 22px var(--glow-1);
     }
-    .splash-ring-inner {
+    #splash-inner {
       width: 56px;
       height: 56px;
       border-bottom-color: var(--accent-2);
@@ -113,7 +142,6 @@
       margin-bottom: 16px;
     }
 
-    /* Анимированная полоса загрузки в цветах палитры */
     .splash-progress-track {
       width: 140px;
       height: 3px;
@@ -122,7 +150,7 @@
       overflow: hidden;
       position: relative;
     }
-    .splash-progress-bar {
+    #splash-bar {
       width: 45%;
       height: 100%;
       background: linear-gradient(90deg, var(--accent-1), var(--accent-2));
@@ -170,7 +198,6 @@
       gap: 12px;
     }
 
-    /* Карточки атлетов */
     .cards-grid {
       flex-shrink: 0;
       display: grid;
@@ -250,7 +277,6 @@
       font-weight: 500;
     }
 
-    /* Холст графика */
     .chart-card {
       background: var(--card-bg);
       border: 1.5px solid rgba(255, 255, 255, 0.05);
@@ -323,15 +349,15 @@
   <div id="splash-screen">
     <div class="splash-box">
       <div class="splash-rings">
-        <div class="splash-ring splash-ring-outer"></div>
-        <div class="splash-ring splash-ring-inner"></div>
+        <div id="splash-outer" class="splash-ring"></div>
+        <div id="splash-inner" class="splash-ring"></div>
         <svg class="splash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
           <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </div>
       <div class="splash-title">Weight Tracker</div>
       <div class="splash-progress-track">
-        <div class="splash-progress-bar"></div>
+        <div id="splash-bar"></div>
       </div>
     </div>
   </div>
@@ -377,43 +403,8 @@
     let selectedUsers = new Set();
     let currentPeriod = 'all';
 
-    // 🎨 Набор гармоничных пар в стиле Apple Watch Fitness
-    const PALETTES = [
-      [
-        { border: '#9fe62e', glow: 'rgba(159, 230, 46, 0.28)' }, // Фисташковый лайм
-        { border: '#38bdf8', glow: 'rgba(56, 189, 248, 0.28)' }  // Небесный циан
-      ],
-      [
-        { border: '#ff375f', glow: 'rgba(255, 55, 95, 0.28)' },  // Неоновый коралл
-        { border: '#00f0ff', glow: 'rgba(0, 240, 255, 0.28)' }   // Ледяной циан
-      ],
-      [
-        { border: '#ccff00', glow: 'rgba(204, 255, 0, 0.28)' },  // Кислотный лайм
-        { border: '#bf5af2', glow: 'rgba(191, 90, 242, 0.28)' }  // Неоновая лаванда
-      ],
-      [
-        { border: '#ff9f0a', glow: 'rgba(255, 159, 10, 0.28)' }, // Теплый янтарь
-        { border: '#30d158', glow: 'rgba(48, 209, 88, 0.28)' }   // Изумруд
-      ],
-      [
-        { border: '#ffd60a', glow: 'rgba(255, 214, 10, 0.28)' }, // Солнечный золотой
-        { border: '#5e5ce6', glow: 'rgba(94, 92, 230, 0.28)' }   // Электрик-индиго
-      ],
-      [
-        { border: '#64d2ff', glow: 'rgba(100, 210, 255, 0.28)' }, // Аквамарин
-        { border: '#ff2d55', glow: 'rgba(255, 45, 85, 0.28)' }    // Рубин
-      ]
-    ];
-
-    // Выбираем случайную пару цветов
-    const randomPalette = PALETTES[Math.floor(Math.random() * PALETTES.length)];
+    // Привязка участников к выбранной палитре
     const userColorMap = {};
-
-    // ⚡️ СРАЗУ ПРИМЕНЯЕМ ВЫБРАННЫЕ ЦВЕТА К ЗАСТАВКЕ
-    document.documentElement.style.setProperty('--accent-1', randomPalette[0].border);
-    document.documentElement.style.setProperty('--accent-2', randomPalette[1].border);
-    document.documentElement.style.setProperty('--glow-1', randomPalette[0].glow);
-    document.documentElement.style.setProperty('--glow-2', randomPalette[1].glow);
 
     function dismissSplash() {
       const splash = document.getElementById('splash-screen');
@@ -466,7 +457,7 @@
         let pIdx = 0;
         for (const uid in data) {
           selectedUsers.add(uid);
-          userColorMap[uid] = randomPalette[pIdx % randomPalette.length];
+          userColorMap[uid] = currentPalette[pIdx % currentPalette.length];
           pIdx++;
         }
 
@@ -536,7 +527,7 @@
         const u = users[uid];
         if (!u.entries || u.entries.length === 0) continue;
 
-        const colorCfg = userColorMap[uid] || randomPalette[0];
+        const colorCfg = userColorMap[uid] || currentPalette[0];
         const currentWeight = u.entries[u.entries.length - 1].weight;
         const startWeight = u.start || u.entries[0].weight;
         const target = u.target;
@@ -641,7 +632,7 @@
         const u = rawData[uid];
         if (!u.entries || u.entries.length === 0) continue;
 
-        const colorCfg = userColorMap[uid] || randomPalette[0];
+        const colorCfg = userColorMap[uid] || currentPalette[0];
 
         datasets.push({
           label: u.name,
