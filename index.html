@@ -40,6 +40,7 @@
       padding: 14px;
       display: flex;
       flex-direction: column;
+      -webkit-tap-highlight-color: transparent;
     }
 
     .app-container {
@@ -60,6 +61,7 @@
       gap: 12px;
     }
 
+    /* Карточки атлетов */
     .cards-grid {
       flex-shrink: 0;
       display: grid;
@@ -115,6 +117,7 @@
       margin-left: 2px;
     }
 
+    /* Прогресс-бар */
     .progress-bar-bg {
       background: rgba(125, 125, 125, 0.15);
       border-radius: 6px;
@@ -134,6 +137,7 @@
       color: var(--text-muted);
     }
 
+    /* Блок графика */
     .chart-card {
       background: var(--tg-theme-secondary-bg-color, var(--card-bg));
       border: 1px solid var(--border-color);
@@ -163,28 +167,42 @@
       color: var(--text-main);
     }
 
-    .filter-tabs {
+    .controls-wrapper {
       display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* Группы табов */
+    .filter-tabs {
+      display: inline-flex;
       background: rgba(125, 125, 125, 0.12);
       border-radius: 9px;
       padding: 3px;
-      gap: 4px;
+      gap: 2px;
     }
     .tab-btn {
       background: transparent;
       border: none;
+      outline: none;
       color: var(--text-muted);
-      padding: 5px 12px;
-      border-radius: 6px;
-      font-size: 12px;
+      padding: 5px 9px;
+      border-radius: 7px;
+      font-size: 11px;
       font-weight: 600;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+      user-select: none;
+      white-space: nowrap;
+    }
+    .tab-btn:focus {
+      outline: none;
     }
     .tab-btn.active {
       background: var(--card-bg);
       color: var(--text-main);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
     }
 
     .chart-wrapper {
@@ -214,10 +232,23 @@
       <div class="chart-card">
         <div class="chart-header">
           <span class="chart-title">Динамика веса</span>
-          <div id="filter-tabs" class="filter-tabs">
-            <button class="tab-btn active" onclick="switchView('all')">Все</button>
+          
+          <div class="controls-wrapper">
+            <!-- Фильтр по атлетам -->
+            <div id="filter-tabs" class="filter-tabs"></div>
+
+            <!-- Фильтр по периодам: 7, 14, 30, 90, 180, все время -->
+            <div id="period-tabs" class="filter-tabs">
+              <button class="tab-btn" data-period="7d" onclick="switchPeriod('7d')">7</button>
+              <button class="tab-btn" data-period="14d" onclick="switchPeriod('14d')">14</button>
+              <button class="tab-btn" data-period="30d" onclick="switchPeriod('30d')">30</button>
+              <button class="tab-btn" data-period="90d" onclick="switchPeriod('90d')">90</button>
+              <button class="tab-btn" data-period="180d" onclick="switchPeriod('180d')">180</button>
+              <button class="tab-btn active" data-period="all" onclick="switchPeriod('all')">Все время</button>
+            </div>
           </div>
         </div>
+
         <div class="chart-wrapper">
           <canvas id="weightChart"></canvas>
         </div>
@@ -238,6 +269,7 @@
     let rawData = null;
     let chartInstance = null;
     let currentView = 'all';
+    let currentPeriod = 'all';
 
     const USER_COLORS = [
       { border: '#10b981', bg: 'rgba(16, 185, 129, 0.15)' },
@@ -298,12 +330,13 @@
 
     function buildTabs(users) {
       const tabsContainer = document.getElementById('filter-tabs');
-      tabsContainer.innerHTML = '<button class="tab-btn active" onclick="switchView(\'all\')">Все</button>';
+      tabsContainer.innerHTML = '<button class="tab-btn active" data-view="all" onclick="switchView(\'all\')">Все</button>';
 
       for (const uid in users) {
         const u = users[uid];
         const btn = document.createElement('button');
         btn.className = 'tab-btn';
+        btn.dataset.view = uid;
         btn.innerText = u.name;
         btn.onclick = () => switchView(uid);
         tabsContainer.appendChild(btn);
@@ -313,16 +346,22 @@
     function switchView(viewKey) {
       currentView = viewKey;
 
-      const btns = document.querySelectorAll('.tab-btn');
-      btns.forEach(b => {
-        const isMatch = (viewKey === 'all' && b.innerText === 'Все') || 
-                        (rawData[viewKey] && b.innerText === rawData[viewKey].name);
-        b.classList.toggle('active', isMatch);
+      document.querySelectorAll('#filter-tabs .tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.view === String(viewKey));
       });
 
-      const cards = document.querySelectorAll('.user-card');
-      cards.forEach(c => {
-        c.classList.toggle('active', c.dataset.uid === viewKey);
+      document.querySelectorAll('.user-card').forEach(card => {
+        card.classList.toggle('active', card.dataset.uid === String(viewKey));
+      });
+
+      renderChart();
+    }
+
+    function switchPeriod(periodKey) {
+      currentPeriod = periodKey;
+
+      document.querySelectorAll('#period-tabs .tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.period === String(periodKey));
       });
 
       renderChart();
@@ -359,7 +398,7 @@
         const card = document.createElement('div');
         card.className = 'user-card';
         card.dataset.uid = uid;
-        card.onclick = () => switchView(uid);
+        card.onclick = () => switchView(currentView === uid ? 'all' : uid);
 
         card.innerHTML = `
           <div class="card-top">
@@ -393,13 +432,43 @@
       const ctx = document.getElementById('weightChart').getContext('2d');
       if (chartInstance) chartInstance.destroy();
 
-      const allTimestamps = new Set();
+      let maxTs = 0;
       for (const uid in rawData) {
         if (rawData[uid].entries) {
-          rawData[uid].entries.forEach(e => allTimestamps.add(e.dateStr));
+          rawData[uid].entries.forEach(e => {
+            if (e.timestamp > maxTs) maxTs = e.timestamp;
+          });
         }
       }
-      const labels = Array.from(allTimestamps);
+      if (maxTs === 0) maxTs = Date.now();
+
+      let minTs = 0;
+      if (currentPeriod === '7d')   minTs = maxTs - 7 * 86400000;
+      if (currentPeriod === '14d')  minTs = maxTs - 14 * 86400000;
+      if (currentPeriod === '30d')  minTs = maxTs - 30 * 86400000;
+      if (currentPeriod === '90d')  minTs = maxTs - 90 * 86400000;
+      if (currentPeriod === '180d') minTs = maxTs - 180 * 86400000;
+
+      const dateEntries = [];
+      for (const uid in rawData) {
+        if (rawData[uid].entries) {
+          rawData[uid].entries.forEach(e => {
+            if (currentPeriod === 'all' || e.timestamp >= minTs) {
+              dateEntries.push({ dateStr: e.dateStr, ts: e.timestamp });
+            }
+          });
+        }
+      }
+      dateEntries.sort((a, b) => a.ts - b.ts);
+
+      const labels = [];
+      const seenDates = new Set();
+      dateEntries.forEach(d => {
+        if (!seenDates.has(d.dateStr)) {
+          seenDates.add(d.dateStr);
+          labels.push(d.dateStr);
+        }
+      });
 
       const datasets = [];
       let cIdx = 0;
