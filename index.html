@@ -18,10 +18,15 @@
       border-radius: 12px; padding: 14px; margin-bottom: 16px;
     }
     #status-msg {
-      text-align: center; margin-top: 60px; font-size: 16px; color: #888;
-      line-height: 1.5; padding: 0 20px;
+      text-align: center; margin-top: 50px; font-size: 15px; color: #aaa;
+      line-height: 1.5; padding: 0 16px;
     }
-    .error-icon { font-size: 40px; margin-bottom: 12px; display: block; }
+    .error-icon { font-size: 38px; margin-bottom: 10px; display: block; }
+    .debug-box {
+      font-family: monospace; font-size: 11px; color: #ff6b6b;
+      margin-top: 14px; background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px;
+      word-break: break-all;
+    }
   </style>
 </head>
 <body>
@@ -36,16 +41,17 @@
 
   <script>
     const tg = window.Telegram?.WebApp;
-    if (tg) tg.expand();
+    if (tg) {
+      tg.ready();
+      tg.expand();
+    }
 
-    // Твоя ссылка на скрипт Google Apps Script
     const API_URL = "https://script.google.com/macros/s/AKfycbx3eYPedBPTxS18308NuajX-h0sop04MV3S30nQfyvfXbsNpD3vKsckGl2ibuggxrFDaQ/exec";
 
     async function loadData() {
       const statusEl = document.getElementById('status-msg');
       const userId = tg?.initDataUnsafe?.user?.id;
 
-      // Если открыто в обычном браузере — блокируем
       if (!userId) {
         statusEl.innerHTML = `
           <span class="error-icon">🔒</span>
@@ -55,16 +61,39 @@
         return;
       }
 
-      // Запрос к Google Таблице с передачей твоего ID
       try {
-        const res = await fetch(`${API_URL}?userId=${userId}`);
-        const data = await res.json();
+        const response = await fetch(`${API_URL}?userId=${userId}`, {
+          method: 'GET',
+          redirect: 'follow'
+        });
+
+        const rawText = await response.text();
+        let data;
+        try {
+          data = JSON.parse(rawText);
+        } catch (e) {
+          statusEl.innerHTML = `
+            <span class="error-icon">⚠️</span>
+            <b>Ошибка формата данных</b><br>
+            Google Apps Script вернул HTML вместо JSON.<br>
+            <div class="debug-box">${rawText.substring(0, 150)}...</div>
+          `;
+          return;
+        }
 
         if (data.error === "unauthorized") {
           statusEl.innerHTML = `
             <span class="error-icon">⛔️</span>
             <b>Доступ запрещен</b><br>
-            Ваш ID (${userId}) не найден в списке участников.
+            Ваш ID (<code>${userId}</code>) не найден в списке участников.
+          `;
+          return;
+        }
+
+        if (data.error) {
+          statusEl.innerHTML = `
+            <span class="error-icon">⚠️</span>
+            Ошибка сервера: ${data.message}
           `;
           return;
         }
@@ -76,7 +105,8 @@
       } catch (err) {
         statusEl.innerHTML = `
           <span class="error-icon">⚠️</span>
-          Ошибка подключения к базе данных.
+          Ошибка подключения к базе данных.<br>
+          <div class="debug-box">${err.toString()}</div>
         `;
       }
     }
