@@ -13,6 +13,11 @@
       --text-main: #f3f4f6;
       --text-muted: #8b929a;
       --border-color: rgba(255, 255, 255, 0.07);
+      /* Динамические переменные палитры для заставки и акцентов */
+      --accent-1: #9fe62e;
+      --accent-2: #38bdf8;
+      --glow-1: rgba(159, 230, 46, 0.3);
+      --glow-2: rgba(56, 189, 248, 0.3);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -35,7 +40,7 @@
     }
 
     /* =========================================================================
-       🎬 ЭКРАН ЗАСТАВКИ (SPLASH SCREEN)
+       🎬 ЭКРАН ЗАСТАВКИ (SPLASH SCREEN С ДИНАМИЧЕСКИМИ ЦВЕТАМИ)
        ========================================================================= */
     #splash-screen {
       position: fixed;
@@ -61,6 +66,7 @@
       text-align: center;
     }
 
+    /* Неоновые кольца (цвета берутся из CSS-переменных текущей темы) */
     .splash-rings {
       position: relative;
       width: 80px;
@@ -79,14 +85,14 @@
     .splash-ring-outer {
       width: 80px;
       height: 80px;
-      border-top-color: #9fe62e;
-      box-shadow: 0 0 22px rgba(159, 230, 46, 0.3);
+      border-top-color: var(--accent-1);
+      box-shadow: 0 0 22px var(--glow-1);
     }
     .splash-ring-inner {
       width: 56px;
       height: 56px;
-      border-bottom-color: #38bdf8;
-      box-shadow: 0 0 18px rgba(56, 189, 248, 0.3);
+      border-bottom-color: var(--accent-2);
+      box-shadow: 0 0 18px var(--glow-2);
       animation-direction: reverse;
       animation-duration: 1.3s;
     }
@@ -107,6 +113,7 @@
       margin-bottom: 16px;
     }
 
+    /* Анимированная полоса загрузки в цветах палитры */
     .splash-progress-track {
       width: 140px;
       height: 3px;
@@ -118,7 +125,7 @@
     .splash-progress-bar {
       width: 45%;
       height: 100%;
-      background: linear-gradient(90deg, #9fe62e, #38bdf8);
+      background: linear-gradient(90deg, var(--accent-1), var(--accent-2));
       border-radius: 4px;
       position: absolute;
       animation: splash-slide 1s ease-in-out infinite alternate;
@@ -370,37 +377,43 @@
     let selectedUsers = new Set();
     let currentPeriod = 'all';
 
-    // 🎨 Набор гармоничных пар цветов (Apple Fitness Style)
+    // 🎨 Набор гармоничных пар в стиле Apple Watch Fitness
     const PALETTES = [
       [
-        { border: '#9fe62e', glow: 'rgba(159, 230, 46, 0.16)' }, // Фисташка
-        { border: '#38bdf8', glow: 'rgba(56, 189, 248, 0.16)' }  // Небесный циан
+        { border: '#9fe62e', glow: 'rgba(159, 230, 46, 0.28)' }, // Фисташковый лайм
+        { border: '#38bdf8', glow: 'rgba(56, 189, 248, 0.28)' }  // Небесный циан
       ],
       [
-        { border: '#ff375f', glow: 'rgba(255, 55, 95, 0.16)' },  // Коралл/Малиновый
-        { border: '#00f0ff', glow: 'rgba(0, 240, 255, 0.16)' }   // Неоновый лед
+        { border: '#ff375f', glow: 'rgba(255, 55, 95, 0.28)' },  // Неоновый коралл
+        { border: '#00f0ff', glow: 'rgba(0, 240, 255, 0.28)' }   // Ледяной циан
       ],
       [
-        { border: '#ccff00', glow: 'rgba(204, 255, 0, 0.16)' },  // Лайм
-        { border: '#bf5af2', glow: 'rgba(191, 90, 242, 0.16)' }  // Неоновая лаванда
+        { border: '#ccff00', glow: 'rgba(204, 255, 0, 0.28)' },  // Кислотный лайм
+        { border: '#bf5af2', glow: 'rgba(191, 90, 242, 0.28)' }  // Неоновая лаванда
       ],
       [
-        { border: '#ff9f0a', glow: 'rgba(255, 159, 10, 0.16)' }, // Теплый янтарь
-        { border: '#30d158', glow: 'rgba(48, 209, 88, 0.16)' }   // Изумруд
+        { border: '#ff9f0a', glow: 'rgba(255, 159, 10, 0.28)' }, // Теплый янтарь
+        { border: '#30d158', glow: 'rgba(48, 209, 88, 0.28)' }   // Изумруд
       ],
       [
-        { border: '#ffd60a', glow: 'rgba(255, 214, 10, 0.16)' }, // Золотой
-        { border: '#5e5ce6', glow: 'rgba(94, 92, 230, 0.16)' }   // Индиго
+        { border: '#ffd60a', glow: 'rgba(255, 214, 10, 0.28)' }, // Солнечный золотой
+        { border: '#5e5ce6', glow: 'rgba(94, 92, 230, 0.28)' }   // Электрик-индиго
       ],
       [
-        { border: '#64d2ff', glow: 'rgba(100, 210, 255, 0.16)' }, // Аквамарин
-        { border: '#ff2d55', glow: 'rgba(255, 45, 85, 0.16)' }    // Рубин
+        { border: '#64d2ff', glow: 'rgba(100, 210, 255, 0.28)' }, // Аквамарин
+        { border: '#ff2d55', glow: 'rgba(255, 45, 85, 0.28)' }    // Рубин
       ]
     ];
 
-    // Случайный выбор темы при каждом запуске
+    // Выбираем случайную пару цветов
     const randomPalette = PALETTES[Math.floor(Math.random() * PALETTES.length)];
     const userColorMap = {};
+
+    // ⚡️ СРАЗУ ПРИМЕНЯЕМ ВЫБРАННЫЕ ЦВЕТА К ЗАСТАВКЕ
+    document.documentElement.style.setProperty('--accent-1', randomPalette[0].border);
+    document.documentElement.style.setProperty('--accent-2', randomPalette[1].border);
+    document.documentElement.style.setProperty('--glow-1', randomPalette[0].glow);
+    document.documentElement.style.setProperty('--glow-2', randomPalette[1].glow);
 
     function dismissSplash() {
       const splash = document.getElementById('splash-screen');
