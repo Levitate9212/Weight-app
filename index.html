@@ -8,21 +8,11 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
-      --bg-color: #0f1115;
-      --card-bg: #181b22;
-      --text-main: #f3f4f6;
-      --text-muted: #9ca3af;
+      --bg-color: #000000;
+      --card-bg: #0d0d0f;
+      --text-main: #ffffff;
+      --text-muted: #86868b;
       --border-color: rgba(255, 255, 255, 0.08);
-    }
-
-    @media (prefers-color-scheme: light) {
-      body.tg-light {
-        --bg-color: #f8fafc;
-        --card-bg: #ffffff;
-        --text-main: #0f172a;
-        --text-muted: #64748b;
-        --border-color: rgba(0, 0, 0, 0.08);
-      }
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -34,13 +24,14 @@
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      background-color: var(--tg-theme-bg-color, var(--bg-color));
-      color: var(--tg-theme-text-color, var(--text-main));
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
       padding: 14px;
       display: flex;
       flex-direction: column;
       -webkit-tap-highlight-color: transparent;
+      -webkit-font-smoothing: antialiased;
     }
 
     .app-container {
@@ -61,7 +52,7 @@
       gap: 12px;
     }
 
-    /* Большие интерактивные карточки атлетов */
+    /* Карточки атлетов */
     .cards-grid {
       flex-shrink: 0;
       display: grid;
@@ -70,20 +61,19 @@
     }
 
     .user-card {
-      background: var(--tg-theme-secondary-bg-color, var(--card-bg));
-      border: 2px solid transparent;
-      border-radius: 14px;
-      padding: 14px;
+      background: var(--card-bg);
+      border: 1.5px solid rgba(255, 255, 255, 0.06);
+      border-radius: 16px;
+      padding: 14px 16px;
       cursor: pointer;
       user-select: none;
-      transition: transform 0.15s ease, border-color 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
-      opacity: 0.42;
-      filter: grayscale(0.25);
+      transition: transform 0.15s ease, border-color 0.25s ease, opacity 0.25s ease, box-shadow 0.25s ease;
+      opacity: 0.35;
+      filter: grayscale(0.4);
     }
     .user-card:hover {
       transform: translateY(-2px);
     }
-    /* Активное состояние карточки: подсвечивается контур и снимается приглушение */
     .user-card.active {
       opacity: 1;
       filter: none;
@@ -97,37 +87,38 @@
     }
     .user-name {
       font-weight: 700;
-      font-size: 14px;
+      font-size: 15px;
+      letter-spacing: -0.2px;
       display: flex;
       align-items: center;
       gap: 8px;
     }
     .status-dot {
-      width: 9px;
-      height: 9px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
       display: inline-block;
     }
     .weight-display {
-      font-size: 24px;
+      font-size: 26px;
       font-weight: 800;
-      letter-spacing: -0.5px;
+      letter-spacing: -0.6px;
       margin-bottom: 2px;
     }
     .weight-display span {
       font-size: 13px;
       font-weight: 500;
       color: var(--text-muted);
-      margin-left: 2px;
+      margin-left: 3px;
     }
 
     /* Прогресс-бар */
     .progress-bar-bg {
-      background: rgba(125, 125, 125, 0.15);
+      background: rgba(255, 255, 255, 0.08);
       border-radius: 6px;
       height: 5px;
       overflow: hidden;
-      margin: 8px 0 5px 0;
+      margin: 8px 0 6px 0;
     }
     .progress-bar-fill {
       height: 100%;
@@ -139,16 +130,16 @@
       justify-content: space-between;
       font-size: 11px;
       color: var(--text-muted);
+      font-weight: 500;
     }
 
-    /* Блок графика */
+    /* Холст графика */
     .chart-card {
-      background: var(--tg-theme-secondary-bg-color, var(--card-bg));
-      border: 1px solid var(--border-color);
-      border-radius: 16px;
+      background: var(--card-bg);
+      border: 1.5px solid rgba(255, 255, 255, 0.06);
+      border-radius: 18px;
       padding: 16px 14px 12px 10px;
       width: 100%;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
       flex: 1;
       display: flex;
       flex-direction: column;
@@ -160,22 +151,23 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 12px;
-      padding: 0 6px;
+      margin-bottom: 14px;
+      padding: 0 8px;
       flex-wrap: wrap;
       gap: 8px;
     }
     .chart-title {
       font-weight: 700;
       font-size: 15px;
-      color: var(--text-main);
+      letter-spacing: -0.2px;
+      color: #f5f5f7;
     }
 
     /* Табы периодов */
     .filter-tabs {
       display: inline-flex;
-      background: rgba(125, 125, 125, 0.12);
-      border-radius: 9px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 10px;
       padding: 3px;
       gap: 2px;
     }
@@ -184,12 +176,12 @@
       border: none;
       outline: none;
       color: var(--text-muted);
-      padding: 5px 9px;
-      border-radius: 7px;
+      padding: 5px 10px;
+      border-radius: 8px;
       font-size: 11px;
       font-weight: 600;
       cursor: pointer;
-      transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+      transition: all 0.2s ease;
       user-select: none;
       white-space: nowrap;
     }
@@ -197,9 +189,9 @@
       outline: none;
     }
     .tab-btn.active {
-      background: var(--card-bg);
-      color: var(--text-main);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+      background: #1c1c1e;
+      color: #ffffff;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.5);
     }
 
     .chart-wrapper {
@@ -224,14 +216,14 @@
     <div id="status-msg">Синхронизация данных... ⏳</div>
 
     <div id="content" style="display: none;">
-      <!-- Кликабельные карточки атлетов -->
+      <!-- Карточки атлетов -->
       <div id="cards-container" class="cards-grid"></div>
 
+      <!-- График Apple Keynote Style -->
       <div class="chart-card">
         <div class="chart-header">
           <span class="chart-title">Динамика веса</span>
           
-          <!-- Фильтр периодов (только он в шапке) -->
           <div id="period-tabs" class="filter-tabs">
             <button class="tab-btn" data-period="7d" onclick="switchPeriod('7d')">7</button>
             <button class="tab-btn" data-period="14d" onclick="switchPeriod('14d')">14</button>
@@ -254,20 +246,20 @@
     if (tg) {
       tg.ready();
       tg.expand();
-      if (tg.colorScheme === 'light') document.body.classList.add('tg-light');
     }
 
     const API_URL = "https://script.google.com/macros/s/AKfycbx3eYPedBPTxSl83O8NuajX-h0sopO4MV3S30nQfyvfXbSnPd3vKsckGl2ibuggxrFDaQ/exec";
 
     let rawData = null;
     let chartInstance = null;
-    let selectedUsers = new Set(); // Хранилище активных атлетов
+    let selectedUsers = new Set();
     let currentPeriod = 'all';
 
+    // Фирменные неоновые цвета Apple Watch Fitness
     const USER_COLORS = [
-      { border: '#10b981', bg: 'rgba(16, 185, 129, 0.15)' }, // Зеленый
-      { border: '#3b82f6', bg: 'rgba(59, 130, 246, 0.15)' }, // Синий
-      { border: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' }  // Янтарный
+      { border: '#ccff00', glow: 'rgba(204, 255, 0, 0.35)' }, // Electric Lime
+      { border: '#00f0ff', glow: 'rgba(0, 240, 255, 0.35)' }, // Cyber Cyan
+      { border: '#ff2d55', glow: 'rgba(255, 45, 85, 0.35)' }  // Neon Coral
     ];
 
     function fetchJSONP(url) {
@@ -307,15 +299,10 @@
         }
 
         rawData = data;
-        
-        // По умолчанию включаем обоих участников
         selectedUsers.clear();
-        for (const uid in data) {
-          selectedUsers.add(uid);
-        }
+        for (const uid in data) selectedUsers.add(uid);
 
         statusEl.style.display = 'none';
-
         const contentEl = document.getElementById('content');
         contentEl.style.display = 'flex';
 
@@ -327,19 +314,16 @@
       }
     }
 
-    // Обработка клика по карточке атлета
     function toggleUser(uid) {
+      if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
+
       if (selectedUsers.has(uid)) {
-        // Если атлет уже включен
         if (selectedUsers.size > 1) {
-          // Выключаем его
           selectedUsers.delete(uid);
         } else {
-          // Если он был последним активным, клик по нему снова включает всех
           for (const id in rawData) selectedUsers.add(id);
         }
       } else {
-        // Включаем атлета в общий график
         selectedUsers.add(uid);
       }
 
@@ -351,20 +335,22 @@
       document.querySelectorAll('.user-card').forEach(card => {
         const uid = card.dataset.uid;
         const color = card.dataset.color;
+        const glow = card.dataset.glow;
         const isActive = selectedUsers.has(uid);
 
         card.classList.toggle('active', isActive);
         if (isActive) {
           card.style.borderColor = color;
-          card.style.boxShadow = `0 4px 18px ${color}33`;
+          card.style.boxShadow = `0 4px 24px ${glow}`;
         } else {
-          card.style.borderColor = 'transparent';
+          card.style.borderColor = 'rgba(255, 255, 255, 0.06)';
           card.style.boxShadow = 'none';
         }
       });
     }
 
     function switchPeriod(periodKey) {
+      if (tg?.HapticFeedback) tg.HapticFeedback.selectionChanged();
       currentPeriod = periodKey;
 
       document.querySelectorAll('#period-tabs .tab-btn').forEach(btn => {
@@ -383,7 +369,7 @@
         const u = users[uid];
         if (!u.entries || u.entries.length === 0) continue;
 
-        const color = USER_COLORS[colorIdx % USER_COLORS.length].border;
+        const colorCfg = USER_COLORS[colorIdx % USER_COLORS.length];
         const currentWeight = u.entries[u.entries.length - 1].weight;
         const startWeight = u.start || u.entries[0].weight;
         const target = u.target;
@@ -405,13 +391,14 @@
         const card = document.createElement('div');
         card.className = 'user-card';
         card.dataset.uid = uid;
-        card.dataset.color = color;
+        card.dataset.color = colorCfg.border;
+        card.dataset.glow = colorCfg.glow;
         card.onclick = () => toggleUser(uid);
 
         card.innerHTML = `
           <div class="card-top">
             <span class="user-name">
-              <span class="status-dot" style="background: ${color}"></span>
+              <span class="status-dot" style="background: ${colorCfg.border}; box-shadow: 0 0 8px ${colorCfg.border};"></span>
               ${u.name}
             </span>
             <span style="font-size: 11px; color: var(--text-muted);">${target ? 'Цель: ' + target + ' кг' : 'Без цели'}</span>
@@ -419,7 +406,7 @@
           <div class="weight-display">${currentWeight}<span>кг</span></div>
           ${target ? `
             <div class="progress-bar-bg">
-              <div class="progress-bar-fill" style="width: ${percent}%; background: ${color}"></div>
+              <div class="progress-bar-fill" style="width: ${percent}%; background: ${colorCfg.border}; box-shadow: 0 0 10px ${colorCfg.border};"></div>
             </div>
             <div class="card-footer">
               <span>${diffStr}</span>
@@ -461,7 +448,6 @@
 
       const dateEntries = [];
       for (const uid in rawData) {
-        // Учитываем даты только выбранных атлетов
         if (selectedUsers.has(uid) && rawData[uid].entries) {
           rawData[uid].entries.forEach(e => {
             if (currentPeriod === 'all' || e.timestamp >= minTs) {
@@ -498,11 +484,7 @@
 
         const colorCfg = USER_COLORS[cIdx % USER_COLORS.length];
 
-        const gradient = ctx.createLinearGradient(0, 0, 0, ctx.canvas.clientHeight || 300);
-        gradient.addColorStop(0, colorCfg.bg);
-        gradient.addColorStop(1, 'rgba(0,0,0,0)');
-
-        // Фактический вес
+        // Неоновая кривая в стиле Apple Health
         datasets.push({
           label: u.name,
           data: labels.map(l => {
@@ -510,26 +492,27 @@
             return match ? match.weight : null;
           }),
           borderColor: colorCfg.border,
-          backgroundColor: gradient,
-          fill: true,
-          tension: 0.35,
-          borderWidth: 3,
-          pointRadius: 5,
+          borderWidth: 4.5,
+          borderCapStyle: 'round',
+          borderJoinStyle: 'round',
+          tension: 0.45,
+          fill: false,
+          pointRadius: 0, // Без точек на графике для эффекта гладкой ленты
           pointHoverRadius: 7,
-          pointBackgroundColor: colorCfg.border,
-          pointBorderColor: '#ffffff',
-          pointBorderWidth: 1.5,
+          pointHoverBackgroundColor: colorCfg.border,
+          pointHoverBorderColor: '#ffffff',
+          pointHoverBorderWidth: 2,
           spanGaps: true
         });
 
-        // Линия цели (активна ТОЛЬКО если выбран один конкретный атлет)
+        // Линия цели (активна только при фокусе на одном атлете)
         if (selectedUsers.size === 1 && u.target) {
           datasets.push({
             label: `Цель (${u.target} кг)`,
             data: labels.map(() => u.target),
-            borderColor: colorCfg.border,
-            borderDash: [6, 6],
-            borderWidth: 2,
+            borderColor: 'rgba(255, 255, 255, 0.25)',
+            borderDash: [5, 5],
+            borderWidth: 1.5,
             pointRadius: 0,
             fill: false
           });
@@ -547,15 +530,17 @@
           resizeDelay: 0,
           interaction: { mode: 'index', intersect: false },
           plugins: {
-            legend: {
-              display: false /* Полностью скрывает лишнюю нативную легенду */
-            },
+            legend: { display: false },
             tooltip: {
-              backgroundColor: '#1f2937',
-              titleColor: '#f9fafb',
-              bodyColor: '#f3f4f6',
-              padding: 10,
-              cornerRadius: 10,
+              backgroundColor: '#1c1c1e',
+              titleColor: '#86868b',
+              bodyColor: '#ffffff',
+              padding: 12,
+              cornerRadius: 12,
+              borderColor: 'rgba(255, 255, 255, 0.1)',
+              borderWidth: 1,
+              titleFont: { size: 11, weight: '600' },
+              bodyFont: { size: 13, weight: '700' },
               callbacks: {
                 label: (ctx) => ` ${ctx.dataset.label}: ${Number(Number(ctx.parsed.y).toFixed(1))} кг`
               }
@@ -563,17 +548,28 @@
           },
           scales: {
             x: {
-              grid: { display: false },
-              ticks: { color: '#6b7280', font: { size: 11, weight: '500' } }
+              grid: {
+                color: 'rgba(255, 255, 255, 0.05)', // Тонкие вертикальные линии Apple Keynote
+                drawBorder: false
+              },
+              ticks: {
+                color: '#636366',
+                font: { size: 11, weight: '600' },
+                padding: 8
+              }
             },
             y: {
-              grid: { color: 'rgba(125, 125, 125, 0.08)', drawBorder: false },
+              grid: {
+                display: false, // Без горизонтальных полос для чистоты
+                drawBorder: false
+              },
               ticks: {
-                color: '#6b7280',
-                font: { size: 11, weight: '500' },
+                color: '#636366',
+                font: { size: 11, weight: '600' },
+                padding: 10,
                 callback: (val) => Number(Number(val).toFixed(1)) + ' кг'
               },
-              grace: selectedUsers.size === 1 ? '15%' : '5%'
+              grace: selectedUsers.size === 1 ? '15%' : '8%'
             }
           }
         }
@@ -581,9 +577,7 @@
     }
 
     window.addEventListener('resize', () => {
-      if (chartInstance) {
-        chartInstance.resize();
-      }
+      if (chartInstance) chartInstance.resize();
     });
 
     loadData();
