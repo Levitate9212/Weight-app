@@ -8,11 +8,11 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
-      --bg-color: #000000;
-      --card-bg: #0d0d0f;
-      --text-main: #ffffff;
-      --text-muted: #86868b;
-      --border-color: rgba(255, 255, 255, 0.08);
+      --bg-color: #08090a;
+      --card-bg: #111317;
+      --text-main: #f3f4f6;
+      --text-muted: #8b929a;
+      --border-color: rgba(255, 255, 255, 0.07);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -62,14 +62,14 @@
 
     .user-card {
       background: var(--card-bg);
-      border: 1.5px solid rgba(255, 255, 255, 0.06);
+      border: 1.5px solid rgba(255, 255, 255, 0.05);
       border-radius: 16px;
       padding: 14px 16px;
       cursor: pointer;
       user-select: none;
       transition: transform 0.15s ease, border-color 0.25s ease, opacity 0.25s ease, box-shadow 0.25s ease;
-      opacity: 0.35;
-      filter: grayscale(0.4);
+      opacity: 0.38;
+      filter: grayscale(0.3);
     }
     .user-card:hover {
       transform: translateY(-2px);
@@ -114,7 +114,7 @@
 
     /* Прогресс-бар */
     .progress-bar-bg {
-      background: rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.06);
       border-radius: 6px;
       height: 5px;
       overflow: hidden;
@@ -136,7 +136,7 @@
     /* Холст графика */
     .chart-card {
       background: var(--card-bg);
-      border: 1.5px solid rgba(255, 255, 255, 0.06);
+      border: 1.5px solid rgba(255, 255, 255, 0.05);
       border-radius: 18px;
       padding: 16px 14px 12px 10px;
       width: 100%;
@@ -160,13 +160,13 @@
       font-weight: 700;
       font-size: 15px;
       letter-spacing: -0.2px;
-      color: #f5f5f7;
+      color: #e5e7eb;
     }
 
     /* Табы периодов */
     .filter-tabs {
       display: inline-flex;
-      background: rgba(255, 255, 255, 0.06);
+      background: rgba(255, 255, 255, 0.05);
       border-radius: 10px;
       padding: 3px;
       gap: 2px;
@@ -189,9 +189,9 @@
       outline: none;
     }
     .tab-btn.active {
-      background: #1c1c1e;
+      background: #1e2229;
       color: #ffffff;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
     }
 
     .chart-wrapper {
@@ -216,10 +216,8 @@
     <div id="status-msg">Синхронизация данных... ⏳</div>
 
     <div id="content" style="display: none;">
-      <!-- Карточки атлетов -->
       <div id="cards-container" class="cards-grid"></div>
 
-      <!-- График Apple Keynote Style -->
       <div class="chart-card">
         <div class="chart-header">
           <span class="chart-title">Динамика веса</span>
@@ -255,11 +253,11 @@
     let selectedUsers = new Set();
     let currentPeriod = 'all';
 
-    // Фирменные неоновые цвета Apple Watch Fitness
+    // Мягкая палитра: фисташковый лайм, небесный аквамарин, пастельный коралл
     const USER_COLORS = [
-      { border: '#ccff00', glow: 'rgba(204, 255, 0, 0.35)' }, // Electric Lime
-      { border: '#00f0ff', glow: 'rgba(0, 240, 255, 0.35)' }, // Cyber Cyan
-      { border: '#ff2d55', glow: 'rgba(255, 45, 85, 0.35)' }  // Neon Coral
+      { border: '#9fe62e', glow: 'rgba(159, 230, 46, 0.16)' },
+      { border: '#38bdf8', glow: 'rgba(56, 189, 248, 0.16)' },
+      { border: '#fb7185', glow: 'rgba(251, 113, 133, 0.16)' }
     ];
 
     function fetchJSONP(url) {
@@ -284,6 +282,7 @@
 
     async function loadData() {
       const statusEl = document.getElementById('status-msg');
+      const contentEl = document.getElementById('content');
       const userId = tg?.initDataUnsafe?.user?.id;
 
       if (!userId) {
@@ -291,26 +290,45 @@
         return;
       }
 
+      const cacheKey = 'wt_data_' + userId;
+      const cachedRaw = localStorage.getItem(cacheKey);
+
+      if (cachedRaw) {
+        try {
+          rawData = JSON.parse(cachedRaw);
+          selectedUsers.clear();
+          for (const uid in rawData) selectedUsers.add(uid);
+
+          statusEl.style.display = 'none';
+          contentEl.style.display = 'flex';
+          renderCards(rawData);
+          renderChart();
+        } catch (e) {}
+      }
+
       try {
         const data = await fetchJSONP(`${API_URL}?userId=${userId}`);
         if (data.error) {
-          statusEl.innerHTML = `<span class="error-icon">⛔️</span>${data.message || 'Ошибка доступа'}`;
+          if (!cachedRaw) statusEl.innerHTML = `<span class="error-icon">⛔️</span>${data.message || 'Ошибка доступа'}`;
           return;
         }
 
         rawData = data;
-        selectedUsers.clear();
-        for (const uid in data) selectedUsers.add(uid);
+        localStorage.setItem(cacheKey, JSON.stringify(data));
+
+        if (selectedUsers.size === 0) {
+          for (const uid in data) selectedUsers.add(uid);
+        }
 
         statusEl.style.display = 'none';
-        const contentEl = document.getElementById('content');
         contentEl.style.display = 'flex';
-
         renderCards(data);
         renderChart();
 
       } catch (err) {
-        statusEl.innerHTML = `<span class="error-icon">⚠️</span>Ошибка подключения к базе данных.`;
+        if (!cachedRaw) {
+          statusEl.innerHTML = `<span class="error-icon">⚠️</span>Ошибка подключения к базе данных.`;
+        }
       }
     }
 
@@ -341,9 +359,9 @@
         card.classList.toggle('active', isActive);
         if (isActive) {
           card.style.borderColor = color;
-          card.style.boxShadow = `0 4px 24px ${glow}`;
+          card.style.boxShadow = `0 4px 16px ${glow}`;
         } else {
-          card.style.borderColor = 'rgba(255, 255, 255, 0.06)';
+          card.style.borderColor = 'rgba(255, 255, 255, 0.05)';
           card.style.boxShadow = 'none';
         }
       });
@@ -398,7 +416,7 @@
         card.innerHTML = `
           <div class="card-top">
             <span class="user-name">
-              <span class="status-dot" style="background: ${colorCfg.border}; box-shadow: 0 0 8px ${colorCfg.border};"></span>
+              <span class="status-dot" style="background: ${colorCfg.border}; box-shadow: 0 0 6px ${colorCfg.glow};"></span>
               ${u.name}
             </span>
             <span style="font-size: 11px; color: var(--text-muted);">${target ? 'Цель: ' + target + ' кг' : 'Без цели'}</span>
@@ -406,7 +424,7 @@
           <div class="weight-display">${currentWeight}<span>кг</span></div>
           ${target ? `
             <div class="progress-bar-bg">
-              <div class="progress-bar-fill" style="width: ${percent}%; background: ${colorCfg.border}; box-shadow: 0 0 10px ${colorCfg.border};"></div>
+              <div class="progress-bar-fill" style="width: ${percent}%; background: ${colorCfg.border};"></div>
             </div>
             <div class="card-footer">
               <span>${diffStr}</span>
@@ -484,7 +502,6 @@
 
         const colorCfg = USER_COLORS[cIdx % USER_COLORS.length];
 
-        // Неоновая кривая в стиле Apple Health
         datasets.push({
           label: u.name,
           data: labels.map(l => {
@@ -492,25 +509,24 @@
             return match ? match.weight : null;
           }),
           borderColor: colorCfg.border,
-          borderWidth: 4.5,
+          borderWidth: 3.5,
           borderCapStyle: 'round',
           borderJoinStyle: 'round',
-          tension: 0.45,
+          tension: 0.42,
           fill: false,
-          pointRadius: 0, // Без точек на графике для эффекта гладкой ленты
-          pointHoverRadius: 7,
+          pointRadius: 0,
+          pointHoverRadius: 6,
           pointHoverBackgroundColor: colorCfg.border,
           pointHoverBorderColor: '#ffffff',
           pointHoverBorderWidth: 2,
           spanGaps: true
         });
 
-        // Линия цели (активна только при фокусе на одном атлете)
         if (selectedUsers.size === 1 && u.target) {
           datasets.push({
             label: `Цель (${u.target} кг)`,
             data: labels.map(() => u.target),
-            borderColor: 'rgba(255, 255, 255, 0.25)',
+            borderColor: 'rgba(255, 255, 255, 0.22)',
             borderDash: [5, 5],
             borderWidth: 1.5,
             pointRadius: 0,
@@ -532,16 +548,29 @@
           plugins: {
             legend: { display: false },
             tooltip: {
-              backgroundColor: '#1c1c1e',
-              titleColor: '#86868b',
+              backgroundColor: '#16191f',
+              titleColor: '#8b929a',
               bodyColor: '#ffffff',
-              padding: 12,
-              cornerRadius: 12,
-              borderColor: 'rgba(255, 255, 255, 0.1)',
+              padding: 11,
+              cornerRadius: 10,
+              borderColor: 'rgba(255, 255, 255, 0.08)',
               borderWidth: 1,
               titleFont: { size: 11, weight: '600' },
               bodyFont: { size: 13, weight: '700' },
+              usePointStyle: true,
+              boxWidth: 6,
+              boxHeight: 6,
+              boxPadding: 6,
               callbacks: {
+                labelColor: function(ctx) {
+                  const col = ctx.dataset.borderColor || '#ffffff';
+                  return {
+                    borderColor: col,
+                    backgroundColor: col,
+                    borderWidth: 0,
+                    borderRadius: 3
+                  };
+                },
                 label: (ctx) => ` ${ctx.dataset.label}: ${Number(Number(ctx.parsed.y).toFixed(1))} кг`
               }
             }
@@ -549,22 +578,22 @@
           scales: {
             x: {
               grid: {
-                color: 'rgba(255, 255, 255, 0.05)', // Тонкие вертикальные линии Apple Keynote
+                color: 'rgba(255, 255, 255, 0.04)',
                 drawBorder: false
               },
               ticks: {
-                color: '#636366',
+                color: '#555d67',
                 font: { size: 11, weight: '600' },
                 padding: 8
               }
             },
             y: {
               grid: {
-                display: false, // Без горизонтальных полос для чистоты
+                display: false,
                 drawBorder: false
               },
               ticks: {
-                color: '#636366',
+                color: '#555d67',
                 font: { size: 11, weight: '600' },
                 padding: 10,
                 callback: (val) => Number(Number(val).toFixed(1)) + ' кг'
