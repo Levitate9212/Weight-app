@@ -61,7 +61,6 @@
       text-align: center;
     }
 
-    /* Неоновые светящиеся кольца */
     .splash-rings {
       position: relative;
       width: 80px;
@@ -108,7 +107,6 @@
       margin-bottom: 16px;
     }
 
-    /* Анимированная полоса загрузки */
     .splash-progress-track {
       width: 140px;
       height: 3px;
@@ -138,7 +136,6 @@
       100% { left: 75%; width: 25%; }
     }
 
-    /* Сообщение об ошибке */
     #error-box {
       display: none;
       text-align: center;
@@ -148,7 +145,6 @@
     }
     .error-icon { font-size: 40px; margin-bottom: 12px; display: block; }
 
-    /* Основной контейнер дашборда */
     .app-container {
       max-width: 1100px;
       margin: 0 auto;
@@ -227,7 +223,6 @@
       margin-left: 3px;
     }
 
-    /* Прогресс-бар */
     .progress-bar-bg {
       background: rgba(255, 255, 255, 0.06);
       border-radius: 6px;
@@ -278,7 +273,6 @@
       color: #e5e7eb;
     }
 
-    /* Табы периодов */
     .filter-tabs {
       display: inline-flex;
       background: rgba(255, 255, 255, 0.05);
@@ -319,7 +313,6 @@
 </head>
 <body>
 
-  <!-- Заставка запуска (активна, пока идут вычисления и загрузка) -->
   <div id="splash-screen">
     <div class="splash-box">
       <div class="splash-rings">
@@ -377,12 +370,37 @@
     let selectedUsers = new Set();
     let currentPeriod = 'all';
 
-    // Мягкая палитра: фисташковый лайм, небесный аквамарин, пастельный коралл
-    const USER_COLORS = [
-      { border: '#9fe62e', glow: 'rgba(159, 230, 46, 0.16)' },
-      { border: '#38bdf8', glow: 'rgba(56, 189, 248, 0.16)' },
-      { border: '#fb7185', glow: 'rgba(251, 113, 133, 0.16)' }
+    // 🎨 Набор гармоничных пар цветов (Apple Fitness Style)
+    const PALETTES = [
+      [
+        { border: '#9fe62e', glow: 'rgba(159, 230, 46, 0.16)' }, // Фисташка
+        { border: '#38bdf8', glow: 'rgba(56, 189, 248, 0.16)' }  // Небесный циан
+      ],
+      [
+        { border: '#ff375f', glow: 'rgba(255, 55, 95, 0.16)' },  // Коралл/Малиновый
+        { border: '#00f0ff', glow: 'rgba(0, 240, 255, 0.16)' }   // Неоновый лед
+      ],
+      [
+        { border: '#ccff00', glow: 'rgba(204, 255, 0, 0.16)' },  // Лайм
+        { border: '#bf5af2', glow: 'rgba(191, 90, 242, 0.16)' }  // Неоновая лаванда
+      ],
+      [
+        { border: '#ff9f0a', glow: 'rgba(255, 159, 10, 0.16)' }, // Теплый янтарь
+        { border: '#30d158', glow: 'rgba(48, 209, 88, 0.16)' }   // Изумруд
+      ],
+      [
+        { border: '#ffd60a', glow: 'rgba(255, 214, 10, 0.16)' }, // Золотой
+        { border: '#5e5ce6', glow: 'rgba(94, 92, 230, 0.16)' }   // Индиго
+      ],
+      [
+        { border: '#64d2ff', glow: 'rgba(100, 210, 255, 0.16)' }, // Аквамарин
+        { border: '#ff2d55', glow: 'rgba(255, 45, 85, 0.16)' }    // Рубин
+      ]
     ];
+
+    // Случайный выбор темы при каждом запуске
+    const randomPalette = PALETTES[Math.floor(Math.random() * PALETTES.length)];
+    const userColorMap = {};
 
     function dismissSplash() {
       const splash = document.getElementById('splash-screen');
@@ -421,7 +439,6 @@
         return;
       }
 
-      // Прямой запрос к базе без кэша с cache-busting таймстемпом
       try {
         const data = await fetchJSONP(`${API_URL}?userId=${userId}&t=${Date.now()}`);
         if (data.error) {
@@ -433,15 +450,16 @@
 
         rawData = data;
         selectedUsers.clear();
+        let pIdx = 0;
         for (const uid in data) {
           selectedUsers.add(uid);
+          userColorMap[uid] = randomPalette[pIdx % randomPalette.length];
+          pIdx++;
         }
 
         contentEl.style.display = 'flex';
         renderCards(data);
         renderChart();
-
-        // Плавно убираем заставку
         dismissSplash();
 
       } catch (err) {
@@ -500,13 +518,12 @@
     function renderCards(users) {
       const container = document.getElementById('cards-container');
       container.innerHTML = '';
-      let colorIdx = 0;
 
       for (const uid in users) {
         const u = users[uid];
         if (!u.entries || u.entries.length === 0) continue;
 
-        const colorCfg = USER_COLORS[colorIdx % USER_COLORS.length];
+        const colorCfg = userColorMap[uid] || randomPalette[0];
         const currentWeight = u.entries[u.entries.length - 1].weight;
         const startWeight = u.start || u.entries[0].weight;
         const target = u.target;
@@ -556,7 +573,6 @@
           `}
         `;
         container.appendChild(card);
-        colorIdx++;
       }
 
       updateCardsVisual();
@@ -605,21 +621,14 @@
       });
 
       const datasets = [];
-      let cIdx = 0;
 
       for (const uid in rawData) {
-        if (!selectedUsers.has(uid)) {
-          cIdx++;
-          continue;
-        }
+        if (!selectedUsers.has(uid)) continue;
 
         const u = rawData[uid];
-        if (!u.entries || u.entries.length === 0) {
-          cIdx++;
-          continue;
-        }
+        if (!u.entries || u.entries.length === 0) continue;
 
-        const colorCfg = USER_COLORS[cIdx % USER_COLORS.length];
+        const colorCfg = userColorMap[uid] || randomPalette[0];
 
         datasets.push({
           label: u.name,
@@ -652,8 +661,6 @@
             fill: false
           });
         }
-
-        cIdx++;
       }
 
       chartInstance = new Chart(ctx, {
