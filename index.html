@@ -7,32 +7,32 @@
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <!-- ВЫБОР ЦВЕТОВ ДО ПЕРВОЙ ОТРИСОВКИ СТРАНИЦЫ -->
+  <!-- СИНХРОНИЗАЦИЯ ЦВЕТОВ ЗАСТАВКИ И ГРАФИКОВ ДО ОТРИСОВКИ СТРАНИЦЫ -->
   <script>
     const PALETTES = [
       [
-        { border: '#9fe62e', glow: 'rgba(159, 230, 46, 0.28)' }, // Фисташка
-        { border: '#38bdf8', glow: 'rgba(56, 189, 248, 0.28)' }  // Небесный циан
+        { border: '#9fe62e', glow: 'rgba(159, 230, 46, 0.28)' },
+        { border: '#38bdf8', glow: 'rgba(56, 189, 248, 0.28)' }
       ],
       [
-        { border: '#ff375f', glow: 'rgba(255, 55, 95, 0.28)' },  // Коралл
-        { border: '#00f0ff', glow: 'rgba(0, 240, 255, 0.28)' }   // Ледяной циан
+        { border: '#ff375f', glow: 'rgba(255, 55, 95, 0.28)' },
+        { border: '#00f0ff', glow: 'rgba(0, 240, 255, 0.28)' }
       ],
       [
-        { border: '#ccff00', glow: 'rgba(204, 255, 0, 0.28)' },  // Кислотный лайм
-        { border: '#bf5af2', glow: 'rgba(191, 90, 242, 0.28)' }  // Неоновая лаванда
+        { border: '#ccff00', glow: 'rgba(204, 255, 0, 0.28)' },
+        { border: '#bf5af2', glow: 'rgba(191, 90, 242, 0.28)' }
       ],
       [
-        { border: '#ff9f0a', glow: 'rgba(255, 159, 10, 0.28)' }, // Янтарь
-        { border: '#30d158', glow: 'rgba(48, 209, 88, 0.28)' }   // Изумруд
+        { border: '#ff9f0a', glow: 'rgba(255, 159, 10, 0.28)' },
+        { border: '#30d158', glow: 'rgba(48, 209, 88, 0.28)' }
       ],
       [
-        { border: '#ffd60a', glow: 'rgba(255, 214, 10, 0.28)' }, // Солнечный золотой
-        { border: '#5e5ce6', glow: 'rgba(94, 92, 230, 0.28)' }   // Электрик-индиго
+        { border: '#ffd60a', glow: 'rgba(255, 214, 10, 0.28)' },
+        { border: '#5e5ce6', glow: 'rgba(94, 92, 230, 0.28)' }
       ],
       [
-        { border: '#64d2ff', glow: 'rgba(100, 210, 255, 0.28)' }, // Аквамарин
-        { border: '#ff2d55', glow: 'rgba(255, 45, 85, 0.28)' }    // Рубин
+        { border: '#64d2ff', glow: 'rgba(100, 210, 255, 0.28)' },
+        { border: '#ff2d55', glow: 'rgba(255, 45, 85, 0.28)' }
       ]
     ];
 
@@ -174,11 +174,26 @@
     #error-box {
       display: none;
       text-align: center;
-      margin-top: 60px;
+      margin-top: 80px;
       font-size: 15px;
       color: var(--text-muted);
+      padding: 0 20px;
     }
-    .error-icon { font-size: 40px; margin-bottom: 12px; display: block; }
+    .error-icon { font-size: 44px; margin-bottom: 12px; display: block; }
+    .retry-btn {
+      background: var(--accent-1);
+      color: #000;
+      border: none;
+      padding: 10px 22px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 14px;
+      cursor: pointer;
+      margin-top: 16px;
+      box-shadow: 0 4px 14px var(--glow-1);
+      transition: transform 0.1s ease;
+    }
+    .retry-btn:active { transform: scale(0.96); }
 
     .app-container {
       max-width: 1100px;
@@ -363,7 +378,12 @@
   </div>
 
   <div class="app-container">
-    <div id="error-box"></div>
+    <div id="error-box">
+      <span class="error-icon">🛰️</span>
+      <b>Сервер Google просыпается...</b><br>
+      <span style="font-size: 12px; color: var(--text-muted);">Первый холодный запуск может занимать до 10 секунд.</span><br>
+      <button class="retry-btn" onclick="location.reload()">Повторить попытку</button>
+    </div>
 
     <div id="content" style="display: none;">
       <div id="cards-container" class="cards-grid"></div>
@@ -403,7 +423,6 @@
     let selectedUsers = new Set();
     let currentPeriod = 'all';
 
-    // Привязка участников к выбранной палитре
     const userColorMap = {};
 
     function dismissSplash() {
@@ -415,7 +434,7 @@
       return new Promise((resolve, reject) => {
         const cb = 'gasCb_' + Math.round(100000 * Math.random());
         let script;
-        const timeout = setTimeout(() => { cleanup(); reject(new Error('Таймаут')); }, 12000);
+        const timeout = setTimeout(() => { cleanup(); reject(new Error('Таймаут')); }, 20000);
 
         function cleanup() {
           if (window[cb]) delete window[cb];
@@ -448,7 +467,7 @@
         if (data.error) {
           dismissSplash();
           errorBox.style.display = 'block';
-          errorBox.innerHTML = `<span class="error-icon">⛔️</span>${data.message || 'Ошибка доступа'}`;
+          errorBox.innerHTML = `<span class="error-icon">⛔️</span>${data.message || 'Ошибка доступа'}<br><button class="retry-btn" onclick="location.reload()">Повторить</button>`;
           return;
         }
 
@@ -469,7 +488,6 @@
       } catch (err) {
         dismissSplash();
         errorBox.style.display = 'block';
-        errorBox.innerHTML = `<span class="error-icon">⚠️</span>Ошибка подключения к базе данных.`;
       }
     }
 
