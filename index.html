@@ -12,7 +12,7 @@
       --card-bg: #181b22;
       --text-main: #f3f4f6;
       --text-muted: #9ca3af;
-      --border-color: rgba(255, 255, 255, 0.07);
+      --border-color: rgba(255, 255, 255, 0.08);
     }
 
     @media (prefers-color-scheme: light) {
@@ -61,7 +61,7 @@
       gap: 12px;
     }
 
-    /* Карточки атлетов */
+    /* Большие интерактивные карточки атлетов */
     .cards-grid {
       flex-shrink: 0;
       display: grid;
@@ -71,18 +71,22 @@
 
     .user-card {
       background: var(--tg-theme-secondary-bg-color, var(--card-bg));
-      border: 1px solid var(--border-color);
+      border: 2px solid transparent;
       border-radius: 14px;
       padding: 14px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
       cursor: pointer;
-      transition: transform 0.15s ease, border-color 0.15s ease;
+      user-select: none;
+      transition: transform 0.15s ease, border-color 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
+      opacity: 0.42;
+      filter: grayscale(0.25);
     }
     .user-card:hover {
       transform: translateY(-2px);
     }
+    /* Активное состояние карточки: подсвечивается контур и снимается приглушение */
     .user-card.active {
-      border-color: #3b82f6;
+      opacity: 1;
+      filter: none;
     }
 
     .card-top {
@@ -167,14 +171,7 @@
       color: var(--text-main);
     }
 
-    .controls-wrapper {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    /* Группы табов */
+    /* Табы периодов */
     .filter-tabs {
       display: inline-flex;
       background: rgba(125, 125, 125, 0.12);
@@ -227,25 +224,21 @@
     <div id="status-msg">Синхронизация данных... ⏳</div>
 
     <div id="content" style="display: none;">
+      <!-- Кликабельные карточки атлетов -->
       <div id="cards-container" class="cards-grid"></div>
 
       <div class="chart-card">
         <div class="chart-header">
           <span class="chart-title">Динамика веса</span>
           
-          <div class="controls-wrapper">
-            <!-- Фильтр по атлетам -->
-            <div id="filter-tabs" class="filter-tabs"></div>
-
-            <!-- Фильтр по периодам: 7, 14, 30, 90, 180, все время -->
-            <div id="period-tabs" class="filter-tabs">
-              <button class="tab-btn" data-period="7d" onclick="switchPeriod('7d')">7</button>
-              <button class="tab-btn" data-period="14d" onclick="switchPeriod('14d')">14</button>
-              <button class="tab-btn" data-period="30d" onclick="switchPeriod('30d')">30</button>
-              <button class="tab-btn" data-period="90d" onclick="switchPeriod('90d')">90</button>
-              <button class="tab-btn" data-period="180d" onclick="switchPeriod('180d')">180</button>
-              <button class="tab-btn active" data-period="all" onclick="switchPeriod('all')">Все время</button>
-            </div>
+          <!-- Фильтр периодов (только он в шапке) -->
+          <div id="period-tabs" class="filter-tabs">
+            <button class="tab-btn" data-period="7d" onclick="switchPeriod('7d')">7</button>
+            <button class="tab-btn" data-period="14d" onclick="switchPeriod('14d')">14</button>
+            <button class="tab-btn" data-period="30d" onclick="switchPeriod('30d')">30</button>
+            <button class="tab-btn" data-period="90d" onclick="switchPeriod('90d')">90</button>
+            <button class="tab-btn" data-period="180d" onclick="switchPeriod('180d')">180</button>
+            <button class="tab-btn active" data-period="all" onclick="switchPeriod('all')">Все время</button>
           </div>
         </div>
 
@@ -268,13 +261,13 @@
 
     let rawData = null;
     let chartInstance = null;
-    let currentView = 'all';
+    let selectedUsers = new Set(); // Хранилище активных атлетов
     let currentPeriod = 'all';
 
     const USER_COLORS = [
-      { border: '#10b981', bg: 'rgba(16, 185, 129, 0.15)' },
-      { border: '#3b82f6', bg: 'rgba(59, 130, 246, 0.15)' },
-      { border: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' }
+      { border: '#10b981', bg: 'rgba(16, 185, 129, 0.15)' }, // Зеленый
+      { border: '#3b82f6', bg: 'rgba(59, 130, 246, 0.15)' }, // Синий
+      { border: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)' }  // Янтарный
     ];
 
     function fetchJSONP(url) {
@@ -314,12 +307,18 @@
         }
 
         rawData = data;
+        
+        // По умолчанию включаем обоих участников
+        selectedUsers.clear();
+        for (const uid in data) {
+          selectedUsers.add(uid);
+        }
+
         statusEl.style.display = 'none';
 
         const contentEl = document.getElementById('content');
         contentEl.style.display = 'flex';
 
-        buildTabs(data);
         renderCards(data);
         renderChart();
 
@@ -328,33 +327,41 @@
       }
     }
 
-    function buildTabs(users) {
-      const tabsContainer = document.getElementById('filter-tabs');
-      tabsContainer.innerHTML = '<button class="tab-btn active" data-view="all" onclick="switchView(\'all\')">Все</button>';
-
-      for (const uid in users) {
-        const u = users[uid];
-        const btn = document.createElement('button');
-        btn.className = 'tab-btn';
-        btn.dataset.view = uid;
-        btn.innerText = u.name;
-        btn.onclick = () => switchView(uid);
-        tabsContainer.appendChild(btn);
+    // Обработка клика по карточке атлета
+    function toggleUser(uid) {
+      if (selectedUsers.has(uid)) {
+        // Если атлет уже включен
+        if (selectedUsers.size > 1) {
+          // Выключаем его
+          selectedUsers.delete(uid);
+        } else {
+          // Если он был последним активным, клик по нему снова включает всех
+          for (const id in rawData) selectedUsers.add(id);
+        }
+      } else {
+        // Включаем атлета в общий график
+        selectedUsers.add(uid);
       }
+
+      updateCardsVisual();
+      renderChart();
     }
 
-    function switchView(viewKey) {
-      currentView = viewKey;
-
-      document.querySelectorAll('#filter-tabs .tab-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.view === String(viewKey));
-      });
-
+    function updateCardsVisual() {
       document.querySelectorAll('.user-card').forEach(card => {
-        card.classList.toggle('active', card.dataset.uid === String(viewKey));
-      });
+        const uid = card.dataset.uid;
+        const color = card.dataset.color;
+        const isActive = selectedUsers.has(uid);
 
-      renderChart();
+        card.classList.toggle('active', isActive);
+        if (isActive) {
+          card.style.borderColor = color;
+          card.style.boxShadow = `0 4px 18px ${color}33`;
+        } else {
+          card.style.borderColor = 'transparent';
+          card.style.boxShadow = 'none';
+        }
+      });
     }
 
     function switchPeriod(periodKey) {
@@ -398,7 +405,8 @@
         const card = document.createElement('div');
         card.className = 'user-card';
         card.dataset.uid = uid;
-        card.onclick = () => switchView(currentView === uid ? 'all' : uid);
+        card.dataset.color = color;
+        card.onclick = () => toggleUser(uid);
 
         card.innerHTML = `
           <div class="card-top">
@@ -426,6 +434,8 @@
         container.appendChild(card);
         colorIdx++;
       }
+
+      updateCardsVisual();
     }
 
     function renderChart() {
@@ -451,7 +461,8 @@
 
       const dateEntries = [];
       for (const uid in rawData) {
-        if (rawData[uid].entries) {
+        // Учитываем даты только выбранных атлетов
+        if (selectedUsers.has(uid) && rawData[uid].entries) {
           rawData[uid].entries.forEach(e => {
             if (currentPeriod === 'all' || e.timestamp >= minTs) {
               dateEntries.push({ dateStr: e.dateStr, ts: e.timestamp });
@@ -474,7 +485,7 @@
       let cIdx = 0;
 
       for (const uid in rawData) {
-        if (currentView !== 'all' && currentView !== uid) {
+        if (!selectedUsers.has(uid)) {
           cIdx++;
           continue;
         }
@@ -491,6 +502,7 @@
         gradient.addColorStop(0, colorCfg.bg);
         gradient.addColorStop(1, 'rgba(0,0,0,0)');
 
+        // Фактический вес
         datasets.push({
           label: u.name,
           data: labels.map(l => {
@@ -510,7 +522,8 @@
           spanGaps: true
         });
 
-        if (currentView === uid && u.target) {
+        // Линия цели (активна ТОЛЬКО если выбран один конкретный атлет)
+        if (selectedUsers.size === 1 && u.target) {
           datasets.push({
             label: `Цель (${u.target} кг)`,
             data: labels.map(() => u.target),
@@ -535,15 +548,7 @@
           interaction: { mode: 'index', intersect: false },
           plugins: {
             legend: {
-              display: (currentView === 'all'),
-              position: 'top',
-              labels: {
-                boxWidth: 10,
-                boxHeight: 10,
-                usePointStyle: true,
-                color: '#9ca3af',
-                font: { size: 12, weight: '600' }
-              }
+              display: false /* Полностью скрывает лишнюю нативную легенду */
             },
             tooltip: {
               backgroundColor: '#1f2937',
@@ -552,7 +557,7 @@
               padding: 10,
               cornerRadius: 10,
               callbacks: {
-                label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y} кг`
+                label: (ctx) => ` ${ctx.dataset.label}: ${Number(Number(ctx.parsed.y).toFixed(1))} кг`
               }
             }
           },
@@ -566,9 +571,9 @@
               ticks: {
                 color: '#6b7280',
                 font: { size: 11, weight: '500' },
-                callback: (val) => val + ' кг'
+                callback: (val) => Number(Number(val).toFixed(1)) + ' кг'
               },
-              grace: currentView !== 'all' ? '15%' : '5%'
+              grace: selectedUsers.size === 1 ? '15%' : '5%'
             }
           }
         }
