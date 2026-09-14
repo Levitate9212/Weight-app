@@ -34,6 +34,121 @@
       -webkit-font-smoothing: antialiased;
     }
 
+    /* =========================================================================
+       🎬 ЭКРАН ЗАСТАВКИ (SPLASH SCREEN)
+       ========================================================================= */
+    #splash-screen {
+      position: fixed;
+      inset: 0;
+      background-color: #08090a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      transition: opacity 0.35s ease, visibility 0.35s ease;
+    }
+    #splash-screen.hidden {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .splash-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    /* Неоновые светящиеся кольца логотипа */
+    .splash-rings {
+      position: relative;
+      width: 76px;
+      height: 76px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 22px;
+    }
+    .splash-ring {
+      position: absolute;
+      border-radius: 50%;
+      border: 3px solid transparent;
+      animation: splash-spin 1.8s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
+    }
+    .splash-ring-outer {
+      width: 76px;
+      height: 76px;
+      border-top-color: #9fe62e;
+      box-shadow: 0 0 20px rgba(159, 230, 46, 0.28);
+    }
+    .splash-ring-inner {
+      width: 54px;
+      height: 54px;
+      border-bottom-color: #38bdf8;
+      box-shadow: 0 0 16px rgba(56, 189, 248, 0.28);
+      animation-direction: reverse;
+      animation-duration: 1.3s;
+    }
+    .splash-icon {
+      width: 24px;
+      height: 24px;
+      stroke: #ffffff;
+      opacity: 0.95;
+      animation: splash-pulse 1.1s ease-in-out infinite alternate;
+    }
+
+    .splash-title {
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: #f3f4f6;
+      margin-bottom: 16px;
+    }
+
+    /* Минималистичная линия загрузки */
+    .splash-progress-track {
+      width: 140px;
+      height: 3px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+    .splash-progress-bar {
+      width: 45%;
+      height: 100%;
+      background: linear-gradient(90deg, #9fe62e, #38bdf8);
+      border-radius: 4px;
+      position: absolute;
+      animation: splash-slide 1s ease-in-out infinite alternate;
+    }
+
+    @keyframes splash-spin {
+      100% { transform: rotate(360deg); }
+    }
+    @keyframes splash-pulse {
+      0% { transform: scale(0.88); opacity: 0.6; }
+      100% { transform: scale(1.08); opacity: 1; }
+    }
+    @keyframes splash-slide {
+      0% { left: 0; width: 25%; }
+      100% { left: 75%; width: 25%; }
+    }
+
+    /* Сообщение об ошибке доступа (если открыто вне бота) */
+    #error-box {
+      display: none;
+      text-align: center;
+      margin-top: 60px;
+      font-size: 15px;
+      color: var(--text-muted);
+    }
+    .error-icon { font-size: 40px; margin-bottom: 12px; display: block; }
+
+    /* Основной контейнер */
     .app-container {
       max-width: 1100px;
       margin: 0 auto;
@@ -200,20 +315,29 @@
       flex: 1;
       min-height: 180px;
     }
-
-    #status-msg {
-      text-align: center;
-      margin-top: 60px;
-      font-size: 15px;
-      color: var(--text-muted);
-    }
-    .error-icon { font-size: 40px; margin-bottom: 12px; display: block; }
   </style>
 </head>
 <body>
 
+  <!-- Заставка запуска (Splash Screen) -->
+  <div id="splash-screen">
+    <div class="splash-box">
+      <div class="splash-rings">
+        <div class="splash-ring splash-ring-outer"></div>
+        <div class="splash-ring splash-ring-inner"></div>
+        <svg class="splash-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="splash-title">Weight Tracker</div>
+      <div class="splash-progress-track">
+        <div class="splash-progress-bar"></div>
+      </div>
+    </div>
+  </div>
+
   <div class="app-container">
-    <div id="status-msg">Синхронизация данных... ⏳</div>
+    <div id="error-box"></div>
 
     <div id="content" style="display: none;">
       <div id="cards-container" class="cards-grid"></div>
@@ -253,12 +377,25 @@
     let selectedUsers = new Set();
     let currentPeriod = 'all';
 
-    // Мягкая палитра: фисташковый лайм, небесный аквамарин, пастельный коралл
     const USER_COLORS = [
       { border: '#9fe62e', glow: 'rgba(159, 230, 46, 0.16)' },
       { border: '#38bdf8', glow: 'rgba(56, 189, 248, 0.16)' },
       { border: '#fb7185', glow: 'rgba(251, 113, 133, 0.16)' }
     ];
+
+    // Отсчет времени открытия экрана для гладкой анимации
+    const splashStartTime = Date.now();
+
+    function dismissSplash() {
+      const minDuration = 500; // Ровно 0.5 секунды — глаз успевает заметить логотип, но нет ожидания
+      const elapsed = Date.now() - splashStartTime;
+      const wait = Math.max(0, minDuration - elapsed);
+
+      setTimeout(() => {
+        const splash = document.getElementById('splash-screen');
+        if (splash) splash.classList.add('hidden');
+      }, wait);
+    }
 
     function fetchJSONP(url) {
       return new Promise((resolve, reject) => {
@@ -281,15 +418,18 @@
     }
 
     async function loadData() {
-      const statusEl = document.getElementById('status-msg');
+      const errorBox = document.getElementById('error-box');
       const contentEl = document.getElementById('content');
       const userId = tg?.initDataUnsafe?.user?.id;
 
       if (!userId) {
-        statusEl.innerHTML = `<span class="error-icon">🔒</span><b>Приватный доступ</b><br>Запустите через Telegram-бота.`;
+        dismissSplash();
+        errorBox.style.display = 'block';
+        errorBox.innerHTML = `<span class="error-icon">🔒</span><b>Приватный доступ</b><br>Запустите через Telegram-бота.`;
         return;
       }
 
+      // 1. МГНОВЕННЫЙ СТАРТ: если есть кэш в памяти устройства
       const cacheKey = 'wt_data_' + userId;
       const cachedRaw = localStorage.getItem(cacheKey);
 
@@ -299,17 +439,22 @@
           selectedUsers.clear();
           for (const uid in rawData) selectedUsers.add(uid);
 
-          statusEl.style.display = 'none';
           contentEl.style.display = 'flex';
           renderCards(rawData);
           renderChart();
+          dismissSplash(); // Плавно гасим заставку
         } catch (e) {}
       }
 
+      // 2. ФОНОВОЕ ОБНОВЛЕНИЕ
       try {
         const data = await fetchJSONP(`${API_URL}?userId=${userId}`);
         if (data.error) {
-          if (!cachedRaw) statusEl.innerHTML = `<span class="error-icon">⛔️</span>${data.message || 'Ошибка доступа'}`;
+          if (!cachedRaw) {
+            dismissSplash();
+            errorBox.style.display = 'block';
+            errorBox.innerHTML = `<span class="error-icon">⛔️</span>${data.message || 'Ошибка доступа'}`;
+          }
           return;
         }
 
@@ -320,14 +465,16 @@
           for (const uid in data) selectedUsers.add(uid);
         }
 
-        statusEl.style.display = 'none';
         contentEl.style.display = 'flex';
         renderCards(data);
         renderChart();
+        dismissSplash();
 
       } catch (err) {
         if (!cachedRaw) {
-          statusEl.innerHTML = `<span class="error-icon">⚠️</span>Ошибка подключения к базе данных.`;
+          dismissSplash();
+          errorBox.style.display = 'block';
+          errorBox.innerHTML = `<span class="error-icon">⚠️</span>Ошибка подключения к базе данных.`;
         }
       }
     }
