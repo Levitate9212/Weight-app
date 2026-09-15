@@ -544,9 +544,11 @@
     async function loadData() {
       const errorBox = document.getElementById('error-box');
       const contentEl = document.getElementById('content');
-      const userId = tg?.initDataUnsafe?.user?.id;
+      
+      // Берем подписанную Telegram строку initData вместо сырого ID
+      const initData = tg?.initData;
 
-      if (!userId) {
+      if (!initData) {
         dismissSplash();
         errorBox.style.display = 'block';
         errorBox.innerHTML = `<span class="error-icon">🔒</span><b>Приватный доступ</b><br>Запустите через Telegram-бота.`;
@@ -554,7 +556,8 @@
       }
 
       try {
-        const data = await fetchJSONP(`${API_URL}?userId=${userId}&t=${Date.now()}`);
+        // Передаем initData в закодированном виде
+        const data = await fetchJSONP(`${API_URL}?initData=${encodeURIComponent(initData)}&t=${Date.now()}`);
         if (data.error) {
           dismissSplash();
           errorBox.style.display = 'block';
