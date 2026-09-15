@@ -7,7 +7,6 @@
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <!-- СИНХРОНИЗАЦИЯ ЦВЕТОВ ЗАСТАВКИ И ГРАФИКОВ ДО ОТРИСОВКИ СТРАНИЦЫ -->
   <script>
     const PALETTES = [
       [
@@ -358,7 +357,7 @@
       min-height: 140px;
     }
 
-    /* Карточка прогноза цели */
+    /* Карточка прогноза цели и плато */
     .forecast-card {
       background: var(--card-bg);
       border: 1.5px solid rgba(255, 255, 255, 0.05);
@@ -368,6 +367,11 @@
       flex-direction: column;
       gap: 4px;
       flex-shrink: 0;
+      transition: border-color 0.3s ease;
+    }
+    .forecast-card.plateau {
+      border-color: rgba(255, 159, 10, 0.35);
+      background: linear-gradient(180deg, rgba(255, 159, 10, 0.04) 0%, var(--card-bg) 100%);
     }
     .forecast-title {
       font-weight: 700;
@@ -437,9 +441,9 @@
         </div>
       </div>
 
-      <!-- Блок прогноза -->
+      <!-- Блок прогноза или детектора плато -->
       <div id="forecast-card" class="forecast-card" style="display: none;">
-        <span class="forecast-title">🎯 Прогноз достижения цели (Тренд)</span>
+        <span id="forecast-title" class="forecast-title">🎯 Прогноз достижения цели</span>
         <div id="forecast-date" class="forecast-main-val">--</div>
         <div class="forecast-sub-info">
           <span>Темп: <b id="forecast-pace">--</b></span>
@@ -491,7 +495,7 @@
     }
 
     /**
-     * Чистая функция расчета прогноза методом наименьших квадратов (линейная регрессия)
+     * Расчет линейной регрессии с детектором плато
      */
     function calculateForecast(entries, target) {
       if (!entries || entries.length < 5) return null;
@@ -501,12 +505,11 @@
       const daysSpan = (lastTs - firstTs) / (1000 * 60 * 60 * 24);
       if (daysSpan < 7) return null;
 
-      // Переводим timestamp в дни от первой точки для стабильности расчетов
       let n = entries.length;
       let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
 
       entries.forEach(e => {
-        let x = (e.timestamp - firstTs) / (1000 * 60 * 60 * 24); // дни
+        let x = (e.timestamp - firstTs) / (1000 * 60 * 60 * 24);
         let y = e.weight;
         sumX += x;
         sumY += y;
@@ -514,25 +517,37 @@
         sumX2 += x * x;
       });
 
-      // Наклон регрессии (кг в день)
       let denominator = (n * sumX2 - sumX * sumX);
       if (denominator === 0) return null;
       let dailySlope = (n * sumXY - sumX * sumY) / denominator;
 
       const lastEntry = entries[entries.length - 1];
       const currentWeight = lastEntry.weight;
-      const leftKg = currentWeight - target; // положительное если нужно сбросить
+      const leftKg = currentWeight - target;
 
-      // Проверяем направление движения к цели
-      if ((leftKg > 0 && dailySlope >= 0) || (leftKg < 0 && dailySlope <= 0)) {
-        return null; // Стоим на месте или удаляемся от цели
+      // ДЕТЕКТОР ПЛАТО:
+      // Если цель еще не достигнута, но динамика около нуля (|dailySlope| < 0.015 кг/день)
+      // или идет откат назад/стагнация на фоне дефицита
+      const isPlateau = Math.abs(dailySlope) < 0.015 || (leftKg > 0 && dailySlope >= 0) || (leftKg < 0 && dailySlope <= 0);
+
+      if (isPlateau) {
+        return {
+          isPlateau: true,
+          plateauDays: Math.round(daysSpan),
+          paceWeek: (dailySlope * 7).toFixed(1) + ' кг/нед',
+          leftKg: Math.abs(leftKg).toFixed(1) + ' кг',
+          currentWeight: currentWeight,
+          targetWeight: target
+        };
       }
 
+      // Обычный активный прогноз к цели
       let daysNeeded = Math.abs(leftKg / dailySlope);
       let targetTimestamp = lastEntry.timestamp + daysNeeded * 24 * 60 * 60 * 1000;
       let targetDate = new Date(targetTimestamp);
 
       return {
+        isPlateau: false,
         dateStr: targetDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }),
         paceWeek: (dailySlope * 7).toFixed(1) + ' кг/нед',
         leftKg: Math.abs(leftKg).toFixed(1) + ' кг',
@@ -544,8 +559,6 @@
     async function loadData() {
       const errorBox = document.getElementById('error-box');
       const contentEl = document.getElementById('content');
-      
-      // Берем подписанную Telegram строку initData вместо сырого ID
       const initData = tg?.initData;
 
       if (!initData) {
@@ -556,7 +569,6 @@
       }
 
       try {
-        // Передаем initData в закодированном виде
         const data = await fetchJSONP(`${API_URL}?initData=${encodeURIComponent(initData)}&t=${Date.now()}`);
         if (data.error) {
           dismissSplash();
@@ -738,8 +750,8 @@
 
       const datasets = [];
       const forecastCard = document.getElementById('forecast-card');
+      const titleEl = document.getElementById('forecast-title');
 
-      // Обработка прогноза через регрессию (только если выбран ровно 1 атлет)
       if (selectedUsers.size === 1) {
         const activeUid = Array.from(selectedUsers)[0];
         const u = rawData[activeUid];
@@ -748,27 +760,40 @@
           const forecastInfo = calculateForecast(u.entries, u.target);
           if (forecastInfo) {
             forecastCard.style.display = 'flex';
-            document.getElementById('forecast-date').innerText = forecastInfo.dateStr;
-            document.getElementById('forecast-pace').innerText = forecastInfo.paceWeek;
-            document.getElementById('forecast-left').innerText = forecastInfo.leftKg;
 
-            labels.push('🎯 Цель');
-            const projData = labels.map(() => null);
-            projData[projData.length - 2] = forecastInfo.currentWeight;
-            projData[projData.length - 1] = forecastInfo.targetWeight;
+            if (forecastInfo.isPlateau) {
+              // РЕЖИМ ПЛАТО
+              forecastCard.classList.add('plateau');
+              titleEl.innerText = '⚠️ ДЕТЕКТОР ПЛАТО (ФИКСАЦИЯ ВЕСА)';
+              document.getElementById('forecast-date').innerText = `Вес стоит на месте (~${forecastInfo.plateauDays} дн.)`;
+              document.getElementById('forecast-pace').innerText = `${forecastInfo.paceWeek} (стагнация)`;
+              document.getElementById('forecast-left').innerText = forecastInfo.leftKg;
+            } else {
+              // РЕЖИМ АКТИВНОГО ПРОГНОЗА
+              forecastCard.classList.remove('plateau');
+              titleEl.innerText = '🎯 ПРОГНОЗ ДОСТИЖЕНИЯ ЦЕЛИ (ТРЕНД)';
+              document.getElementById('forecast-date').innerText = forecastInfo.dateStr;
+              document.getElementById('forecast-pace').innerText = forecastInfo.paceWeek;
+              document.getElementById('forecast-left').innerText = forecastInfo.leftKg;
 
-            const colorCfg = userColorMap[activeUid] || currentPalette[0];
-            datasets.push({
-              label: 'Прогноз',
-              data: projData,
-              borderColor: colorCfg.border,
-              borderDash: [4, 4],
-              borderWidth: 2,
-              pointRadius: 4,
-              pointBackgroundColor: colorCfg.border,
-              fill: false,
-              spanGaps: true
-            });
+              labels.push('🎯 Цель');
+              const projData = labels.map(() => null);
+              projData[projData.length - 2] = forecastInfo.currentWeight;
+              projData[projData.length - 1] = forecastInfo.targetWeight;
+
+              const colorCfg = userColorMap[activeUid] || currentPalette[0];
+              datasets.push({
+                label: 'Прогноз',
+                data: projData,
+                borderColor: colorCfg.border,
+                borderDash: [4, 4],
+                borderWidth: 2,
+                pointRadius: 4,
+                pointBackgroundColor: colorCfg.border,
+                fill: false,
+                spanGaps: true
+              });
+            }
           } else {
             forecastCard.style.display = 'none';
           }
