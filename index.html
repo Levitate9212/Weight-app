@@ -437,9 +437,9 @@
         </div>
       </div>
 
-      <!-- Блок прогноза (скрыт по умолчанию, появляется если набрано достаточно данных) -->
+      <!-- Блок прогноза -->
       <div id="forecast-card" class="forecast-card" style="display: none;">
-        <span class="forecast-title">🎯 Прогноз достижения цели</span>
+        <span class="forecast-title">🎯 Прогноз достижения цели (Тренд)</span>
         <div id="forecast-date" class="forecast-main-val">--</div>
         <div class="forecast-sub-info">
           <span>Темп: <b id="forecast-pace">--</b></span>
@@ -488,6 +488,57 @@
         script.onerror = () => { cleanup(); reject(new Error('Ошибка загрузки')); };
         document.body.appendChild(script);
       });
+    }
+
+    /**
+     * Чистая функция расчета прогноза методом наименьших квадратов (линейная регрессия)
+     */
+    function calculateForecast(entries, target) {
+      if (!entries || entries.length < 5) return null;
+
+      const firstTs = entries[0].timestamp;
+      const lastTs = entries[entries.length - 1].timestamp;
+      const daysSpan = (lastTs - firstTs) / (1000 * 60 * 60 * 24);
+      if (daysSpan < 7) return null;
+
+      // Переводим timestamp в дни от первой точки для стабильности расчетов
+      let n = entries.length;
+      let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+
+      entries.forEach(e => {
+        let x = (e.timestamp - firstTs) / (1000 * 60 * 60 * 24); // дни
+        let y = e.weight;
+        sumX += x;
+        sumY += y;
+        sumXY += x * y;
+        sumX2 += x * x;
+      });
+
+      // Наклон регрессии (кг в день)
+      let denominator = (n * sumX2 - sumX * sumX);
+      if (denominator === 0) return null;
+      let dailySlope = (n * sumXY - sumX * sumY) / denominator;
+
+      const lastEntry = entries[entries.length - 1];
+      const currentWeight = lastEntry.weight;
+      const leftKg = currentWeight - target; // положительное если нужно сбросить
+
+      // Проверяем направление движения к цели
+      if ((leftKg > 0 && dailySlope >= 0) || (leftKg < 0 && dailySlope <= 0)) {
+        return null; // Стоим на месте или удаляемся от цели
+      }
+
+      let daysNeeded = Math.abs(leftKg / dailySlope);
+      let targetTimestamp = lastEntry.timestamp + daysNeeded * 24 * 60 * 60 * 1000;
+      let targetDate = new Date(targetTimestamp);
+
+      return {
+        dateStr: targetDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' }),
+        paceWeek: (dailySlope * 7).toFixed(1) + ' кг/нед',
+        leftKg: Math.abs(leftKg).toFixed(1) + ' кг',
+        currentWeight: currentWeight,
+        targetWeight: target
+      };
     }
 
     async function loadData() {
@@ -683,62 +734,38 @@
       });
 
       const datasets = [];
-
-      // Обработка блока прогноза цели (только если выбран ровно 1 атлет и достаточно данных)
       const forecastCard = document.getElementById('forecast-card');
+
+      // Обработка прогноза через регрессию (только если выбран ровно 1 атлет)
       if (selectedUsers.size === 1) {
         const activeUid = Array.from(selectedUsers)[0];
         const u = rawData[activeUid];
         
-        // Условия надежности: минимум 5 записей И разница между первым и последним замером >= 7 дней
-        const hasEnoughData = u && u.entries && u.entries.length >= 5 && 
-                              ((u.entries[u.entries.length - 1].timestamp - u.entries[0].timestamp) >= 7 * 24 * 60 * 60 * 1000);
+        if (u && u.target) {
+          const forecastInfo = calculateForecast(u.entries, u.target);
+          if (forecastInfo) {
+            forecastCard.style.display = 'flex';
+            document.getElementById('forecast-date').innerText = forecastInfo.dateStr;
+            document.getElementById('forecast-pace').innerText = forecastInfo.paceWeek;
+            document.getElementById('forecast-left').innerText = forecastInfo.leftKg;
 
-        if (u && u.target && hasEnoughData) {
-          forecastCard.style.display = 'flex';
-          
-          // Считаем скорость по всем доступным записям (или сглаженному тренду)
-          const first = u.entries[0];
-          const last = u.entries[u.entries.length - 1];
-          const daysDiff = (last.timestamp - first.timestamp) / (1000 * 60 * 60 * 24);
-          
-          if (daysDiff > 0) {
-            const weightDiff = last.weight - first.weight;
-            const dailySpeed = weightDiff / daysDiff;
-            const currentWeight = last.weight;
-            const leftKg = currentWeight - u.target;
-            
-            if ((leftKg > 0 && dailySpeed < 0) || (leftKg < 0 && dailySpeed > 0)) {
-              const daysNeeded = Math.abs(leftKg / dailySpeed);
-              const targetDate = new Date(last.timestamp + daysNeeded * 24 * 60 * 60 * 1000);
-              
-              const dateFormatted = targetDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
-              const weeklyPace = (dailySpeed * 7).toFixed(1) + ' кг/нед';
-              
-              document.getElementById('forecast-date').innerText = dateFormatted;
-              document.getElementById('forecast-pace').innerText = weeklyPace;
-              document.getElementById('forecast-left').innerText = Math.abs(leftKg).toFixed(1) + ' кг';
+            labels.push('🎯 Цель');
+            const projData = labels.map(() => null);
+            projData[projData.length - 2] = forecastInfo.currentWeight;
+            projData[projData.length - 1] = forecastInfo.targetWeight;
 
-              labels.push('🎯 Цель');
-              const projData = labels.map(() => null);
-              projData[projData.length - 2] = currentWeight;
-              projData[projData.length - 1] = u.target;
-
-              const colorCfg = userColorMap[activeUid] || currentPalette[0];
-              datasets.push({
-                label: 'Прогноз',
-                data: projData,
-                borderColor: colorCfg.border,
-                borderDash: [4, 4],
-                borderWidth: 2,
-                pointRadius: 4,
-                pointBackgroundColor: colorCfg.border,
-                fill: false,
-                spanGaps: true
-              });
-            } else {
-              forecastCard.style.display = 'none';
-            }
+            const colorCfg = userColorMap[activeUid] || currentPalette[0];
+            datasets.push({
+              label: 'Прогноз',
+              data: projData,
+              borderColor: colorCfg.border,
+              borderDash: [4, 4],
+              borderWidth: 2,
+              pointRadius: 4,
+              pointBackgroundColor: colorCfg.border,
+              fill: false,
+              spanGaps: true
+            });
           } else {
             forecastCard.style.display = 'none';
           }
