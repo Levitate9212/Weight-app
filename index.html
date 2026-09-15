@@ -437,7 +437,7 @@
         </div>
       </div>
 
-      <!-- Блок прогноза (скрыт по умолчанию, появляется если выбран ровно 1 атлет с целью) -->
+      <!-- Блок прогноза (скрыт по умолчанию, появляется если набрано достаточно данных) -->
       <div id="forecast-card" class="forecast-card" style="display: none;">
         <span class="forecast-title">🎯 Прогноз достижения цели</span>
         <div id="forecast-date" class="forecast-main-val">--</div>
@@ -684,28 +684,30 @@
 
       const datasets = [];
 
-      // Обработка блока прогноза цели (только если выбран ровно 1 атлет)
+      // Обработка блока прогноза цели (только если выбран ровно 1 атлет и достаточно данных)
       const forecastCard = document.getElementById('forecast-card');
       if (selectedUsers.size === 1) {
         const activeUid = Array.from(selectedUsers)[0];
         const u = rawData[activeUid];
         
-        if (u && u.target && u.entries && u.entries.length >= 3) {
+        // Условия надежности: минимум 5 записей И разница между первым и последним замером >= 7 дней
+        const hasEnoughData = u && u.entries && u.entries.length >= 5 && 
+                              ((u.entries[u.entries.length - 1].timestamp - u.entries[0].timestamp) >= 7 * 24 * 60 * 60 * 1000);
+
+        if (u && u.target && hasEnoughData) {
           forecastCard.style.display = 'flex';
           
-          // Считаем скорость по последним 14 дням (или по всем, если записей мало)
-          const recentEntries = u.entries.slice(-14);
-          const first = recentEntries[0];
-          const last = recentEntries[recentEntries.length - 1];
+          // Считаем скорость по всем доступным записям (или сглаженному тренду)
+          const first = u.entries[0];
+          const last = u.entries[u.entries.length - 1];
           const daysDiff = (last.timestamp - first.timestamp) / (1000 * 60 * 60 * 24);
           
           if (daysDiff > 0) {
-            const weightDiff = last.weight - first.weight; // минус если худеет
-            const dailySpeed = weightDiff / daysDiff; // кг в день
+            const weightDiff = last.weight - first.weight;
+            const dailySpeed = weightDiff / daysDiff;
             const currentWeight = last.weight;
-            const leftKg = currentWeight - u.target; // положительное если надо сбросить
+            const leftKg = currentWeight - u.target;
             
-            // Проверяем, движется ли атлет к цели
             if ((leftKg > 0 && dailySpeed < 0) || (leftKg < 0 && dailySpeed > 0)) {
               const daysNeeded = Math.abs(leftKg / dailySpeed);
               const targetDate = new Date(last.timestamp + daysNeeded * 24 * 60 * 60 * 1000);
@@ -717,7 +719,6 @@
               document.getElementById('forecast-pace').innerText = weeklyPace;
               document.getElementById('forecast-left').innerText = Math.abs(leftKg).toFixed(1) + ' кг';
 
-              // Добавляем точку и линию прогноза на график
               labels.push('🎯 Цель');
               const projData = labels.map(() => null);
               projData[projData.length - 2] = currentWeight;
@@ -756,7 +757,6 @@
 
         const colorCfg = userColorMap[uid] || currentPalette[0];
 
-        // Массив данных с учетом добавленной метки прогноза (если есть)
         const userPointData = labels.map(l => {
           if (l === '🎯 Цель') return null;
           const match = u.entries.find(e => e.dateStr === l);
