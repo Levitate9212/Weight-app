@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Weight Tracker | Дашборд</title>
-  <!-- Telegram WebApp Script -->
+  <title>Weight Tracker</title>
+  <!-- Telegram WebApp -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <!-- Chart.js для красивых графиков -->
+  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- Google Fonts & Tailwind CSS -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Inter Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -17,101 +17,97 @@
         extend: {
           fontFamily: { sans: ['Inter', 'sans-serif'] },
           colors: {
-            darkBg: '#0b0f19',
-            cardBg: '#131c2e',
-            accentGreen: '#10b981',
-            accentRed: '#ef4444',
-            accentBlue: '#3b82f6',
-            accentNeon: '#22c55e'
+            iosBlack: '#000000',
+            iosCard: '#1c1c1e',
+            iosCardSecondary: '#2c2c2e',
+            iosBlue: '#0a84ff',
+            iosGreen: '#30d158',
+            iosRed: '#ff453a',
+            iosGray: '#8e8e93',
+            iosBorder: 'rgba(255, 255, 255, 0.08)'
           }
         }
       }
     }
   </script>
 </head>
-<body class="bg-darkBg text-gray-100 font-sans min-h-screen pb-12">
+<body class="bg-iosBlack text-white font-sans antialiased min-h-screen pb-16 selection:bg-iosBlue selection:text-white">
 
-  <!-- Шапка -->
-  <header class="bg-cardBg border-b border-gray-800 sticky top-0 z-50 px-4 py-3 flex justify-between items-center shadow-lg">
-    <div class="flex items-center space-x-2">
-      <span class="text-2xl">🏆</span>
-      <h1 class="font-bold text-lg tracking-wide text-white">WEIGHT TRACKER</h1>
+  <!-- iOS Style Navigation Bar -->
+  <header class="sticky top-0 z-50 bg-iosBlack/80 backdrop-blur-xl border-b border-iosBorder px-5 py-4 flex justify-between items-center">
+    <div class="flex items-center space-x-2.5">
+      <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-iosBlue to-indigo-500 flex items-center justify-center text-sm shadow-lg shadow-iosBlue/20">🏆</div>
+      <h1 class="font-semibold text-lg tracking-tight">Weight Tracker</h1>
     </div>
-    <!-- Переключатель атлетов (если пользователей несколько) -->
+    <!-- Селектор пользователя в стиле iOS Picker -->
     <div id="userSelectorContainer" class="hidden">
-      <select id="userSelect" class="bg-darkBg text-sm border border-gray-700 rounded-lg px-3 py-1.5 focus:outline-none focus:border-accentBlue text-white font-medium">
+      <select id="userSelect" class="bg-iosCardSecondary text-sm font-medium border border-iosBorder rounded-full px-4 py-1.5 focus:outline-none focus:ring-2 focus:ring-iosBlue text-white appearance-none pr-8 cursor-pointer">
         <!-- Заполняется динамически -->
       </select>
     </div>
   </header>
 
-  <main class="max-w-4xl mx-auto px-4 mt-6">
+  <main class="max-w-xl mx-auto px-4 mt-6 space-y-5">
 
-    <!-- Статус загрузки / Ошибки -->
-    <div id="loader" class="flex flex-col items-center justify-center py-20">
-      <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-accentBlue mb-4"></div>
-      <p class="text-gray-400 text-sm">Загружаем данные атлетов...</p>
+    <!-- Лоадер -->
+    <div id="loader" class="flex flex-col items-center justify-center py-32">
+      <div class="animate-spin rounded-full h-10 w-10 border-2 border-iosBlue border-t-transparent mb-3"></div>
+      <p class="text-iosGray text-sm font-medium">Загрузка данных...</p>
     </div>
 
-    <div id="errorBox" class="hidden bg-red-900/50 border border-red-500 text-red-200 px-4 py-3 rounded-xl mb-6 text-sm"></div>
+    <!-- Ошибка -->
+    <div id="errorBox" class="hidden bg-iosRed/20 border border-iosRed/30 text-iosRed px-4 py-3 rounded-2xl text-sm font-medium"></div>
 
-    <!-- Основной контент (скрыт до загрузки) -->
-    <div id="dashboardContent" class="hidden space-y-6">
+    <!-- Основной дашборд -->
+    <div id="dashboardContent" class="hidden space-y-5">
 
-      <!-- Карточки метрик -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="bg-cardBg border border-gray-800/80 rounded-2xl p-4 shadow-md">
-          <p class="text-xs text-gray-400 font-medium uppercase tracking-wider">Текущий вес</p>
-          <p id="currWeight" class="text-2xl font-extrabold text-white mt-1">-</p>
-          <span id="currDiffBadge" class="text-xs font-semibold px-2 py-0.5 rounded-md mt-2 inline-block">--</span>
+      <!-- Главная карточка текущего веса (iOS Widget Style) -->
+      <div class="bg-iosCard border border-iosBorder rounded-3xl p-6 relative overflow-hidden shadow-2xl">
+        <div class="absolute -right-10 -top-10 w-40 h-40 bg-iosBlue/10 rounded-full blur-3xl pointer-events-none"></div>
+        
+        <div class="flex justify-between items-start">
+          <div>
+            <p class="text-xs font-semibold uppercase tracking-wider text-iosGray">Текущий вес</p>
+            <p id="currWeight" class="text-4xl font-bold tracking-tight mt-1">-</p>
+          </div>
+          <span id="currDiffBadge" class="text-xs font-semibold px-3 py-1 rounded-full border border-iosBorder">--</span>
         </div>
 
-        <div class="bg-cardBg border border-gray-800/80 rounded-2xl p-4 shadow-md">
-          <p class="text-xs text-gray-400 font-medium uppercase tracking-wider">Тренд (SMA 7)</p>
-          <p id="trendWeight" class="text-2xl font-extrabold text-accentBlue mt-1">-</p>
-          <span class="text-xs text-gray-400 mt-2 inline-block">Истинный baseline</span>
-        </div>
-
-        <div class="bg-cardBg border border-gray-800/80 rounded-2xl p-4 shadow-md">
-          <p class="text-xs text-gray-400 font-medium uppercase tracking-wider">Старт</p>
-          <p id="startWeight" class="text-2xl font-extrabold text-gray-200 mt-1">-</p>
-          <span class="text-xs text-gray-400 mt-2 inline-block">Точка отсчета</span>
-        </div>
-
-        <div class="bg-cardBg border border-gray-800/80 rounded-2xl p-4 shadow-md">
-          <p class="text-xs text-gray-400 font-medium uppercase tracking-wider">Цель</p>
-          <p id="targetWeight" class="text-2xl font-extrabold text-accentNeon mt-1">-</p>
-          <span id="progressText" class="text-xs text-gray-400 mt-2 inline-block">Цель: --%</span>
+        <div class="grid grid-cols-3 gap-3 mt-6 pt-5 border-t border-iosBorder/60">
+          <div>
+            <p class="text-[11px] font-medium text-iosGray">Тренд (SMA 7)</p>
+            <p id="trendWeight" class="text-base font-semibold text-iosBlue mt-0.5">-</p>
+          </div>
+          <div>
+            <p class="text-[11px] font-medium text-iosGray">Старт</p>
+            <p id="startWeight" class="text-base font-semibold text-white mt-0.5">-</p>
+          </div>
+          <div>
+            <p class="text-[11px] font-medium text-iosGray">Цель</p>
+            <p id="targetWeight" class="text-base font-semibold text-iosGreen mt-0.5">-</p>
+          </div>
         </div>
       </div>
 
-      <!-- Блок графика -->
-      <div class="bg-cardBg border border-gray-800/80 rounded-2xl p-5 shadow-xl">
-        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-2">
+      <!-- График (iOS Card Style) -->
+      <div class="bg-iosCard border border-iosBorder rounded-3xl p-6 shadow-2xl">
+        <div class="flex justify-between items-center mb-5">
           <div>
-            <h2 class="text-base font-bold text-white flex items-center gap-2">
-              <span>📈</span> Динамика веса и линия тренда
-            </h2>
-            <p class="text-xs text-gray-400">Фактические замеры и сглаженная кривая скользящего среднего</p>
+            <h2 class="text-base font-semibold tracking-tight">Динамика и тренд</h2>
+            <p class="text-xs text-iosGray mt-0.5">Фактические замеры и линия скользящего среднего</p>
           </div>
-          <div class="flex items-center space-x-3 text-xs font-medium">
-            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-blue-500 inline-block"></span> Факт</span>
-            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-400 inline-block"></span> Тренд (SMA)</span>
+          <div class="flex items-center space-x-3 text-xs font-medium text-iosGray">
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-iosBlue inline-block"></span> Факт</span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-iosGreen inline-block"></span> Тренд</span>
           </div>
         </div>
 
-        <div class="relative w-full h-[320px]">
+        <div class="relative w-full h-[280px]">
           <canvas id="weightChart"></canvas>
         </div>
-      </div>
-
-      <!-- Последние заметки и чек-ины -->
-      <div class="bg-cardBg border border-gray-800/80 rounded-2xl p-5 shadow-xl">
-        <h3 class="text-base font-bold text-white mb-3 flex items-center gap-2">
-          <span>📝</span> Последние отметки и сон
-        </h3>
-        <div id="notesContainer" class="space-y-3">
-          <!-- Заполняется динамически -->
+        
+        <div id="progressText" class="mt-4 text-center text-xs font-medium text-iosGray">
+          Прогресс цели: --%
         </div>
       </div>
 
@@ -119,45 +115,38 @@
   </main>
 
   <script>
-    // ⚠️ ВСТАВЬТЕ СЮДУ ССЫЛКУ НА ВАШЕ РАЗВЕРНУТОЕ WEB-ПРИЛОЖЕНИЕ GOOGLE APPS SCRIPT (заканчивается на /exec)
+    // ⚠️ Вставьте ссылку на развернутое веб-приложение Google Apps Script
     const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx3eYPedBPTxSl83O8NuajX-h0sopO4MV3S30nQfyvfXbSnPd3vKsckGl2ibuggxrFDaQ/exec";
 
     let chartInstance = null;
     let globalData = {};
     let activeUserId = null;
 
-    // Инициализация при загрузке страницы
     window.addEventListener('DOMContentLoaded', () => {
-      // Инициализация Telegram WebApp
       if (window.Telegram && window.Telegram.WebApp) {
         window.Telegram.WebApp.ready();
         window.Telegram.WebApp.expand();
       }
-
       fetchData();
     });
 
     function fetchData() {
       const initData = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp.initData : "";
-      
-      // Формируем запрос с передачей initData для проверки прав
       const url = `${APPS_SCRIPT_URL}?initData=${encodeURIComponent(initData)}&callback=handleData`;
 
-      // Используем JSONP для обхода CORS ограничений Google Apps Script
       const script = document.createElement('script');
       script.src = url;
       script.onerror = () => {
-        showError("⚠️ Не удалось загрузить данные с сервера. Проверьте правильность URL скрипта.");
+        showError("Не удалось подключиться к серверу скрипта.");
       };
       document.body.appendChild(script);
     }
 
-    // Глобальный callback для JSONP
     window.handleData = function(response) {
       document.getElementById('loader').classList.add('hidden');
 
       if (response.error) {
-        showError(response.message || "Ошибка авторизации или доступа.");
+        showError(response.message || "Ошибка авторизации.");
         return;
       }
 
@@ -165,11 +154,10 @@
       const userIds = Object.keys(globalData);
 
       if (userIds.length === 0) {
-        showError("⚠️ В базе пока нет данных по атлетам.");
+        showError("В базе данных нет записей.");
         return;
       }
 
-      // Настраиваем переключатель пользователей
       const userSelect = document.getElementById('userSelect');
       userSelect.innerHTML = '';
       
@@ -185,13 +173,10 @@
         document.getElementById('userSelectorContainer').classList.remove('hidden');
       }
 
-      // По умолчанию берем первого атлета или текущего пользователя из Telegram
       let defaultUid = userIds[0];
       if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
         const tgId = String(window.Telegram.WebApp.initDataUnsafe.user.id);
-        if (globalData[tgId]) {
-          defaultUid = tgId;
-        }
+        if (globalData[tgId]) defaultUid = tgId;
       }
 
       userSelect.value = defaultUid;
@@ -213,7 +198,6 @@
       errBox.classList.remove('hidden');
     }
 
-    // Расчет скользящей средней (SMA / Линия тренда) за 7 точек
     function calculateSMA(entries, windowSize = 7) {
       return entries.map((entry, index, arr) => {
         const start = Math.max(0, index - windowSize + 1);
@@ -225,41 +209,36 @@
 
     function renderDashboard(userData) {
       if (!userData || !userData.entries || userData.entries.length === 0) {
-        showError("У выбранного атлета пока нет записей о весе.");
+        showError("У пользователя нет данных о весе.");
         return;
       }
 
-      const entries = userData.entries; // уже отсортированы по времени
+      const entries = userData.entries;
       const latest = entries[entries.length - 1];
       const prev = entries.length > 1 ? entries[entries.length - 2] : latest;
       const start = userData.start || entries[0].weight;
       const target = userData.target;
 
-      // Метрики
       document.getElementById('currWeight').textContent = `${latest.weight} кг`;
       document.getElementById('startWeight').textContent = `${start} кг`;
-      document.getElementById('targetWeight').textContent = target ? `${target} кг` : "Не задана";
+      document.getElementById('targetWeight').textContent = target ? `${target} кг` : "—";
 
-      // Разница за сутки
       const diffDay = parseFloat((latest.weight - prev.weight).toFixed(1));
       const badge = document.getElementById('currDiffBadge');
       if (diffDay < 0) {
         badge.textContent = `${diffDay} кг за сутки`;
-        badge.className = "text-xs font-semibold px-2 py-0.5 rounded-md mt-2 inline-block bg-emerald-500/20 text-emerald-400";
+        badge.className = "text-xs font-semibold px-3 py-1 rounded-full bg-iosGreen/15 text-iosGreen border border-iosGreen/20";
       } else if (diffDay > 0) {
         badge.textContent = `+${diffDay} кг за сутки`;
-        badge.className = "text-xs font-semibold px-2 py-0.5 rounded-md mt-2 inline-block bg-red-500/20 text-red-400";
+        badge.className = "text-xs font-semibold px-3 py-1 rounded-full bg-iosRed/15 text-iosRed border border-iosRed/20";
       } else {
         badge.textContent = `Без изменений`;
-        badge.className = "text-xs font-semibold px-2 py-0.5 rounded-md mt-2 inline-block bg-gray-700 text-gray-300";
+        badge.className = "text-xs font-semibold px-3 py-1 rounded-full bg-iosCardSecondary text-iosGray border border-iosBorder";
       }
 
-      // Расчет тренда (SMA)
       const smaValues = calculateSMA(entries);
-      const currentTrend = smaValues[smaValues.length - 1];
-      document.getElementById('trendWeight').textContent = `${currentTrend} кг`;
+      document.getElementById('trendWeight').textContent = `${smaValues[smaValues.length - 1]} кг`;
 
-      // Процент выполнения цели
       if (target) {
         const totalDist = Math.abs(target - start);
         const currentDist = Math.abs(latest.weight - start);
@@ -267,16 +246,13 @@
         pct = Math.max(0, Math.min(100, pct));
         document.getElementById('progressText').textContent = `Выполнение цели: ${pct}%`;
       } else {
-        document.getElementById('progressText').textContent = `Задайте цель через /goal`;
+        document.getElementById('progressText').textContent = `Цель не установлена (/goal)`;
       }
 
-      // Рендер графика Chart.js
       const labels = entries.map(e => e.dateStr);
       const weights = entries.map(e => e.weight);
 
-      if (chartInstance) {
-        chartInstance.destroy();
-      }
+      if (chartInstance) chartInstance.destroy();
 
       const ctx = document.getElementById('weightChart').getContext('2d');
       chartInstance = new Chart(ctx, {
@@ -285,24 +261,24 @@
           labels: labels,
           datasets: [
             {
-              label: 'Фактический вес',
+              label: 'Факт',
               data: weights,
-              borderColor: '#3b82f6',
-              backgroundColor: 'rgba(59, 130, 246, 0.1)',
-              borderWidth: 2.5,
+              borderColor: '#0a84ff',
+              backgroundColor: 'rgba(10, 132, 255, 0.08)',
+              borderWidth: 3,
               pointRadius: 4,
-              pointBackgroundColor: '#3b82f6',
-              tension: 0.2,
+              pointBackgroundColor: '#0a84ff',
+              tension: 0.35,
               fill: true
             },
             {
-              label: 'Линия тренда (SMA 7)',
+              label: 'Тренд',
               data: smaValues,
-              borderColor: '#10b981',
-              borderWidth: 2,
+              borderColor: '#30d158',
+              borderWidth: 2.5,
               pointRadius: 0,
-              borderDash: [5, 5],
-              tension: 0.3,
+              borderDash: [4, 4],
+              tension: 0.35,
               fill: false
             }
           ]
@@ -315,48 +291,27 @@
             tooltip: {
               mode: 'index',
               intersect: false,
-              backgroundColor: '#1e293b',
-              titleColor: '#f8fafc',
-              bodyColor: '#cbd5e1',
-              borderColor: '#334155',
-              borderWidth: 1
+              backgroundColor: '#2c2c2e',
+              titleColor: '#ffffff',
+              bodyColor: '#ebebf5',
+              borderColor: 'rgba(255,255,255,0.1)',
+              borderWidth: 1,
+              padding: 10,
+              cornerRadius: 12
             }
           },
           scales: {
             x: {
-              grid: { color: 'rgba(255, 255, 255, 0.05)' },
-              ticks: { color: '#94a3b8', font: { size: 11 } }
+              grid: { display: false },
+              ticks: { color: '#8e8e93', font: { size: 11, family: 'Inter' } }
             },
             y: {
               grid: { color: 'rgba(255, 255, 255, 0.05)' },
-              ticks: { color: '#94a3b8', font: { size: 11 } }
+              ticks: { color: '#8e8e93', font: { size: 11, family: 'Inter' } }
             }
           }
         }
       });
-
-      // Рендер списка последних заметок
-      const notesContainer = document.getElementById('notesContainer');
-      notesContainer.innerHTML = '';
-      
-      const recentEntries = [...entries].reverse().slice(0, 5);
-      recentEntries.forEach(ent => {
-        if (!ent.note) return;
-        const div = document.createElement('div');
-        div.className = "bg-darkBg/60 border border-gray-800 rounded-xl p-3 text-xs";
-        div.innerHTML = `
-          <div class="flex justify-between items-center text-gray-400 mb-1">
-            <span class="font-semibold text-gray-200">${ent.dateStr}</span>
-            <span class="text-accentBlue font-bold">${ent.weight} кг</span>
-          </div>
-          <p class="text-gray-300">${ent.note}</p>
-        `;
-        notesContainer.appendChild(div);
-      });
-
-      if (notesContainer.innerHTML === '') {
-        notesContainer.innerHTML = '<p class="text-gray-500 text-xs italic">Нет заметок за последнее время.</p>';
-      }
     }
   </script>
 </body>
