@@ -16,51 +16,59 @@
       width: 100%;
       max-width: 100vw;
       overflow-x: hidden;
-      background-color: #f3f6fc;
+      background-color: #f1f4f9;
       touch-action: pan-y;
+    }
+    #splashScreen {
+      transition: opacity 0.4s ease-out, visibility 0.4s ease-out;
     }
   </style>
 </head>
 <body class="text-slate-900 font-sans antialiased min-h-screen pb-12 selection:bg-blue-600 selection:text-white relative flex flex-col items-center">
 
-  <!-- Фоновые мягкие световые сферы -->
-  <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[450px] h-[450px] bg-blue-400/15 rounded-full blur-[120px] pointer-events-none"></div>
-  <div class="absolute top-1/3 right-10 w-[350px] h-[350px] bg-purple-400/10 rounded-full blur-[120px] pointer-events-none"></div>
+  <!-- СТИЛЬНАЯ ЗАСТАВКА (SPLASH SCREEN) -->
+  <div id="splashScreen" class="fixed inset-0 z-50 bg-[#f1f4f9] flex flex-col items-center justify-center">
+    <div class="relative flex items-center justify-center">
+      <div class="absolute w-24 h-24 bg-blue-500/20 rounded-full animate-ping"></div>
+      <div class="w-16 h-16 rounded-[24px] bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center text-2xl shadow-xl shadow-blue-500/30 text-white relative z-10">🏆</div>
+    </div>
+    <h2 class="mt-5 font-bold text-slate-800 text-sm tracking-tight">Weight Tracker AI</h2>
+    <p class="text-slate-400 text-xs mt-1 font-medium">Загрузка дашборда...</p>
+  </div>
+
+  <!-- Фоновые мягкие Mesh Gradient сферы (в стиле референса) -->
+  <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-blue-400/20 rounded-full blur-[140px] pointer-events-none"></div>
+  <div class="absolute top-1/4 right-5 w-[400px] h-[400px] bg-purple-400/15 rounded-full blur-[140px] pointer-events-none"></div>
+  <div class="absolute top-2/3 left-5 w-[400px] h-[400px] bg-pink-400/10 rounded-full blur-[140px] pointer-events-none"></div>
 
   <main class="w-full max-w-lg mx-auto px-4 pt-5 space-y-4 relative z-10">
 
     <!-- Выбор человека по центру вверху -->
-    <div id="userSelectorContainer" class="hidden flex justify-center mb-2">
-      <div id="userTabs" class="flex items-center space-x-1 bg-slate-200/80 p-1 rounded-full border border-slate-300/50 shadow-inner">
+    <div id="userSelectorContainer" class="hidden flex justify-center mb-1">
+      <div id="userTabs" class="flex items-center space-x-1 bg-white/80 backdrop-blur-md p-1 rounded-full border border-slate-200/80 shadow-sm">
         <!-- Заполняется динамически -->
       </div>
-    </div>
-
-    <!-- Лоадер -->
-    <div id="loader" class="flex flex-col items-center justify-center py-24">
-      <div class="animate-spin rounded-full h-8 w-8 border-2 border-blue-600 border-t-transparent mb-3 shadow-md"></div>
-      <p class="text-slate-500 text-xs font-medium">Загрузка данных...</p>
     </div>
 
     <!-- Ошибка -->
     <div id="errorBox" class="hidden bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl text-xs font-medium"></div>
 
-    <!-- Основной контент -->
+    <!-- Основной контент (Bento Grid) -->
     <div id="dashboardContent" class="hidden space-y-4">
 
-      <!-- Карточка 1: Главная синяя градиентная карточка -->
-      <div class="bg-gradient-to-br from-[#1d4ed8] via-[#2563eb] to-[#0284c7] text-white rounded-[32px] p-6 relative overflow-hidden shadow-xl shadow-blue-600/20">
-        <div class="absolute -right-8 -top-8 w-40 h-40 bg-white/10 rounded-full blur-2xl pointer-events-none"></div>
+      <!-- Карточка 1: Главная градиентная карточка (в стиле Performance Overview) -->
+      <div class="bg-gradient-to-br from-[#1d4ed8] via-[#2563eb] to-[#0284c7] text-white rounded-[32px] p-6 relative overflow-hidden shadow-[0_20px_40px_rgba(37,99,235,0.25)]">
+        <div class="absolute -right-10 -top-10 w-48 h-48 bg-white/15 rounded-full blur-3xl pointer-events-none"></div>
 
         <div class="flex justify-between items-start relative z-10">
           <div>
             <p class="text-[11px] font-bold uppercase tracking-widest text-blue-100/80">Текущий вес</p>
-            <p id="currWeight" class="text-3xl font-extrabold tracking-tight mt-1 text-white">-</p>
+            <p id="currWeight" class="text-4xl font-extrabold tracking-tight mt-1 text-white">-</p>
           </div>
           <span id="currDiffBadge" class="text-[11px] font-semibold px-3.5 py-1.5 rounded-full border backdrop-blur-md">--</span>
         </div>
 
-        <div class="grid grid-cols-3 gap-2 mt-6 pt-4 border-t border-white/15 relative z-10">
+        <div class="grid grid-cols-3 gap-2 mt-7 pt-5 border-t border-white/15 relative z-10">
           <div>
             <p class="text-[10px] font-bold uppercase tracking-wider text-blue-100/70">Тренд (SMA 7)</p>
             <p id="trendWeight" class="text-xs font-extrabold text-white mt-0.5">-</p>
@@ -76,8 +84,8 @@
         </div>
       </div>
 
-      <!-- Карточка 2: График, выбор периода и прогноз -->
-      <div class="bg-white/90 backdrop-blur-xl border border-slate-200/80 rounded-[32px] p-6 shadow-lg shadow-slate-200/50 relative overflow-hidden">
+      <!-- Карточка 2: Белая карточка с графиком и периодами -->
+      <div class="bg-white/90 backdrop-blur-xl border border-slate-200/80 rounded-[32px] p-6 shadow-[0_15px_35px_rgba(0,0,0,0.05)] relative overflow-hidden">
         
         <!-- Шапка графика -->
         <div class="flex flex-col gap-3 mb-4">
@@ -107,15 +115,22 @@
         <div class="relative w-full h-[240px]">
           <canvas id="weightChart"></canvas>
         </div>
+      </div>
 
-        <!-- Подвал карточки: Прогресс и дата достижения цели -->
-        <div class="mt-4 pt-3 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-2 text-[11px]">
-          <div id="progressText" class="font-medium text-slate-500">
-            Выполнение цели: <span class="text-slate-900 font-bold">--%</span>
-          </div>
-          <div id="goalEtaText" class="font-medium text-slate-600 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200/60 shadow-sm">
-            🎯 Прогноз: <span class="text-emerald-600 font-bold">--</span>
-          </div>
+      <!-- Bento-сетка снизу из двух красивых градиентных мини-карточек (в стиле Leadly AI) -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <!-- Карточка Прогресса (Фиолетово-розовый градиент) -->
+        <div class="bg-gradient-to-br from-purple-600/90 to-pink-600/90 text-white rounded-[24px] p-5 shadow-lg shadow-purple-500/15 relative overflow-hidden flex flex-col justify-between">
+          <div class="absolute -right-6 -bottom-6 w-24 h-24 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
+          <p class="text-[10px] font-bold uppercase tracking-wider text-purple-100/80">Прогресс цели</p>
+          <div id="progressText" class="text-2xl font-extrabold mt-2 text-white">--%</div>
+        </div>
+
+        <!-- Карточка Прогноза (Голубо-бирюзовый градиент) -->
+        <div class="bg-gradient-to-br from-cyan-600/90 to-blue-600/90 text-white rounded-[24px] p-5 shadow-lg shadow-cyan-500/15 relative overflow-hidden flex flex-col justify-between">
+          <div class="absolute -right-6 -bottom-6 w-24 h-24 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
+          <p class="text-[10px] font-bold uppercase tracking-wider text-cyan-100/80">🎯 Прогноз достижения</p>
+          <div id="goalEtaText" class="text-lg font-extrabold mt-2 text-white truncate">--</div>
         </div>
       </div>
 
@@ -152,7 +167,9 @@
     }
 
     window.handleData = function(response) {
-      document.getElementById('loader').classList.add('hidden');
+      const splash = document.getElementById('splashScreen');
+      splash.style.opacity = '0';
+      splash.style.visibility = 'hidden';
 
       if (response.error) {
         showError(response.message || "Ошибка авторизации.");
@@ -214,7 +231,10 @@
     }
 
     function showError(msg) {
-      document.getElementById('loader').classList.add('hidden');
+      const splash = document.getElementById('splashScreen');
+      splash.style.opacity = '0';
+      splash.style.visibility = 'hidden';
+
       const errBox = document.getElementById('errorBox');
       errBox.textContent = msg;
       errBox.classList.remove('hidden');
@@ -314,13 +334,13 @@
         const currentDist = Math.abs(latest.weight - start);
         let pct = totalDist > 0 ? Math.round((currentDist / totalDist) * 100) : 100;
         pct = Math.max(0, Math.min(100, pct));
-        document.getElementById('progressText').innerHTML = `Выполнение цели: <span class="text-slate-900 font-bold">${pct}%</span>`;
+        document.getElementById('progressText').textContent = `${pct}%`;
         
         const etaDateStr = calculateGoalETA(allEntries, target, latest.weight);
-        document.getElementById('goalEtaText').innerHTML = `🎯 Прогноз: <span class="text-emerald-600 font-bold">${etaDateStr}</span>`;
+        document.getElementById('goalEtaText').textContent = etaDateStr;
       } else {
-        document.getElementById('progressText').innerHTML = `Цель не установлена (<code class="text-blue-600">/goal</code>)`;
-        document.getElementById('goalEtaText').innerHTML = `🎯 Прогноз: <span class="text-slate-400">нет цели</span>`;
+        document.getElementById('progressText').textContent = `0%`;
+        document.getElementById('goalEtaText').textContent = `Нет цели`;
       }
 
       const labels = entries.map(e => e.dateStr);
