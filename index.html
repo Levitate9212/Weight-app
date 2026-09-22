@@ -14,128 +14,148 @@
   <style>
     html, body {
       width: 100%;
+      height: 100vh;
       max-width: 100vw;
       overflow-x: hidden;
+      overflow-y: auto;
       background-color: #f1f4f9;
       touch-action: pan-y;
+      margin: 0;
+      padding: 0;
     }
     #splashScreen {
-      transition: opacity 0.4s ease-out, visibility 0.4s ease-out;
+      transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    /* Кастомный премиальный спиннер */
+    @keyframes spin-slow {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .spinner-ring {
+      animation: spin-slow 1.2s linear infinite;
     }
   </style>
 </head>
-<body class="text-slate-900 font-sans antialiased min-h-screen pb-12 selection:bg-blue-600 selection:text-white relative flex flex-col items-center">
+<body class="text-slate-900 font-sans antialiased selection:bg-blue-600 selection:text-white flex flex-col items-center">
 
-  <!-- СТИЛЬНАЯ ЗАСТАВКА (SPLASH SCREEN) -->
+  <!-- ПРЕМИАЛЬНЫЙ ЭКРАН ЗАГРУЗКИ (SPLASH SCREEN) -->
   <div id="splashScreen" class="fixed inset-0 z-50 bg-[#f1f4f9] flex flex-col items-center justify-center p-6 text-center">
-    <div class="relative flex items-center justify-center">
-      <div class="absolute w-24 h-24 bg-blue-500/20 rounded-full animate-ping"></div>
-      <div class="w-16 h-16 rounded-[24px] bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center text-2xl shadow-xl shadow-blue-500/30 text-white relative z-10">🏆</div>
+    <div class="relative flex items-center justify-center w-20 h-20">
+      <!-- Переливающийся градиентный ободок -->
+      <div class="absolute inset-0 rounded-3xl bg-gradient-to-tr from-blue-600 via-indigo-500 to-purple-600 spinner-ring opacity-80 blur-sm"></div>
+      <!-- Внутренняя плашка с иконкой -->
+      <div class="absolute inset-1 rounded-[22px] bg-white flex items-center justify-center shadow-inner">
+        <span class="text-2xl">🏆</span>
+      </div>
     </div>
-    <h2 class="mt-5 font-bold text-slate-800 text-sm tracking-tight">Weight Tracker AI</h2>
-    <p class="text-slate-400 text-xs mt-1 font-medium">Загрузка дашборда...</p>
+    <h2 class="mt-6 font-extrabold text-slate-900 text-base tracking-tight">Weight Tracker AI</h2>
+    <div class="flex items-center gap-1.5 mt-2">
+      <span class="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce" style="animation-delay: 0s;"></span>
+      <span class="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-bounce" style="animation-delay: 0.2s;"></span>
+      <span class="w-1.5 h-1.5 rounded-full bg-purple-600 animate-bounce" style="animation-delay: 0.4s;"></span>
+      <span class="text-slate-400 text-xs font-medium ml-1">Синхронизация с облаком...</span>
+    </div>
   </div>
 
-  <!-- Фоновые мягкие Mesh Gradient сферы -->
-  <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-blue-400/20 rounded-full blur-[140px] pointer-events-none"></div>
-  <div class="absolute top-1/4 right-5 w-[400px] h-[400px] bg-purple-400/15 rounded-full blur-[140px] pointer-events-none"></div>
-  <div class="absolute top-2/3 left-5 w-[400px] h-[400px] bg-pink-400/10 rounded-full blur-[140px] pointer-events-none"></div>
+  <!-- Фон (Mesh Gradient) -->
+  <div class="fixed top-0 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-blue-400/15 rounded-full blur-[140px] pointer-events-none"></div>
+  <div class="fixed top-1/3 right-5 w-[400px] h-[400px] bg-purple-400/10 rounded-full blur-[140px] pointer-events-none"></div>
 
-  <main class="w-full max-w-lg mx-auto px-4 pt-5 space-y-4 relative z-10">
+  <main class="w-full max-w-lg mx-auto px-4 py-3 space-y-3 relative z-10 flex-shrink-0">
 
     <!-- Выбор человека по центру вверху -->
-    <div id="userSelectorContainer" class="hidden flex justify-center mb-1">
+    <div id="userSelectorContainer" class="hidden flex justify-center">
       <div id="userTabs" class="flex items-center space-x-1 bg-white/85 backdrop-blur-md p-1 rounded-full border border-slate-200/80 shadow-sm">
         <!-- Заполняется динамически -->
       </div>
     </div>
 
     <!-- Ошибка -->
-    <div id="errorBox" class="hidden bg-red-50 border border-red-200 text-red-600 px-4 py-4 rounded-2xl text-xs font-medium shadow-sm leading-relaxed"></div>
+    <div id="errorBox" class="hidden bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl text-xs font-medium shadow-sm leading-relaxed"></div>
 
     <!-- Основной контент (Bento Grid) -->
-    <div id="dashboardContent" class="hidden space-y-4">
+    <div id="dashboardContent" class="hidden space-y-3 pb-6">
 
       <!-- Карточка 1: Главная градиентная карточка -->
-      <div class="bg-gradient-to-br from-[#1d4ed8] via-[#2563eb] to-[#0284c7] text-white rounded-[32px] p-6 relative overflow-hidden shadow-[0_20px_40px_rgba(37,99,235,0.25)]">
-        <div class="absolute -right-10 -top-10 w-48 h-48 bg-white/15 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="bg-gradient-to-br from-[#1d4ed8] via-[#2563eb] to-[#0284c7] text-white rounded-[28px] p-5 relative overflow-hidden shadow-[0_15px_30px_rgba(37,99,235,0.2)]">
+        <div class="absolute -right-10 -top-10 w-40 h-40 bg-white/15 rounded-full blur-3xl pointer-events-none"></div>
 
         <div class="flex justify-between items-start relative z-10">
           <div>
-            <p class="text-[11px] font-bold uppercase tracking-widest text-blue-100/80">Текущий вес</p>
-            <p id="currWeight" class="text-4xl font-extrabold tracking-tight mt-1 text-white">-</p>
+            <p class="text-[10px] font-bold uppercase tracking-widest text-blue-100/80">Текущий вес</p>
+            <p id="currWeight" class="text-3xl font-extrabold tracking-tight mt-1 text-white">-</p>
           </div>
-          <span id="currDiffBadge" class="text-[11px] font-semibold px-3.5 py-1.5 rounded-full border backdrop-blur-md">--</span>
+          <span id="currDiffBadge" class="text-[11px] font-semibold px-3 py-1 rounded-full border backdrop-blur-md">--</span>
         </div>
 
-        <div class="grid grid-cols-3 gap-2 mt-7 pt-5 border-t border-white/15 relative z-10">
+        <div class="grid grid-cols-3 gap-2 mt-5 pt-4 border-t border-white/15 relative z-10">
           <div>
-            <p class="text-[10px] font-bold uppercase tracking-wider text-blue-100/70">Тренд (SMA 7)</p>
+            <p class="text-[9px] font-bold uppercase tracking-wider text-blue-100/70">Тренд (SMA 7)</p>
             <p id="trendWeight" class="text-xs font-extrabold text-white mt-0.5">-</p>
           </div>
           <div>
-            <p class="text-[10px] font-bold uppercase tracking-wider text-blue-100/70">Старт</p>
+            <p class="text-[9px] font-bold uppercase tracking-wider text-blue-100/70">Старт</p>
             <p id="startWeight" class="text-xs font-extrabold text-white/90 mt-0.5">-</p>
           </div>
           <div>
-            <p class="text-[10px] font-bold uppercase tracking-wider text-blue-100/70">Цель</p>
+            <p class="text-[9px] font-bold uppercase tracking-wider text-blue-100/70">Цель</p>
             <p id="targetWeight" class="text-xs font-extrabold text-emerald-300 mt-0.5">-</p>
           </div>
         </div>
       </div>
 
       <!-- Карточка 2: Белая карточка с графиком и периодами -->
-      <div class="bg-white/90 backdrop-blur-xl border border-slate-200/80 rounded-[32px] p-6 shadow-[0_15px_35px_rgba(0,0,0,0.05)] relative overflow-hidden">
+      <div class="bg-white/95 backdrop-blur-xl border border-slate-200/80 rounded-[28px] p-5 shadow-[0_10px_25px_rgba(0,0,0,0.04)] relative overflow-hidden">
         
         <!-- Шапка графика -->
-        <div class="flex flex-col gap-3 mb-4">
+        <div class="flex flex-col gap-2.5 mb-3">
           <div class="flex flex-wrap justify-between items-start gap-2">
             <div>
               <h2 class="text-xs font-bold tracking-tight text-slate-900">Прогресс</h2>
             </div>
-            <div class="flex items-center space-x-2.5 text-[10px] font-medium text-slate-500">
+            <div class="flex items-center space-x-2 text-[10px] font-medium text-slate-500">
               <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-600 inline-block"></span> Факт</span>
               <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span> Тренд</span>
             </div>
           </div>
 
-          <!-- Выбор периода (14, 30, 90, 180, Год, Все) -->
+          <!-- Выбор периода -->
           <div class="grid grid-cols-6 gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/80 text-center">
-            <button onclick="setPeriod('14')" id="btn-14" class="period-btn py-1.5 rounded-lg transition text-slate-600 text-[11px] font-medium">14д</button>
-            <button onclick="setPeriod('30')" id="btn-30" class="period-btn py-1.5 rounded-lg transition text-slate-600 text-[11px] font-medium">30д</button>
-            <button onclick="setPeriod('90')" id="btn-90" class="period-btn py-1.5 rounded-lg transition text-slate-600 text-[11px] font-medium">90д</button>
-            <button onclick="setPeriod('180')" id="btn-180" class="period-btn py-1.5 rounded-lg transition text-slate-600 text-[11px] font-medium">180д</button>
-            <button onclick="setPeriod('365')" id="btn-365" class="period-btn py-1.5 rounded-lg transition text-slate-600 text-[11px] font-medium">Год</button>
-            <button onclick="setPeriod('all')" id="btn-all" class="period-btn py-1.5 rounded-lg transition bg-white text-blue-600 shadow-sm font-semibold text-[11px]">Все</button>
+            <button onclick="setPeriod('14')" id="btn-14" class="period-btn py-1 rounded-lg transition text-slate-600 text-[11px] font-medium">14д</button>
+            <button onclick="setPeriod('30')" id="btn-30" class="period-btn py-1 rounded-lg transition text-slate-600 text-[11px] font-medium">30д</button>
+            <button onclick="setPeriod('90')" id="btn-90" class="period-btn py-1 rounded-lg transition text-slate-600 text-[11px] font-medium">90д</button>
+            <button onclick="setPeriod('180')" id="btn-180" class="period-btn py-1 rounded-lg transition text-slate-600 text-[11px] font-medium">180д</button>
+            <button onclick="setPeriod('365')" id="btn-365" class="period-btn py-1 rounded-lg transition text-slate-600 text-[11px] font-medium">Год</button>
+            <button onclick="setPeriod('all')" id="btn-all" class="period-btn py-1 rounded-lg transition bg-white text-blue-600 shadow-sm font-semibold text-[11px]">Все</button>
           </div>
         </div>
 
-        <!-- Область графика -->
-        <div class="relative w-full h-[240px]">
+        <!-- Область графика (компактная высота, чтобы не было скролла) -->
+        <div class="relative w-full h-[200px]">
           <canvas id="weightChart"></canvas>
         </div>
       </div>
 
-      <!-- ПРЕМИАЛЬНЫЕ МИНИ-КАРТОЧКИ СНИЗУ (В стиле Leadly AI / Apple Fitness) -->
+      <!-- Премиальные плашки снизу в одну строчку -->
       <div class="grid grid-cols-2 gap-3">
         <!-- Цель -->
-        <div class="bg-white/90 backdrop-blur-xl border border-slate-200/80 rounded-[24px] p-4 shadow-[0_10px_25px_rgba(0,0,0,0.04)] relative overflow-hidden flex items-center justify-between">
-          <div class="absolute right-0 top-0 w-24 h-24 bg-purple-500/5 rounded-full blur-xl pointer-events-none"></div>
+        <div class="bg-white/95 backdrop-blur-xl border border-slate-200/80 rounded-[22px] p-3.5 shadow-[0_8px_20px_rgba(0,0,0,0.03)] relative overflow-hidden flex items-center justify-between">
+          <div class="absolute right-0 top-0 w-20 h-20 bg-purple-500/5 rounded-full blur-xl pointer-events-none"></div>
           <div>
-            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Цель</p>
-            <div id="progressText" class="text-xl font-extrabold tracking-tight mt-0.5 text-slate-900">--%</div>
+            <p class="text-[9px] font-bold uppercase tracking-wider text-slate-400">Цель</p>
+            <div id="progressText" class="text-base font-extrabold tracking-tight mt-0.5 text-slate-900">--%</div>
           </div>
-          <div class="w-10 h-10 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-600 font-bold text-sm shadow-inner">🎯</div>
+          <div class="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-600 font-bold text-xs shadow-inner">🎯</div>
         </div>
 
         <!-- Прогноз -->
-        <div class="bg-white/90 backdrop-blur-xl border border-slate-200/80 rounded-[24px] p-4 shadow-[0_10px_25px_rgba(0,0,0,0.04)] relative overflow-hidden flex items-center justify-between">
-          <div class="absolute right-0 top-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-xl pointer-events-none"></div>
+        <div class="bg-white/95 backdrop-blur-xl border border-slate-200/80 rounded-[22px] p-3.5 shadow-[0_8px_20px_rgba(0,0,0,0.03)] relative overflow-hidden flex items-center justify-between">
+          <div class="absolute right-0 top-0 w-20 h-20 bg-cyan-500/5 rounded-full blur-xl pointer-events-none"></div>
           <div>
-            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Прогноз</p>
-            <div id="goalEtaText" class="text-xs font-extrabold tracking-tight mt-1 text-blue-600 truncate max-w-[110px]">--</div>
+            <p class="text-[9px] font-bold uppercase tracking-wider text-slate-400">Прогноз</p>
+            <div id="goalEtaText" class="text-[11px] font-extrabold tracking-tight mt-1 text-blue-600 truncate max-w-[105px]">--</div>
           </div>
-          <div class="w-10 h-10 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-600 font-bold text-sm shadow-inner">⏳</div>
+          <div class="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-600 font-bold text-xs shadow-inner">⏳</div>
         </div>
       </div>
 
@@ -261,11 +281,11 @@
     function setPeriod(period) {
       currentPeriod = period;
       document.querySelectorAll('.period-btn').forEach(btn => {
-        btn.className = "period-btn py-1.5 rounded-lg transition text-slate-600 text-[11px] font-medium";
+        btn.className = "period-btn py-1 rounded-lg transition text-slate-600 text-[11px] font-medium";
       });
       const activeBtn = document.getElementById(`btn-${period}`);
       if (activeBtn) {
-        activeBtn.className = "period-btn py-1.5 rounded-lg transition bg-white text-blue-600 shadow-sm font-semibold text-[11px]";
+        activeBtn.className = "period-btn py-1 rounded-lg transition bg-white text-blue-600 shadow-sm font-semibold text-[11px]";
       }
       if (globalData[activeUserId]) {
         renderDashboard(globalData[activeUserId]);
@@ -335,13 +355,13 @@
       const badge = document.getElementById('currDiffBadge');
       if (diffDay < 0) {
         badge.textContent = `${diffDay} кг за сутки`;
-        badge.className = "text-[11px] font-semibold px-3.5 py-1.5 rounded-full bg-emerald-500/20 text-emerald-100 border border-emerald-400/30 backdrop-blur-md";
+        badge.className = "text-[11px] font-semibold px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-100 border border-emerald-400/30 backdrop-blur-md";
       } else if (diffDay > 0) {
         badge.textContent = `+${diffDay} кг за сутки`;
-        badge.className = "text-[11px] font-semibold px-3.5 py-1.5 rounded-full bg-red-500/20 text-red-100 border border-red-400/30 backdrop-blur-md";
+        badge.className = "text-[11px] font-semibold px-3 py-1 rounded-full bg-red-500/20 text-red-100 border border-red-400/30 backdrop-blur-md";
       } else {
         badge.textContent = `Без изменений`;
-        badge.className = "text-[11px] font-semibold px-3.5 py-1.5 rounded-full bg-white/15 text-white/90 border border-white/20 backdrop-blur-md";
+        badge.className = "text-[11px] font-semibold px-3 py-1 rounded-full bg-white/15 text-white/90 border border-white/20 backdrop-blur-md";
       }
 
       const smaValuesAll = calculateSMA(allEntries);
@@ -368,7 +388,7 @@
       if (chartInstance) chartInstance.destroy();
 
       const ctx = document.getElementById('weightChart').getContext('2d');
-      const gradient = ctx.createLinearGradient(0, 0, 0, 240);
+      const gradient = ctx.createLinearGradient(0, 0, 0, 200);
       gradient.addColorStop(0, 'rgba(37, 99, 235, 0.15)');
       gradient.addColorStop(1, 'rgba(37, 99, 235, 0.0)');
 
