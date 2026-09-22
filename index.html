@@ -36,7 +36,7 @@
     <p class="text-slate-400 text-xs mt-1 font-medium">Загрузка дашборда...</p>
   </div>
 
-  <!-- Фоновые мягкие Mesh Gradient сферы (в стиле референса) -->
+  <!-- Фоновые мягкие Mesh Gradient сферы -->
   <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-blue-400/20 rounded-full blur-[140px] pointer-events-none"></div>
   <div class="absolute top-1/4 right-5 w-[400px] h-[400px] bg-purple-400/15 rounded-full blur-[140px] pointer-events-none"></div>
   <div class="absolute top-2/3 left-5 w-[400px] h-[400px] bg-pink-400/10 rounded-full blur-[140px] pointer-events-none"></div>
@@ -45,7 +45,7 @@
 
     <!-- Выбор человека по центру вверху -->
     <div id="userSelectorContainer" class="hidden flex justify-center mb-1">
-      <div id="userTabs" class="flex items-center space-x-1 bg-white/80 backdrop-blur-md p-1 rounded-full border border-slate-200/80 shadow-sm">
+      <div id="userTabs" class="flex items-center space-x-1 bg-white/85 backdrop-blur-md p-1 rounded-full border border-slate-200/80 shadow-sm">
         <!-- Заполняется динамически -->
       </div>
     </div>
@@ -56,7 +56,7 @@
     <!-- Основной контент (Bento Grid) -->
     <div id="dashboardContent" class="hidden space-y-4">
 
-      <!-- Карточка 1: Главная градиентная карточка (в стиле Performance Overview) -->
+      <!-- Карточка 1: Главная градиентная карточка -->
       <div class="bg-gradient-to-br from-[#1d4ed8] via-[#2563eb] to-[#0284c7] text-white rounded-[32px] p-6 relative overflow-hidden shadow-[0_20px_40px_rgba(37,99,235,0.25)]">
         <div class="absolute -right-10 -top-10 w-48 h-48 bg-white/15 rounded-full blur-3xl pointer-events-none"></div>
 
@@ -91,8 +91,7 @@
         <div class="flex flex-col gap-3 mb-4">
           <div class="flex flex-wrap justify-between items-start gap-2">
             <div>
-              <h2 class="text-xs font-bold tracking-tight text-slate-900">Динамика и тренд</h2>
-              <p class="text-[10px] text-slate-500">Фактические замеры и линия скользящего среднего</p>
+              <h2 class="text-xs font-bold tracking-tight text-slate-900">Прогресс</h2>
             </div>
             <div class="flex items-center space-x-2.5 text-[10px] font-medium text-slate-500">
               <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-600 inline-block"></span> Факт</span>
@@ -117,20 +116,26 @@
         </div>
       </div>
 
-      <!-- Bento-сетка снизу из двух красивых градиентных мини-карточек (в стиле Leadly AI) -->
+      <!-- Компактные мини-карточки снизу без пустого пространства -->
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <!-- Карточка Прогресса (Фиолетово-розовый градиент) -->
-        <div class="bg-gradient-to-br from-purple-600/90 to-pink-600/90 text-white rounded-[24px] p-5 shadow-lg shadow-purple-500/15 relative overflow-hidden flex flex-col justify-between">
-          <div class="absolute -right-6 -bottom-6 w-24 h-24 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
-          <p class="text-[10px] font-bold uppercase tracking-wider text-purple-100/80">Прогресс цели</p>
-          <div id="progressText" class="text-2xl font-extrabold mt-2 text-white">--%</div>
+        <!-- Прогресс цели -->
+        <div class="bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-[24px] px-5 py-4 shadow-lg shadow-purple-500/15 relative overflow-hidden flex items-center justify-between">
+          <div class="absolute -right-6 -bottom-6 w-20 h-20 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
+          <div>
+            <p class="text-[10px] font-bold uppercase tracking-wider text-purple-100/80">Выполнение цели</p>
+            <div id="progressText" class="text-xl font-extrabold mt-0.5 text-white">--%</div>
+          </div>
+          <div class="w-10 h-10 rounded-2xl bg-white/15 flex items-center justify-center text-lg backdrop-blur-md">📈</div>
         </div>
 
-        <!-- Карточка Прогноза (Голубо-бирюзовый градиент) -->
-        <div class="bg-gradient-to-br from-cyan-600/90 to-blue-600/90 text-white rounded-[24px] p-5 shadow-lg shadow-cyan-500/15 relative overflow-hidden flex flex-col justify-between">
-          <div class="absolute -right-6 -bottom-6 w-24 h-24 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
-          <p class="text-[10px] font-bold uppercase tracking-wider text-cyan-100/80">🎯 Прогноз достижения</p>
-          <div id="goalEtaText" class="text-lg font-extrabold mt-2 text-white truncate">--</div>
+        <!-- Прогноз достижения -->
+        <div class="bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-[24px] px-5 py-4 shadow-lg shadow-cyan-500/15 relative overflow-hidden flex items-center justify-between">
+          <div class="absolute -right-6 -bottom-6 w-20 h-20 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
+          <div>
+            <p class="text-[10px] font-bold uppercase tracking-wider text-cyan-100/80">🎯 Прогноз достижения</p>
+            <div id="goalEtaText" class="text-sm font-extrabold mt-0.5 text-white">--</div>
+          </div>
+          <div class="w-10 h-10 rounded-2xl bg-white/15 flex items-center justify-center text-lg backdrop-blur-md">⏳</div>
         </div>
       </div>
 
@@ -145,6 +150,14 @@
     let globalData = {};
     let activeUserId = null;
     let currentPeriod = 'all';
+    let dataLoaded = false;
+
+    const safetyTimer = setTimeout(() => {
+      if (!dataLoaded) {
+        hideSplash();
+        showError("Превышено время ожидания сервера. Проверьте URL скрипта.");
+      }
+    }, 6000);
 
     window.addEventListener('DOMContentLoaded', () => {
       if (window.Telegram && window.Telegram.WebApp) {
@@ -161,15 +174,24 @@
       const script = document.createElement('script');
       script.src = url;
       script.onerror = () => {
-        showError("Не удалось подключиться к серверу скрипта.");
+        hideSplash();
+        showError("Не удалось загрузить данные. Ошибка сети или скрипта.");
       };
       document.body.appendChild(script);
     }
 
-    window.handleData = function(response) {
+    function hideSplash() {
       const splash = document.getElementById('splashScreen');
-      splash.style.opacity = '0';
-      splash.style.visibility = 'hidden';
+      if (splash) {
+        splash.style.opacity = '0';
+        splash.style.visibility = 'hidden';
+      }
+    }
+
+    window.handleData = function(response) {
+      dataLoaded = true;
+      clearTimeout(safetyTimer);
+      hideSplash();
 
       if (response.error) {
         showError(response.message || "Ошибка авторизации.");
@@ -231,10 +253,7 @@
     }
 
     function showError(msg) {
-      const splash = document.getElementById('splashScreen');
-      splash.style.opacity = '0';
-      splash.style.visibility = 'hidden';
-
+      hideSplash();
       const errBox = document.getElementById('errorBox');
       errBox.textContent = msg;
       errBox.classList.remove('hidden');
