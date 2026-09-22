@@ -14,9 +14,10 @@
   <style>
     html, body {
       width: 100%;
-      min-height: 100%;
+      height: 100%;
       max-width: 100vw;
       overflow-x: hidden;
+      overflow-y: auto;
       background-color: #f3f6fc;
       touch-action: pan-y;
       margin: 0;
@@ -30,42 +31,44 @@
       100% { transform: translateX(200%); }
     }
     .stepn-bar {
-      animation: stepn-shimmer 1.8s infinite linear;
+      animation: stepn-shimmer 1.6s infinite linear;
     }
   </style>
 </head>
-<body class="text-slate-900 font-sans antialiased selection:bg-blue-600 selection:text-white flex flex-col items-center pb-6">
+<body class="text-slate-900 font-sans antialiased selection:bg-blue-600 selection:text-white flex flex-col items-center">
 
-  <!-- ФУТУРИСТИЧНЫЙ ЭКРАН ЗАГРУЗКИ В СТИЛЕ STEPN -->
-  <div id="splashScreen" class="fixed inset-0 z-50 bg-[#0c0f17] flex flex-col items-center justify-center p-6 text-center text-white">
-    <!-- Неоновый логотип-аватар -->
+  <!-- СВЕТЛЫЙ ЭКРАН ЗАГРУЗКИ В СТИЛЕ STEPN -->
+  <div id="splashScreen" class="fixed inset-0 z-50 bg-[#f3f6fc] flex flex-col items-center justify-center p-6 text-center">
+    <!-- Иконка бегущего человека с неоновым свечением -->
     <div class="relative flex items-center justify-center w-24 h-24 mb-6">
-      <div class="absolute inset-0 rounded-[30px] bg-gradient-to-tr from-[#00ff87] to-[#60efff] animate-pulse opacity-40 blur-xl"></div>
-      <div class="absolute inset-0 rounded-[30px] border border-[#00ff87]/40 shadow-[0_0_35px_rgba(0,255,135,0.3)]"></div>
-      <div class="absolute inset-1 rounded-[26px] bg-[#121622] flex items-center justify-center">
-        <span class="text-3xl">👟</span>
+      <div class="absolute inset-0 rounded-[30px] bg-gradient-to-tr from-[#00ff87] to-[#2563eb] animate-pulse opacity-30 blur-xl"></div>
+      <div class="absolute inset-0 rounded-[30px] border border-blue-500/20 shadow-[0_0_30px_rgba(37,99,235,0.15)] bg-white"></div>
+      <div class="absolute inset-1 rounded-[26px] flex items-center justify-center text-blue-600">
+        <!-- SVG силуэт бегущего человека (Stepn vibe) -->
+        <svg class="w-10 h-10" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path>
+        </svg>
       </div>
     </div>
     
-    <!-- Название в киберспортивном стиле -->
-    <h2 class="font-extrabold text-white text-base tracking-widest uppercase">WEIGHT TRACKER <span class="text-[#00ff87]">AI</span></h2>
+    <h2 class="font-extrabold text-slate-900 text-base tracking-widest uppercase">WEIGHT TRACKER <span class="text-blue-600">AI</span></h2>
     
-    <!-- Неоновый прогресс-бар загрузки -->
-    <div class="w-48 h-1.5 bg-[#1a2130] rounded-full mt-6 overflow-hidden relative border border-white/5">
-      <div class="absolute top-0 left-0 bottom-0 w-1/2 bg-gradient-to-r from-[#00ff87] to-[#60efff] rounded-full stepn-bar shadow-[0_0_12px_#00ff87]"></div>
+    <!-- Прогресс-бар загрузки -->
+    <div class="w-44 h-1.5 bg-slate-200 rounded-full mt-6 overflow-hidden relative">
+      <div class="absolute top-0 left-0 bottom-0 w-1/2 bg-gradient-to-r from-blue-600 to-[#00ff87] rounded-full stepn-bar shadow-[0_0_10px_rgba(37,99,235,0.4)]"></div>
     </div>
     <p class="text-slate-400 text-[11px] mt-3 font-semibold tracking-wider uppercase">Синхронизация данных...</p>
   </div>
 
-  <!-- Фоновые мягкие Mesh Gradient сферы для дашборда -->
-  <div class="fixed top-[-10%] left-[-10%] w-[350px] h-[350px] bg-blue-400/25 rounded-full blur-[100px] pointer-events-none"></div>
-  <div class="fixed bottom-[-10%] right-[-10%] w-[350px] h-[350px] bg-purple-400/20 rounded-full blur-[100px] pointer-events-none"></div>
+  <!-- Фоновые мягкие Mesh Gradient сферы -->
+  <div class="fixed top-[-10%] left-[-10%] w-[350px] h-[350px] bg-blue-400/20 rounded-full blur-[100px] pointer-events-none"></div>
+  <div class="fixed bottom-[-10%] right-[-10%] w-[350px] h-[350px] bg-purple-400/15 rounded-full blur-[100px] pointer-events-none"></div>
 
-  <main class="w-full max-w-md mx-auto px-4 pt-3 space-y-3 relative z-10">
+  <main class="w-full max-w-md mx-auto px-4 py-3 space-y-3 relative z-10 flex-shrink-0 pb-8">
 
-    <!-- Переключатель пользователей по центру -->
+    <!-- Переключатель пользователей по центру вверху -->
     <div id="userSelectorContainer" class="hidden flex justify-center mb-1">
-      <div id="userTabs" class="flex items-center space-x-1 bg-white/80 backdrop-blur-xl p-1 rounded-full border border-slate-200/80 shadow-sm">
+      <div id="userTabs" class="flex items-center space-x-1 bg-white/85 backdrop-blur-md p-1 rounded-full border border-slate-200/80 shadow-sm">
         <!-- Заполняется динамически -->
       </div>
     </div>
@@ -85,7 +88,7 @@
             <p class="text-[10px] font-bold uppercase tracking-widest text-blue-100/80">Текущий вес</p>
             <p id="currWeight" class="text-3xl font-extrabold tracking-tight mt-1 text-white">-</p>
           </div>
-          <span id="currDiffBadge" class="text-[11px] font-semibold px-3 py-1 rounded-full border backdrop-blur-md">--</span>
+          <span id="currDiffBadge" class="text-[11px] font-semibold px-3.5 py-1.5 rounded-full border backdrop-blur-md">--</span>
         </div>
 
         <div class="grid grid-cols-3 gap-2 mt-5 pt-4 border-t border-white/15 relative z-10">
@@ -135,7 +138,7 @@
         </div>
       </div>
 
-      <!-- Премиальные градиентные плашки снизу -->
+      <!-- Премиальные плашки снизу -->
       <div class="grid grid-cols-2 gap-3">
         <div class="bg-gradient-to-br from-purple-600 via-indigo-600 to-pink-600 text-white rounded-[26px] p-4 shadow-lg shadow-purple-500/20 relative overflow-hidden flex flex-col justify-between">
           <div class="absolute -right-6 -bottom-6 w-20 h-20 bg-white/15 rounded-full blur-xl pointer-events-none"></div>
