@@ -27,7 +27,7 @@
 <body class="text-slate-900 font-sans antialiased min-h-screen pb-12 selection:bg-blue-600 selection:text-white relative flex flex-col items-center">
 
   <!-- СТИЛЬНАЯ ЗАСТАВКА (SPLASH SCREEN) -->
-  <div id="splashScreen" class="fixed inset-0 z-50 bg-[#f1f4f9] flex flex-col items-center justify-center">
+  <div id="splashScreen" class="fixed inset-0 z-50 bg-[#f1f4f9] flex flex-col items-center justify-center p-6 text-center">
     <div class="relative flex items-center justify-center">
       <div class="absolute w-24 h-24 bg-blue-500/20 rounded-full animate-ping"></div>
       <div class="w-16 h-16 rounded-[24px] bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 flex items-center justify-center text-2xl shadow-xl shadow-blue-500/30 text-white relative z-10">🏆</div>
@@ -51,7 +51,7 @@
     </div>
 
     <!-- Ошибка -->
-    <div id="errorBox" class="hidden bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl text-xs font-medium"></div>
+    <div id="errorBox" class="hidden bg-red-50 border border-red-200 text-red-600 px-4 py-4 rounded-2xl text-xs font-medium shadow-sm leading-relaxed"></div>
 
     <!-- Основной контент (Bento Grid) -->
     <div id="dashboardContent" class="hidden space-y-4">
@@ -116,26 +116,26 @@
         </div>
       </div>
 
-      <!-- Мини-карточки снизу строго в ОДНУ СТРОЧКУ -->
+      <!-- ПРЕМИАЛЬНЫЕ МИНИ-КАРТОЧКИ СНИЗУ (В стиле Leadly AI / Apple Fitness) -->
       <div class="grid grid-cols-2 gap-3">
-        <!-- Прогресс цели -->
-        <div class="bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-[24px] px-4 py-3.5 shadow-lg shadow-purple-500/15 relative overflow-hidden flex items-center justify-between">
-          <div class="absolute -right-6 -bottom-6 w-16 h-16 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
+        <!-- Цель -->
+        <div class="bg-white/90 backdrop-blur-xl border border-slate-200/80 rounded-[24px] p-4 shadow-[0_10px_25px_rgba(0,0,0,0.04)] relative overflow-hidden flex items-center justify-between">
+          <div class="absolute right-0 top-0 w-24 h-24 bg-purple-500/5 rounded-full blur-xl pointer-events-none"></div>
           <div>
-            <p class="text-[9px] font-bold uppercase tracking-wider text-purple-100/80">Цель</p>
-            <div id="progressText" class="text-lg font-extrabold mt-0.5 text-white">--%</div>
+            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Цель</p>
+            <div id="progressText" class="text-xl font-extrabold tracking-tight mt-0.5 text-slate-900">--%</div>
           </div>
-          <div class="w-8 h-8 rounded-xl bg-white/15 flex items-center justify-center text-sm backdrop-blur-md">📈</div>
+          <div class="w-10 h-10 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-600 font-bold text-sm shadow-inner">🎯</div>
         </div>
 
-        <!-- Прогноз достижения -->
-        <div class="bg-gradient-to-r from-cyan-600 to-blue-600 text-white rounded-[24px] px-4 py-3.5 shadow-lg shadow-cyan-500/15 relative overflow-hidden flex items-center justify-between">
-          <div class="absolute -right-6 -bottom-6 w-16 h-16 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
+        <!-- Прогноз -->
+        <div class="bg-white/90 backdrop-blur-xl border border-slate-200/80 rounded-[24px] p-4 shadow-[0_10px_25px_rgba(0,0,0,0.04)] relative overflow-hidden flex items-center justify-between">
+          <div class="absolute right-0 top-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-xl pointer-events-none"></div>
           <div>
-            <p class="text-[9px] font-bold uppercase tracking-wider text-cyan-100/80">🎯 Прогноз</p>
-            <div id="goalEtaText" class="text-xs font-extrabold mt-1 text-white truncate">--</div>
+            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Прогноз</p>
+            <div id="goalEtaText" class="text-xs font-extrabold tracking-tight mt-1 text-blue-600 truncate max-w-[110px]">--</div>
           </div>
-          <div class="w-8 h-8 rounded-xl bg-white/15 flex items-center justify-center text-sm backdrop-blur-md">⏳</div>
+          <div class="w-10 h-10 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-600 font-bold text-sm shadow-inner">⏳</div>
         </div>
       </div>
 
@@ -150,14 +150,6 @@
     let globalData = {};
     let activeUserId = null;
     let currentPeriod = 'all';
-    let dataLoaded = false;
-
-    const safetyTimer = setTimeout(() => {
-      if (!dataLoaded) {
-        hideSplash();
-        showError("Превышено время ожидания сервера. Проверьте URL скрипта.");
-      }
-    }, 6000);
 
     window.addEventListener('DOMContentLoaded', () => {
       if (window.Telegram && window.Telegram.WebApp) {
@@ -167,17 +159,26 @@
       fetchData();
     });
 
-    function fetchData() {
+    async function fetchData() {
       const initData = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp.initData : "";
-      const url = `${APPS_SCRIPT_URL}?initData=${encodeURIComponent(initData)}&callback=handleData`;
+      const url = `${APPS_SCRIPT_URL}?initData=${encodeURIComponent(initData)}`;
 
-      const script = document.createElement('script');
-      script.src = url;
-      script.onerror = () => {
+      try {
+        const response = await fetch(url);
+        const text = await response.text();
+        
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          throw new Error("Сервер вернул некорректный ответ (проверьте URL Web App и права доступа «Все»).");
+        }
+
+        handleData(data);
+      } catch (err) {
         hideSplash();
-        showError("Не удалось загрузить данные. Ошибка сети или скрипта.");
-      };
-      document.body.appendChild(script);
+        showError("Ошибка подключения: " + err.message);
+      }
     }
 
     function hideSplash() {
@@ -188,9 +189,7 @@
       }
     }
 
-    window.handleData = function(response) {
-      dataLoaded = true;
-      clearTimeout(safetyTimer);
+    function handleData(response) {
       hideSplash();
 
       if (response.error) {
@@ -421,7 +420,7 @@
               padding: 10,
               cornerRadius: 12,
               boxPadding: 3,
-              usePointStyle: true, // КРУГЛЫЕ ТОЧКИ В ТУЛТИПЕ В СТИЛЕ APPLE
+              usePointStyle: true,
             }
           },
           scales: {
