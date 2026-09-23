@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Weight Tracker</title>
   <!-- Telegram WebApp -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -13,19 +13,17 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     html, body {
-      width: 100vw;
-      height: 100vh;
-      max-width: 100vw;
-      max-height: 100vh;
-      overflow: hidden;
+      width: 100%;
+      min-height: 100%;
+      overflow-x: hidden;
       background-color: #f3f6fc;
       touch-action: pan-y;
       margin: 0;
       padding: 0;
-      position: fixed;
+      -webkit-tap-highlight-color: transparent;
     }
     #splashScreen {
-      transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     }
     @keyframes stepn-shimmer {
       0% { transform: translateX(-100%); }
@@ -34,92 +32,42 @@
     .stepn-bar {
       animation: stepn-shimmer 1.6s infinite linear;
     }
-    @keyframes pulse-glow {
-      0%, 100% { opacity: 0.5; transform: scale(1); }
-      50% { opacity: 0.8; transform: scale(1.05); }
-    }
-    .neon-pulse {
-      animation: pulse-glow 3s ease-in-out infinite;
-    }
   </style>
 </head>
-<body class="text-slate-900 font-sans antialiased selection:bg-blue-600 selection:text-white flex flex-col justify-between items-center px-4 pt-safe pb-safe">
+<body class="text-slate-900 font-sans antialiased selection:bg-blue-600 selection:text-white flex flex-col items-center">
 
-  <!-- ПОЛНОЭКРАННАЯ АТМОСФЕРНАЯ ЗАСТАВКА В СТИЛЕ STEPN (С БЕГУЩИМ ПАРНЕМ) -->
-  <div id="splashScreen" class="fixed inset-0 w-screen h-screen z-[99999] bg-[#070913] flex flex-col justify-between items-center py-12 px-6 text-white text-center overflow-hidden">
+  <!-- СВЕТЛЫЙ ЭКРАН ЗАГРУЗКИ В СТИЛЕ STEPN (ЕДИНЫЙ СО ВСЕМ ПРИЛОЖЕНИЕМ) -->
+  <div id="splashScreen" class="fixed inset-0 z-50 bg-[#f3f6fc] flex flex-col items-center justify-center p-6 text-center">
     
-    <!-- Фонуай пейзаж: Градиентное небо и неоновые холмы -->
-    <div class="absolute inset-0 bg-gradient-to-b from-[#141b33] via-[#090c17] to-[#040609] pointer-events-none"></div>
-    
-    <!-- Стилизованные горы в фоне (SVG векторный пейзаж) -->
-    <div class="absolute bottom-0 left-0 right-0 h-[65%] opacity-80 pointer-events-none flex items-end justify-center">
-      <svg class="w-full h-full object-cover" viewBox="0 0 400 600" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-        <!-- Дальние горы -->
-        <polygon points="0,400 120,220 250,380 400,180 400,600 0,600" fill="#1b1238"/>
-        <!-- Ближние горы / холмы с розово-фиолетовым отливом -->
-        <polygon points="0,450 80,320 190,460 310,290 400,420 400,600 0,600" fill="#2d1d4f"/>
-        <polygon points="0,500 150,380 280,480 400,350 400,600 0,600" fill="#3b2260"/>
-        
-        <!-- Извилистая неоново-лаймовая дорога (трек) -->
-        <path d="M 200,600 Q 210,480 160,420 T 230,300 T 190,200 L 210,180 Q 250,280 180,380 T 220,600 Z" fill="#00ff87" opacity="0.85" filter="drop-shadow(0 0 15px #00ff87)"/>
-      </svg>
-    </div>
-
-    <!-- Верхняя энергия и молния в стиле STEPN -->
-    <div class="relative z-10 flex flex-col items-center pt-2">
-      <div class="w-10 h-10 rounded-2xl bg-[#00ff87]/20 border border-[#00ff87]/50 flex items-center justify-center shadow-[0_0_20px_#00ff87] mb-2 neon-pulse">
-        <svg class="w-6 h-6 text-[#00ff87]" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+    <!-- Карточка с силуэтом бегущего атлета -->
+    <div class="relative flex items-center justify-center w-28 h-28 mb-6">
+      <div class="absolute inset-0 rounded-[32px] bg-gradient-to-tr from-blue-500/20 to-emerald-400/20 blur-xl animate-pulse"></div>
+      <div class="absolute inset-0 rounded-[32px] bg-white border border-slate-200/80 shadow-[0_15px_35px_rgba(37,99,235,0.1)] flex items-center justify-center">
+        <!-- Аккуратный силуэт бегущего человека -->
+        <svg class="w-14 h-14 text-blue-600 drop-shadow-[0_4px_10px_rgba(37,99,235,0.25)]" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3c1.3 1.5 3.3 2.5 5.5 2.5v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.2L6 8.3V13h2V9.6l1.8-.7z"/>
         </svg>
       </div>
-      <div class="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white/10 border border-white/15 backdrop-blur-md">
-        <span class="w-1.5 h-1.5 rounded-full bg-[#00ff87] animate-ping"></span>
-        <span class="text-[9px] font-extrabold tracking-widest uppercase text-[#00ff87]">Web3 Running Engine</span>
-      </div>
     </div>
-
-    <!-- Центральный персонаж: Бегущий парень со спины -->
-    <div class="relative z-10 flex flex-col items-center my-auto">
-      <div class="relative flex items-center justify-center w-36 h-36">
-        <!-- Неоновый ореол вокруг бегуна -->
-        <div class="absolute inset-0 rounded-full bg-[#00ff87]/20 blur-2xl neon-pulse"></div>
-        
-        <!-- Силуэт бегущего парня (атлет со спины в капюшоне / спортивной форме) -->
-        <svg class="w-28 h-28 text-[#00ff87] filter drop-shadow-[0_0_12px_#00ff87]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
-          <!-- Голова и капюшон -->
-          <circle cx="12" cy="5" r="2.2" fill="currentColor"/>
-          <!-- Торс и плечи (мощная мужская спина) -->
-          <path d="M9 8h6l1 5h-8z"/>
-          <!-- Руки в динамичном беге -->
-          <path d="M15 10l3 3-1.5 1.5"/>
-          <path d="M9 10l-3 3 1.5 1.5"/>
-          <!-- Ноги в шаге -->
-          <path d="M11 13l-1.5 5.5 2.5 1.5"/>
-          <path d="M13 13l2 5-2 2"/>
-        </svg>
-      </div>
-      
-      <h2 class="font-extrabold text-white text-base tracking-[0.25em] uppercase mt-2">WEIGHT TRACKER <span class="text-[#00ff87]">AI</span></h2>
+    
+    <h2 class="font-extrabold text-slate-900 text-base tracking-[0.2em] uppercase">WEIGHT TRACKER <span class="text-blue-600">AI</span></h2>
+    
+    <!-- Прогресс-бар загрузки -->
+    <div class="w-48 h-1.5 bg-slate-200 rounded-full mt-6 overflow-hidden relative shadow-inner">
+      <div class="absolute top-0 left-0 bottom-0 w-1/2 bg-gradient-to-r from-blue-600 via-indigo-500 to-emerald-400 rounded-full stepn-bar shadow-[0_0_10px_rgba(37,99,235,0.4)]"></div>
     </div>
-
-    <!-- Нижняя часть: Прогресс-бар загрузки -->
-    <div class="relative z-10 w-full max-w-[220px] flex flex-col items-center pb-2">
-      <div class="w-full h-2 bg-[#151c2e] rounded-full overflow-hidden relative border border-white/10 shadow-inner">
-        <div class="absolute top-0 left-0 bottom-0 w-1/2 bg-gradient-to-r from-[#00ff87] to-[#60efff] rounded-full stepn-bar shadow-[0_0_15px_#00ff87]"></div>
-      </div>
-      <p class="text-slate-400 text-[10px] mt-3 font-bold tracking-[0.2em] uppercase">Синхронизация данных...</p>
-    </div>
-
+    <p class="text-slate-400 text-[10px] mt-3 font-bold tracking-widest uppercase">Синхронизация данных...</p>
   </div>
 
-  <!-- Фоновые сферы для дашборда -->
+  <!-- Фоновые мягкие Mesh Gradient сферы -->
   <div class="fixed top-[-10%] left-[-10%] w-[350px] h-[350px] bg-blue-400/20 rounded-full blur-[100px] pointer-events-none"></div>
   <div class="fixed bottom-[-10%] right-[-10%] w-[350px] h-[350px] bg-purple-400/15 rounded-full blur-[100px] pointer-events-none"></div>
 
-  <main class="w-full max-w-md h-full flex flex-col justify-center space-y-3 relative z-15 overflow-y-auto no-scrollbar py-2">
+  <!-- Основной контейнер с правильными отступами без обрезания углов -->
+  <main class="w-full max-w-[420px] mx-auto px-4 py-4 space-y-3.5 relative z-10">
 
     <!-- Переключатель пользователей -->
-    <div id="userSelectorContainer" class="hidden flex justify-center flex-shrink-0">
+    <div id="userSelectorContainer" class="hidden flex justify-center mb-1">
       <div id="userTabs" class="flex items-center space-x-1 bg-white/85 backdrop-blur-md p-1 rounded-full border border-slate-200/80 shadow-sm"></div>
     </div>
 
@@ -127,10 +75,10 @@
     <div id="errorBox" class="hidden bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl text-xs font-medium shadow-sm"></div>
 
     <!-- Основной контент -->
-    <div id="dashboardContent" class="hidden space-y-3 flex-shrink-0">
+    <div id="dashboardContent" class="hidden space-y-3.5 pb-6">
 
-      <!-- Карточка 1: Главная градиентная карточка -->
-      <div class="bg-gradient-to-br from-[#1d4ed8] via-[#2563eb] to-[#0284c7] text-white rounded-[28px] p-4.5 relative overflow-hidden shadow-[0_15px_30px_rgba(37,99,235,0.25)]">
+      <!-- Карточка 1: Главная синяя градиентная карточка -->
+      <div class="bg-gradient-to-br from-[#1d4ed8] via-[#2563eb] to-[#0284c7] text-white rounded-[28px] p-5 relative overflow-hidden shadow-[0_15px_30px_rgba(37,99,235,0.25)]">
         <div class="absolute -right-10 -top-10 w-40 h-40 bg-white/15 rounded-full blur-2xl pointer-events-none"></div>
 
         <div class="flex justify-between items-start relative z-10">
@@ -138,10 +86,10 @@
             <p class="text-[10px] font-bold uppercase tracking-widest text-blue-100/80">Текущий вес</p>
             <p id="currWeight" class="text-3xl font-extrabold tracking-tight mt-1 text-white">-</p>
           </div>
-          <span id="currDiffBadge" class="text-[11px] font-semibold px-3.5 py-1 rounded-full border backdrop-blur-md">--</span>
+          <span id="currDiffBadge" class="text-[11px] font-semibold px-3 py-1 rounded-full border backdrop-blur-md">--</span>
         </div>
 
-        <div class="grid grid-cols-3 gap-2 mt-4 pt-3.5 border-t border-white/15 relative z-10">
+        <div class="grid grid-cols-3 gap-2 mt-5 pt-4 border-t border-white/15 relative z-10">
           <div>
             <p class="text-[9px] font-bold uppercase tracking-wider text-blue-100/70">Тренд (SMA 7)</p>
             <p id="trendWeight" class="text-xs font-extrabold text-white mt-0.5">-</p>
@@ -158,14 +106,14 @@
       </div>
 
       <!-- Карточка 2: График и периоды -->
-      <div class="bg-white/90 backdrop-blur-2xl border border-white/80 rounded-[28px] p-4.5 shadow-[0_10px_25px_rgba(0,0,0,0.04)] relative overflow-hidden">
+      <div class="bg-white/95 backdrop-blur-xl border border-white/80 rounded-[28px] p-5 shadow-[0_10px_25px_rgba(0,0,0,0.04)] relative overflow-hidden">
         
-        <div class="flex flex-col gap-2 mb-2.5">
+        <div class="flex flex-col gap-2.5 mb-3">
           <div class="flex flex-wrap justify-between items-start gap-2">
             <div>
               <h2 class="text-xs font-bold tracking-tight text-slate-900">Прогресс</h2>
             </div>
-            <div class="flex items-center space-x-2 text-[10px] font-medium text-slate-500">
+            <div class="flex items-center space-x-2.5 text-[10px] font-medium text-slate-500">
               <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-600 inline-block"></span> Факт</span>
               <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span> Тренд</span>
             </div>
@@ -182,21 +130,23 @@
           </div>
         </div>
 
-        <!-- График -->
-        <div class="relative w-full h-[180px]">
+        <!-- График с комфортной высотой -->
+        <div class="relative w-full h-[200px]">
           <canvas id="weightChart"></canvas>
         </div>
       </div>
 
-      <!-- Премиальные плашки снизу -->
-      <div class="grid grid-cols-2 gap-3 pb-2">
-        <div class="bg-gradient-to-br from-purple-600 via-indigo-600 to-pink-600 text-white rounded-[24px] p-3.5 shadow-lg shadow-purple-500/20 relative overflow-hidden flex flex-col justify-between">
+      <!-- Премиальные плашки снизу в одну строчку -->
+      <div class="grid grid-cols-2 gap-3">
+        <!-- Выполнение цели -->
+        <div class="bg-gradient-to-br from-purple-600 via-indigo-600 to-pink-600 text-white rounded-[24px] p-4 shadow-lg shadow-purple-500/15 relative overflow-hidden flex flex-col justify-between">
           <div class="absolute -right-6 -bottom-6 w-16 h-16 bg-white/15 rounded-full blur-xl pointer-events-none"></div>
           <p class="text-[10px] font-bold uppercase tracking-wider text-purple-100/80">Выполнение цели</p>
           <div id="progressText" class="text-xl font-extrabold tracking-tight mt-1 text-white">--%</div>
         </div>
 
-        <div class="bg-gradient-to-br from-blue-600 via-cyan-600 to-teal-600 text-white rounded-[24px] p-3.5 shadow-lg shadow-blue-500/20 relative overflow-hidden flex flex-col justify-between">
+        <!-- Прогноз цели -->
+        <div class="bg-gradient-to-br from-blue-600 via-cyan-600 to-teal-600 text-white rounded-[24px] p-4 shadow-lg shadow-blue-500/15 relative overflow-hidden flex flex-col justify-between">
           <div class="absolute -right-6 -bottom-6 w-16 h-16 bg-white/15 rounded-full blur-xl pointer-events-none"></div>
           <p class="text-[10px] font-bold uppercase tracking-wider text-cyan-100/80">🎯 Прогноз цели</p>
           <div id="goalEtaText" class="text-xs font-extrabold tracking-tight mt-1 text-white truncate">--</div>
@@ -218,9 +168,6 @@
       if (window.Telegram && window.Telegram.WebApp) {
         window.Telegram.WebApp.ready();
         window.Telegram.WebApp.expand();
-        if (window.Telegram.WebApp.requestFullscreen) {
-          window.Telegram.WebApp.requestFullscreen();
-        }
       }
       fetchData();
     });
@@ -401,13 +348,13 @@
       const badge = document.getElementById('currDiffBadge');
       if (diffDay < 0) {
         badge.textContent = `${diffDay} кг за сутки`;
-        badge.className = "text-[11px] font-semibold px-3.5 py-1.5 rounded-full bg-emerald-500/20 text-emerald-100 border border-emerald-400/30 backdrop-blur-md";
+        badge.className = "text-[11px] font-semibold px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-100 border border-emerald-400/30 backdrop-blur-md";
       } else if (diffDay > 0) {
         badge.textContent = `+${diffDay} кг за сутки`;
-        badge.className = "text-[11px] font-semibold px-3.5 py-1.5 rounded-full bg-red-500/20 text-red-100 border border-red-400/30 backdrop-blur-md";
+        badge.className = "text-[11px] font-semibold px-3 py-1 rounded-full bg-red-500/20 text-red-100 border border-red-400/30 backdrop-blur-md";
       } else {
         badge.textContent = `Без изменений`;
-        badge.className = "text-[11px] font-semibold px-3.5 py-1.5 rounded-full bg-white/15 text-white/90 border border-white/20 backdrop-blur-md";
+        badge.className = "text-[11px] font-semibold px-3 py-1 rounded-full bg-white/15 text-white/90 border border-white/20 backdrop-blur-md";
       }
 
       const smaValuesAll = calculateSMA(allEntries);
@@ -434,7 +381,7 @@
       if (chartInstance) chartInstance.destroy();
 
       const ctx = document.getElementById('weightChart').getContext('2d');
-      const gradient = ctx.createLinearGradient(0, 0, 0, 160);
+      const gradient = ctx.createLinearGradient(0, 0, 0, 180);
       gradient.addColorStop(0, 'rgba(37, 99, 235, 0.15)');
       gradient.addColorStop(1, 'rgba(37, 99, 235, 0.0)');
 
