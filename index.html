@@ -69,22 +69,24 @@
   <!-- Основной контейнер дашборда -->
   <main class="w-full max-w-[420px] mx-auto px-4 py-3 space-y-3 relative z-10">
 
-    <!-- Переключатель пользователей -->
-    <div id="userSelectorContainer" class="hidden flex justify-center mb-0.5">
-      <div id="userTabs" class="flex items-center space-x-1 bg-white/85 backdrop-blur-md p-1 rounded-full border border-slate-200/80 shadow-sm"></div>
+    <!-- ПЕРЕКЛЮЧАТЕЛЬ ПОЛЬЗОВАТЕЛЕЙ (С ВЫСОКИМ Z-INDEX И ЧЕТКИМ ТАПОМ) -->
+    <div id="userSelectorContainer" class="hidden flex justify-center mb-1 relative z-30">
+      <div id="userTabs" class="flex items-center space-x-1.5 bg-white/90 backdrop-blur-md p-1.5 rounded-full border border-slate-200/90 shadow-sm">
+        <!-- Генерируется через JS -->
+      </div>
     </div>
 
     <!-- ПОЛУКРУГЛЫЙ КАЛЕНДАРНЫЙ СТРИП СО СВАЙПОМ НЕДЕЛЬ -->
-    <div id="dateStripWrapper" class="hidden relative w-full pt-1 pb-1 select-none">
+    <div id="dateStripWrapper" class="hidden relative w-full pt-1 pb-1 select-none z-10">
       
       <!-- Шапка стрипа: Название периода и кнопка "Сегодня" -->
       <div class="flex justify-between items-center px-2 mb-1 text-[11px]">
         <div class="flex items-center gap-1.5 text-slate-500 font-semibold">
-          <button onclick="changeWeek(-1)" class="p-1 rounded-full hover:bg-slate-200/60 active:scale-95 transition text-slate-600">
+          <button onclick="changeWeek(-1)" class="p-1.5 rounded-full hover:bg-slate-200/60 active:scale-95 transition text-slate-600">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
           </button>
           <span id="weekPeriodLabel">Неделя</span>
-          <button id="nextWeekBtn" onclick="changeWeek(1)" class="p-1 rounded-full hover:bg-slate-200/60 active:scale-95 transition text-slate-600 disabled:opacity-30 disabled:pointer-events-none">
+          <button id="nextWeekBtn" onclick="changeWeek(1)" class="p-1.5 rounded-full hover:bg-slate-200/60 active:scale-95 transition text-slate-600 disabled:opacity-30 disabled:pointer-events-none">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
           </button>
         </div>
@@ -193,9 +195,8 @@
     let activeUserId = null;
     let currentPeriod = 'all';
     let selectedDateTimestamp = null;
-    let currentWeekOffset = 0; // 0 = текущая неделя, -1 = прошлая неделя и т.д.
+    let currentWeekOffset = 0;
 
-    // Тактильный виброотклик Telegram
     function triggerHaptic(type = 'light') {
       if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) {
         window.Telegram.WebApp.HapticFeedback.impactOccurred(type);
@@ -211,7 +212,6 @@
       fetchData();
     });
 
-    // Обработка свайпов пальцем по календарному стрипу
     function initSwipeListeners() {
       const container = document.getElementById('curvedDateStrip');
       let touchStartX = 0;
@@ -229,17 +229,15 @@
       function handleSwipeGesture() {
         const threshold = 40;
         if (touchEndX - touchStartX > threshold) {
-          // Свайп вправо -> листаем в прошлое
           changeWeek(-1);
         } else if (touchStartX - touchEndX > threshold) {
-          // Свайп влево -> листаем вперед (к сегодня)
           changeWeek(1);
         }
       }
     }
 
     function changeWeek(direction) {
-      if (direction === 1 && currentWeekOffset >= 0) return; // Нельзя листать в будущее
+      if (direction === 1 && currentWeekOffset >= 0) return;
       currentWeekOffset += direction;
       triggerHaptic('light');
       if (globalData[activeUserId]) {
@@ -308,48 +306,70 @@
         if (globalData[tgId]) defaultUid = tgId;
       }
 
-      activeUserId = defaultUid;
+      activeUserId = String(defaultUid);
 
-      const userTabs = document.getElementById('userTabs');
-      userTabs.innerHTML = '';
-
-      if (userIds.length > 1) {
-        document.getElementById('userSelectorContainer').classList.remove('hidden');
-        userIds.forEach(uid => {
-          const user = globalData[uid];
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.className = `px-3.5 py-1 text-xs font-semibold rounded-full transition-all ${uid === activeUserId ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`;
-          btn.textContent = user.name;
-          btn.addEventListener('click', () => {
-            activeUserId = uid;
-            selectedDateTimestamp = null;
-            currentWeekOffset = 0;
-            triggerHaptic('selection');
-            updateTabsUI(userIds);
-            renderDashboard(globalData[activeUserId]);
-          });
-          userTabs.appendChild(btn);
-        });
-      }
-
+      renderUserTabs();
       document.getElementById('dateStripWrapper').classList.remove('hidden');
       document.getElementById('dashboardContent').classList.remove('hidden');
       renderDashboard(globalData[activeUserId]);
-    };
+    }
 
-    function updateTabsUI(userIds) {
+    // НАДЕЖНЫЙ ПЕРЕКЛЮЧАТЕЛЬ ПОЛЬЗОВАТЕЛЕЙ С ПРЯМЫМ ТАПОМ
+    function renderUserTabs() {
+      const container = document.getElementById('userSelectorContainer');
       const userTabs = document.getElementById('userTabs');
-      const buttons = userTabs.children;
-      userIds.forEach((uid, index) => {
-        if (buttons[index]) {
-          if (uid === activeUserId) {
-            buttons[index].className = "px-3.5 py-1 text-xs font-semibold rounded-full transition-all bg-blue-600 text-white shadow-sm";
-          } else {
-            buttons[index].className = "px-3.5 py-1 text-xs font-semibold rounded-full transition-all text-slate-600 hover:text-slate-900";
-          }
-        }
+      const userIds = Object.keys(globalData);
+
+      if (userIds.length <= 1) {
+        container.classList.add('hidden');
+        return;
+      }
+
+      container.classList.remove('hidden');
+      userTabs.innerHTML = '';
+
+      userIds.forEach(uid => {
+        const user = globalData[uid];
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        const isActive = (String(uid) === String(activeUserId));
+        btn.className = `px-4 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer select-none active:scale-95 ${
+          isActive 
+            ? 'bg-blue-600 text-white shadow-sm ring-2 ring-blue-600/30' 
+            : 'text-slate-600 hover:text-slate-900 bg-transparent'
+        }`;
+        btn.textContent = user.name || uid;
+
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          switchUser(uid);
+        });
+
+        userTabs.appendChild(btn);
       });
+    }
+
+    function switchUser(uid) {
+      if (String(activeUserId) === String(uid)) return;
+      activeUserId = String(uid);
+      selectedDateTimestamp = null;
+      currentWeekOffset = 0;
+      triggerHaptic('selection');
+      renderUserTabs();
+      
+      const userData = globalData[activeUserId];
+      if (!userData || !userData.entries || userData.entries.length === 0) {
+        showError(`У пользователя ${userData ? userData.name : uid} пока нет записей о весе.`);
+        document.getElementById('currWeight').textContent = "—";
+        document.getElementById('startWeight').textContent = "—";
+        document.getElementById('targetWeight').textContent = "—";
+        document.getElementById('trendWeight').textContent = "—";
+        document.getElementById('curvedDateStrip').innerHTML = '';
+        if (chartInstance) chartInstance.destroy();
+        return;
+      }
+
+      renderDashboard(userData);
     }
 
     function showError(msg) {
@@ -378,7 +398,7 @@
       return entries.map((entry, index, arr) => {
         const start = Math.max(0, index - windowSize + 1);
         const subset = arr.slice(start, index + 1);
-        const sum = subset.reduce((acc, curr) => acc + curr.weight, 0);
+        const sum = subset.reduce((acc, curr) => acc + (parseFloat(curr.weight) || 0), 0);
         return parseFloat((sum / subset.length).toFixed(1));
       });
     }
@@ -408,7 +428,6 @@
       return targetDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
     }
 
-    // ПОСТРОЕНИЕ ПОЛУКРУГЛОГО КАЛЕНДАРЯ СО СВАЙПОМ НЕДЕЛЬ
     function renderCurvedDateStrip(allEntries) {
       const container = document.getElementById('curvedDateStrip');
       container.innerHTML = '';
@@ -419,7 +438,6 @@
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      // Рассчитываем 7 дней с учетом текущего смещения недели (currentWeekOffset)
       const baseEndDate = new Date(today);
       baseEndDate.setDate(today.getDate() + (currentWeekOffset * 7));
 
@@ -430,7 +448,6 @@
         stripDays.push(d);
       }
 
-      // Обновляем шапку стрипа
       const firstDay = stripDays[0];
       const lastDay = stripDays[6];
       const periodLabel = `${firstDay.getDate()} ${monthsRu[firstDay.getMonth()]} — ${lastDay.getDate()} ${monthsRu[lastDay.getMonth()]}`;
@@ -446,7 +463,6 @@
         todayBtn.classList.add('hidden');
       }
 
-      // Параболические смещения дуги
       const arcOffsets = [14, 7, 2, 0, 2, 7, 14];
 
       if (!selectedDateTimestamp && allEntries.length > 0 && currentWeekOffset === 0) {
@@ -522,8 +538,10 @@
     }
 
     function renderDashboard(userData) {
+      document.getElementById('errorBox').classList.add('hidden');
+
       if (!userData || !userData.entries || userData.entries.length === 0) {
-        showError("У пользователя нет данных о весе.");
+        showError(`У пользователя ${userData ? userData.name : ''} пока нет данных о весе.`);
         return;
       }
 
@@ -570,7 +588,7 @@
       }
 
       const smaValuesAll = calculateSMA(allEntries);
-      const smaTarget = smaValuesAll[targetEntryIndex];
+      const smaTarget = smaValuesAll[targetEntryIndex !== -1 ? targetEntryIndex : smaValuesAll.length - 1];
       document.getElementById('trendWeight').textContent = `${smaTarget} кг`;
 
       if (target) {
