@@ -76,10 +76,10 @@
       </div>
     </div>
 
-    <!-- ПОЛУКРУГЛЫЙ КАЛЕНДАРНЫЙ СТРИП СО СВАЙПОМ НЕДЕЛЬ -->
+    <!-- ПОЛУКРУГЛЫЙ КАЛЕНДАРНЫЙ СТРИП (СТРОГО ПН - ВС) -->
     <div id="dateStripWrapper" class="hidden relative w-full pt-1 pb-1 select-none z-10">
       
-      <!-- Шапка стрипа: Название периода и кнопка "Сегодня" -->
+      <!-- Шапка стрипа: Период (Пн - Вс) и кнопка "Сегодня" -->
       <div class="flex justify-between items-center px-2 mb-1 text-[11px]">
         <div class="flex items-center gap-1.5 text-slate-500 font-semibold">
           <button onclick="changeWeek(-1)" class="p-1.5 rounded-full hover:bg-slate-200/60 active:scale-95 transition text-slate-600">
@@ -91,14 +91,14 @@
           </button>
         </div>
         <button id="todayBtn" onclick="resetToToday()" class="hidden px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-600 font-bold border border-blue-200 shadow-xs hover:bg-blue-100 transition active:scale-95 text-[10px]">
-          Сегодня
+          Текущая неделя
         </button>
       </div>
 
       <!-- Мягкое свечение в центре -->
       <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-20 bg-blue-500/10 rounded-full blur-2xl pointer-events-none"></div>
       
-      <!-- Сама дуга с 7 днями -->
+      <!-- Сама дуга с 7 днями (Пн-Вс) -->
       <div id="curvedDateStrip" class="relative z-10 flex items-center justify-between px-1 h-[95px] touch-pan-y">
         <!-- Заполняется динамически -->
       </div>
@@ -195,9 +195,8 @@
     let activeUserId = null;
     let currentPeriod = 'all';
     let selectedDateTimestamp = null;
-    let currentWeekOffset = 0;
+    let currentWeekOffset = 0; // 0 = текущая неделя, -1 = прошлая неделя Пн-Вс и т.д.
 
-    // Безопасный виброотклик Telegram без крашей скрипта
     function safeHaptic(type = 'light') {
       try {
         if (!window.Telegram || !window.Telegram.WebApp || !window.Telegram.WebApp.HapticFeedback) return;
@@ -240,16 +239,19 @@
       function handleSwipeGesture() {
         const threshold = 40;
         if (touchEndX - touchStartX > threshold) {
+          // Свайп вправо -> прошлая неделя
           changeWeek(-1);
         } else if (touchStartX - touchEndX > threshold) {
+          // Свайп влево -> следующая неделя
           changeWeek(1);
         }
       }
     }
 
     function changeWeek(direction) {
-      if (direction === 1 && currentWeekOffset >= 0) return;
+      if (direction === 1 && currentWeekOffset >= 0) return; // Запрет листания в будущие недели
       currentWeekOffset += direction;
+      selectedDateTimestamp = null; // Сбрасываем выбранный день, чтобы подставить актуальный для новой недели
       safeHaptic('light');
       renderDashboard();
     }
@@ -321,7 +323,6 @@
       renderDashboard();
     }
 
-    // НАДЕЖНАЯ ДЕКЛАРАТИВНАЯ ОТРИСОВКА ВКЛАДОК ПОЛЬЗОВАТЕЛЕЙ
     function renderUserTabs() {
       const container = document.getElementById('userSelectorContainer');
       const userTabs = document.getElementById('userTabs');
@@ -356,7 +357,6 @@
       });
     }
 
-    // МГНОВЕННЫЙ И БЕЗОПАСНЫЙ ПЕРЕКЛЮЧАТЕЛЬ АТЛЕТА
     function selectUser(uid) {
       if (String(activeUserId) === String(uid)) return;
       activeUserId = String(uid);
@@ -422,26 +422,38 @@
       return targetDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
     }
 
+    // ПОСТРОЕНИЕ КАЛЕНДАРНОГО СТРИПА СТРОГО С ПОНЕДЕЛЬНИКА ПО ВОСКРЕСЕНЬЕ (ПН - ВС)
     function renderCurvedDateStrip(allEntries) {
       const container = document.getElementById('curvedDateStrip');
       container.innerHTML = '';
 
-      const daysOfWeek = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+      const daysOfWeek = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
       const monthsRu = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
       
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const baseEndDate = new Date(today);
-      baseEndDate.setDate(today.getDate() + (currentWeekOffset * 7));
+      // Находим понедельник текущей недели
+      // В JS: 0 - Вс, 1 - Пн, 2 - Вт, ..., 6 - Сб
+      const dayOfWeek = today.getDay();
+      const diffToMonday = (dayOfWeek === 0 ? -6 : 1 - dayOfWeek);
+      
+      const currentMonday = new Date(today);
+      currentMonday.setDate(today.getDate() + diffToMonday);
 
+      // Находим понедельник целевой недели с учетом листания (currentWeekOffset)
+      const targetMonday = new Date(currentMonday);
+      targetMonday.setDate(currentMonday.getDate() + (currentWeekOffset * 7));
+
+      // Заполняем строго 7 дней от Понедельника (0) до Воскресенья (6)
       const stripDays = [];
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date(baseEndDate);
-        d.setDate(baseEndDate.getDate() - i);
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(targetMonday);
+        d.setDate(targetMonday.getDate() + i);
         stripDays.push(d);
       }
 
+      // Обновляем текст периода (например: "22 сен — 28 сен")
       const firstDay = stripDays[0];
       const lastDay = stripDays[6];
       const periodLabel = `${firstDay.getDate()} ${monthsRu[firstDay.getMonth()]} — ${lastDay.getDate()} ${monthsRu[lastDay.getMonth()]}`;
@@ -457,16 +469,30 @@
         todayBtn.classList.add('hidden');
       }
 
+      // Параболический изгиб дуги: вершина ровно по центру (Четверг, index 3)
       const arcOffsets = [14, 7, 2, 0, 2, 7, 14];
 
-      if (!selectedDateTimestamp && allEntries.length > 0 && currentWeekOffset === 0) {
-        selectedDateTimestamp = allEntries[allEntries.length - 1].timestamp;
+      // Проверяем, есть ли замеры в выбранной неделе
+      const weekStartTs = stripDays[0].getTime();
+      const weekEndTs = stripDays[6].getTime() + 86400000 - 1;
+      const entriesInWeek = allEntries.filter(e => e.timestamp >= weekStartTs && e.timestamp <= weekEndTs);
+
+      // Если выбранный день не входит в текущую просматриваемую неделю — выбираем последний день недели с замером
+      const isSelectedInWeek = entriesInWeek.some(e => e.timestamp === selectedDateTimestamp);
+      if (!isSelectedInWeek) {
+        if (entriesInWeek.length > 0) {
+          selectedDateTimestamp = entriesInWeek[entriesInWeek.length - 1].timestamp;
+        } else if (currentWeekOffset === 0 && allEntries.length > 0) {
+          selectedDateTimestamp = allEntries[allEntries.length - 1].timestamp;
+        }
       }
 
       stripDays.forEach((d, idx) => {
         const dayNum = d.getDate();
-        const dayName = daysOfWeek[d.getDay()];
+        const dayName = daysOfWeek[idx]; // Строго Пн, Вт, Ср, Чт, Пт, Сб, Вс
+        const isFuture = (d.getTime() > today.getTime());
 
+        // Ищем замер за этот день
         const entryIdx = allEntries.findIndex(e => {
           const ed = new Date(e.timestamp);
           return ed.getFullYear() === d.getFullYear() && ed.getMonth() === d.getMonth() && ed.getDate() === d.getDate();
@@ -497,15 +523,19 @@
         }
 
         const isSelected = entry && entry.timestamp === selectedDateTimestamp;
-        const isToday = d.toDateString() === (new Date()).toDateString();
+        const isToday = (d.toDateString() === (new Date()).toDateString());
 
         const col = document.createElement('div');
-        col.className = 'flex flex-col items-center justify-center cursor-pointer transition-all duration-300';
+        col.className = `flex flex-col items-center justify-center transition-all duration-300 ${
+          isFuture ? 'opacity-40 cursor-default' : 'cursor-pointer'
+        }`;
         col.style.transform = `translateY(${arcOffsets[idx]}px)`;
 
         col.innerHTML = `
+          <!-- Суточная дельта веса -->
           <span class="text-[9px] mb-1 tracking-tight ${diffColor}">${diffText}</span>
           
+          <!-- Кружок даты -->
           <div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
             isSelected 
               ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/35 ring-4 ring-blue-500/20 scale-110' 
@@ -516,16 +546,19 @@
             ${dayNum}
           </div>
           
-          <span class="text-[10px] mt-1 font-semibold ${isSelected ? 'text-blue-600' : 'text-slate-400'}">${dayName}</span>
+          <!-- День недели (Пн, Вт, Ср, Чт, Пт, Сб, Вс) -->
+          <span class="text-[10px] mt-1 font-semibold ${isSelected ? 'text-blue-600 font-bold' : 'text-slate-400'}">${dayName}</span>
         `;
 
-        col.onclick = function() {
-          if (entry) {
-            selectedDateTimestamp = entry.timestamp;
-            safeHaptic('light');
-            renderDashboard();
-          }
-        };
+        if (!isFuture) {
+          col.onclick = function() {
+            if (entry) {
+              selectedDateTimestamp = entry.timestamp;
+              safeHaptic('light');
+              renderDashboard();
+            }
+          };
+        }
 
         container.appendChild(col);
       });
