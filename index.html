@@ -74,13 +74,31 @@
       <div id="userTabs" class="flex items-center space-x-1 bg-white/85 backdrop-blur-md p-1 rounded-full border border-slate-200/80 shadow-sm"></div>
     </div>
 
-    <!-- ПОЛУКРУГЛЫЙ КАЛЕНДАРНЫЙ СТРИП (ПО ДУГЕ В СТИЛЕ AIVO) -->
-    <div id="dateStripWrapper" class="hidden relative w-full pt-1 pb-2">
-      <!-- Мягкое ореоловое свечение в центре дуги -->
+    <!-- ПОЛУКРУГЛЫЙ КАЛЕНДАРНЫЙ СТРИП СО СВАЙПОМ НЕДЕЛЬ -->
+    <div id="dateStripWrapper" class="hidden relative w-full pt-1 pb-1 select-none">
+      
+      <!-- Шапка стрипа: Название периода и кнопка "Сегодня" -->
+      <div class="flex justify-between items-center px-2 mb-1 text-[11px]">
+        <div class="flex items-center gap-1.5 text-slate-500 font-semibold">
+          <button onclick="changeWeek(-1)" class="p-1 rounded-full hover:bg-slate-200/60 active:scale-95 transition text-slate-600">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <span id="weekPeriodLabel">Неделя</span>
+          <button id="nextWeekBtn" onclick="changeWeek(1)" class="p-1 rounded-full hover:bg-slate-200/60 active:scale-95 transition text-slate-600 disabled:opacity-30 disabled:pointer-events-none">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+        <button id="todayBtn" onclick="resetToToday()" class="hidden px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-600 font-bold border border-blue-200 shadow-xs hover:bg-blue-100 transition active:scale-95 text-[10px]">
+          Сегодня
+        </button>
+      </div>
+
+      <!-- Мягкое свечение в центре -->
       <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-20 bg-blue-500/10 rounded-full blur-2xl pointer-events-none"></div>
       
-      <div id="curvedDateStrip" class="relative z-10 flex items-center justify-between px-1 h-[95px]">
-        <!-- Заполняется динамически по дуге -->
+      <!-- Сама дуга с 7 днями -->
+      <div id="curvedDateStrip" class="relative z-10 flex items-center justify-between px-1 h-[95px] touch-pan-y">
+        <!-- Заполняется динамически -->
       </div>
     </div>
 
@@ -175,14 +193,68 @@
     let activeUserId = null;
     let currentPeriod = 'all';
     let selectedDateTimestamp = null;
+    let currentWeekOffset = 0; // 0 = текущая неделя, -1 = прошлая неделя и т.д.
+
+    // Тактильный виброотклик Telegram
+    function triggerHaptic(type = 'light') {
+      if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) {
+        window.Telegram.WebApp.HapticFeedback.impactOccurred(type);
+      }
+    }
 
     window.addEventListener('DOMContentLoaded', () => {
       if (window.Telegram && window.Telegram.WebApp) {
         window.Telegram.WebApp.ready();
         window.Telegram.WebApp.expand();
       }
+      initSwipeListeners();
       fetchData();
     });
+
+    // Обработка свайпов пальцем по календарному стрипу
+    function initSwipeListeners() {
+      const container = document.getElementById('curvedDateStrip');
+      let touchStartX = 0;
+      let touchEndX = 0;
+
+      container.addEventListener('touchstart', (e) => {
+        touchStartX = e.changedTouches[0].screenX;
+      }, { passive: true });
+
+      container.addEventListener('touchend', (e) => {
+        touchEndX = e.changedTouches[0].screenX;
+        handleSwipeGesture();
+      }, { passive: true });
+
+      function handleSwipeGesture() {
+        const threshold = 40;
+        if (touchEndX - touchStartX > threshold) {
+          // Свайп вправо -> листаем в прошлое
+          changeWeek(-1);
+        } else if (touchStartX - touchEndX > threshold) {
+          // Свайп влево -> листаем вперед (к сегодня)
+          changeWeek(1);
+        }
+      }
+    }
+
+    function changeWeek(direction) {
+      if (direction === 1 && currentWeekOffset >= 0) return; // Нельзя листать в будущее
+      currentWeekOffset += direction;
+      triggerHaptic('light');
+      if (globalData[activeUserId]) {
+        renderDashboard(globalData[activeUserId]);
+      }
+    }
+
+    function resetToToday() {
+      currentWeekOffset = 0;
+      selectedDateTimestamp = null;
+      triggerHaptic('medium');
+      if (globalData[activeUserId]) {
+        renderDashboard(globalData[activeUserId]);
+      }
+    }
 
     async function fetchData() {
       const initData = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp.initData : "";
@@ -252,6 +324,8 @@
           btn.addEventListener('click', () => {
             activeUserId = uid;
             selectedDateTimestamp = null;
+            currentWeekOffset = 0;
+            triggerHaptic('selection');
             updateTabsUI(userIds);
             renderDashboard(globalData[activeUserId]);
           });
@@ -287,6 +361,7 @@
 
     function setPeriod(period) {
       currentPeriod = period;
+      triggerHaptic('light');
       document.querySelectorAll('.period-btn').forEach(btn => {
         btn.className = "period-btn py-1 rounded-lg transition text-slate-600 text-[11px] font-medium";
       });
@@ -333,36 +408,55 @@
       return targetDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
     }
 
-    // ПОСТРОЕНИЕ ПОЛУКРУГЛОГО КАЛЕНДАРЯ (AIVO STYLE ДУГА)
+    // ПОСТРОЕНИЕ ПОЛУКРУГЛОГО КАЛЕНДАРЯ СО СВАЙПОМ НЕДЕЛЬ
     function renderCurvedDateStrip(allEntries) {
       const container = document.getElementById('curvedDateStrip');
       container.innerHTML = '';
 
       const daysOfWeek = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+      const monthsRu = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+      
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      // Генерируем 7 дней: 6 дней назад + сегодня
+      // Рассчитываем 7 дней с учетом текущего смещения недели (currentWeekOffset)
+      const baseEndDate = new Date(today);
+      baseEndDate.setDate(today.getDate() + (currentWeekOffset * 7));
+
       const stripDays = [];
       for (let i = 6; i >= 0; i--) {
-        const d = new Date(today);
-        d.setDate(today.getDate() - i);
+        const d = new Date(baseEndDate);
+        d.setDate(baseEndDate.getDate() - i);
         stripDays.push(d);
       }
 
-      // Параболические смещения дуги (вершина по центру)
+      // Обновляем шапку стрипа
+      const firstDay = stripDays[0];
+      const lastDay = stripDays[6];
+      const periodLabel = `${firstDay.getDate()} ${monthsRu[firstDay.getMonth()]} — ${lastDay.getDate()} ${monthsRu[lastDay.getMonth()]}`;
+      document.getElementById('weekPeriodLabel').textContent = periodLabel;
+
+      const nextWeekBtn = document.getElementById('nextWeekBtn');
+      nextWeekBtn.disabled = (currentWeekOffset >= 0);
+
+      const todayBtn = document.getElementById('todayBtn');
+      if (currentWeekOffset < 0) {
+        todayBtn.classList.remove('hidden');
+      } else {
+        todayBtn.classList.add('hidden');
+      }
+
+      // Параболические смещения дуги
       const arcOffsets = [14, 7, 2, 0, 2, 7, 14];
 
-      if (!selectedDateTimestamp && allEntries.length > 0) {
+      if (!selectedDateTimestamp && allEntries.length > 0 && currentWeekOffset === 0) {
         selectedDateTimestamp = allEntries[allEntries.length - 1].timestamp;
       }
 
       stripDays.forEach((d, idx) => {
-        const dTimestamp = d.getTime();
         const dayNum = d.getDate();
         const dayName = daysOfWeek[d.getDay()];
 
-        // Ищем замер на эту дату
         const entryIdx = allEntries.findIndex(e => {
           const ed = new Date(e.timestamp);
           return ed.getFullYear() === d.getFullYear() && ed.getMonth() === d.getMonth() && ed.getDate() === d.getDate();
@@ -400,27 +494,25 @@
         col.style.transform = `translateY(${arcOffsets[idx]}px)`;
 
         col.innerHTML = `
-          <!-- Разница веса за сутки -->
           <span class="text-[9px] mb-1 tracking-tight ${diffColor}">${diffText}</span>
           
-          <!-- Кружок с числом -->
           <div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
             isSelected 
               ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/35 ring-4 ring-blue-500/20 scale-110' 
               : (isToday 
                   ? 'bg-white text-blue-600 border-2 border-blue-500 font-extrabold shadow-sm' 
-                  : 'bg-white/90 text-slate-700 border border-slate-200/80 shadow-sm hover:bg-white')
+                  : (entry ? 'bg-white text-slate-800 border border-slate-200 shadow-xs' : 'bg-slate-100 text-slate-400 border border-slate-200/50'))
           }">
             ${dayNum}
           </div>
           
-          <!-- День недели -->
           <span class="text-[10px] mt-1 font-semibold ${isSelected ? 'text-blue-600' : 'text-slate-400'}">${dayName}</span>
         `;
 
         col.addEventListener('click', () => {
           if (entry) {
             selectedDateTimestamp = entry.timestamp;
+            triggerHaptic('light');
             renderDashboard(globalData[activeUserId]);
           }
         });
@@ -495,7 +587,6 @@
         document.getElementById('goalEtaText').textContent = `Нет цели`;
       }
 
-      // Подготовка данных графика под выбранный период
       let chartEntries = allEntries;
       if (currentPeriod !== 'all') {
         const daysLimit = parseInt(currentPeriod);
