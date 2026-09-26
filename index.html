@@ -32,18 +32,22 @@
     .stepn-bar {
       animation: stepn-shimmer 1.6s infinite linear;
     }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
   </style>
 </head>
 <body class="text-slate-900 font-sans antialiased selection:bg-blue-600 selection:text-white flex flex-col items-center">
 
-  <!-- СВЕТЛЫЙ ЭКРАН ЗАГРУЗКИ В СТИЛЕ STEPN (ЕДИНЫЙ СО ВСЕМ ПРИЛОЖЕНИЕМ) -->
+  <!-- СВЕТЛЫЙ ЭКРАН ЗАГРУЗКИ В СТИЛЕ STEPN -->
   <div id="splashScreen" class="fixed inset-0 z-50 bg-[#f3f6fc] flex flex-col items-center justify-center p-6 text-center">
-    
-    <!-- Карточка с силуэтом бегущего атлета -->
     <div class="relative flex items-center justify-center w-28 h-28 mb-6">
       <div class="absolute inset-0 rounded-[32px] bg-gradient-to-tr from-blue-500/20 to-emerald-400/20 blur-xl animate-pulse"></div>
       <div class="absolute inset-0 rounded-[32px] bg-white border border-slate-200/80 shadow-[0_15px_35px_rgba(37,99,235,0.1)] flex items-center justify-center">
-        <!-- Аккуратный силуэт бегущего человека -->
         <svg class="w-14 h-14 text-blue-600 drop-shadow-[0_4px_10px_rgba(37,99,235,0.25)]" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
           <path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3c1.3 1.5 3.3 2.5 5.5 2.5v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.2L6 8.3V13h2V9.6l1.8-.7z"/>
         </svg>
@@ -52,23 +56,32 @@
     
     <h2 class="font-extrabold text-slate-900 text-base tracking-[0.2em] uppercase">WEIGHT TRACKER <span class="text-blue-600">AI</span></h2>
     
-    <!-- Прогресс-бар загрузки -->
     <div class="w-48 h-1.5 bg-slate-200 rounded-full mt-6 overflow-hidden relative shadow-inner">
       <div class="absolute top-0 left-0 bottom-0 w-1/2 bg-gradient-to-r from-blue-600 via-indigo-500 to-emerald-400 rounded-full stepn-bar shadow-[0_0_10px_rgba(37,99,235,0.4)]"></div>
     </div>
     <p class="text-slate-400 text-[10px] mt-3 font-bold tracking-widest uppercase">Синхронизация данных...</p>
   </div>
 
-  <!-- Фоновые мягкие Mesh Gradient сферы -->
+  <!-- Фоновые сферы -->
   <div class="fixed top-[-10%] left-[-10%] w-[350px] h-[350px] bg-blue-400/20 rounded-full blur-[100px] pointer-events-none"></div>
   <div class="fixed bottom-[-10%] right-[-10%] w-[350px] h-[350px] bg-purple-400/15 rounded-full blur-[100px] pointer-events-none"></div>
 
-  <!-- Основной контейнер с правильными отступами без обрезания углов -->
-  <main class="w-full max-w-[420px] mx-auto px-4 py-4 space-y-3.5 relative z-10">
+  <!-- Основной контейнер дашборда -->
+  <main class="w-full max-w-[420px] mx-auto px-4 py-3 space-y-3 relative z-10">
 
     <!-- Переключатель пользователей -->
-    <div id="userSelectorContainer" class="hidden flex justify-center mb-1">
+    <div id="userSelectorContainer" class="hidden flex justify-center mb-0.5">
       <div id="userTabs" class="flex items-center space-x-1 bg-white/85 backdrop-blur-md p-1 rounded-full border border-slate-200/80 shadow-sm"></div>
+    </div>
+
+    <!-- ПОЛУКРУГЛЫЙ КАЛЕНДАРНЫЙ СТРИП (ПО ДУГЕ В СТИЛЕ AIVO) -->
+    <div id="dateStripWrapper" class="hidden relative w-full pt-1 pb-2">
+      <!-- Мягкое ореоловое свечение в центре дуги -->
+      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-20 bg-blue-500/10 rounded-full blur-2xl pointer-events-none"></div>
+      
+      <div id="curvedDateStrip" class="relative z-10 flex items-center justify-between px-1 h-[95px]">
+        <!-- Заполняется динамически по дуге -->
+      </div>
     </div>
 
     <!-- Ошибка -->
@@ -83,7 +96,7 @@
 
         <div class="flex justify-between items-start relative z-10">
           <div>
-            <p class="text-[10px] font-bold uppercase tracking-widest text-blue-100/80">Текущий вес</p>
+            <p id="currWeightLabel" class="text-[10px] font-bold uppercase tracking-widest text-blue-100/80">Текущий вес</p>
             <p id="currWeight" class="text-3xl font-extrabold tracking-tight mt-1 text-white">-</p>
           </div>
           <span id="currDiffBadge" class="text-[11px] font-semibold px-3 py-1 rounded-full border backdrop-blur-md">--</span>
@@ -130,22 +143,20 @@
           </div>
         </div>
 
-        <!-- График с комфортной высотой -->
+        <!-- График -->
         <div class="relative w-full h-[200px]">
           <canvas id="weightChart"></canvas>
         </div>
       </div>
 
-      <!-- Премиальные плашки снизу в одну строчку -->
+      <!-- Премиальные плашки снизу -->
       <div class="grid grid-cols-2 gap-3">
-        <!-- Выполнение цели -->
         <div class="bg-gradient-to-br from-purple-600 via-indigo-600 to-pink-600 text-white rounded-[24px] p-4 shadow-lg shadow-purple-500/15 relative overflow-hidden flex flex-col justify-between">
           <div class="absolute -right-6 -bottom-6 w-16 h-16 bg-white/15 rounded-full blur-xl pointer-events-none"></div>
           <p class="text-[10px] font-bold uppercase tracking-wider text-purple-100/80">Выполнение цели</p>
           <div id="progressText" class="text-xl font-extrabold tracking-tight mt-1 text-white">--%</div>
         </div>
 
-        <!-- Прогноз цели -->
         <div class="bg-gradient-to-br from-blue-600 via-cyan-600 to-teal-600 text-white rounded-[24px] p-4 shadow-lg shadow-blue-500/15 relative overflow-hidden flex flex-col justify-between">
           <div class="absolute -right-6 -bottom-6 w-16 h-16 bg-white/15 rounded-full blur-xl pointer-events-none"></div>
           <p class="text-[10px] font-bold uppercase tracking-wider text-cyan-100/80">🎯 Прогноз цели</p>
@@ -163,6 +174,7 @@
     let globalData = {};
     let activeUserId = null;
     let currentPeriod = 'all';
+    let selectedDateTimestamp = null;
 
     window.addEventListener('DOMContentLoaded', () => {
       if (window.Telegram && window.Telegram.WebApp) {
@@ -184,7 +196,7 @@
         try {
           data = JSON.parse(text);
         } catch (e) {
-          throw new Error("Сервер вернул некорректный ответ (проверьте URL Web App и права доступа «Все»).");
+          throw new Error("Сервер вернул некорректный ответ (проверьте URL Web App и доступ «Все»).");
         }
 
         handleData(data);
@@ -239,6 +251,7 @@
           btn.textContent = user.name;
           btn.addEventListener('click', () => {
             activeUserId = uid;
+            selectedDateTimestamp = null;
             updateTabsUI(userIds);
             renderDashboard(globalData[activeUserId]);
           });
@@ -246,6 +259,7 @@
         });
       }
 
+      document.getElementById('dateStripWrapper').classList.remove('hidden');
       document.getElementById('dashboardContent').classList.remove('hidden');
       renderDashboard(globalData[activeUserId]);
     };
@@ -319,32 +333,138 @@
       return targetDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
     }
 
+    // ПОСТРОЕНИЕ ПОЛУКРУГЛОГО КАЛЕНДАРЯ (AIVO STYLE ДУГА)
+    function renderCurvedDateStrip(allEntries) {
+      const container = document.getElementById('curvedDateStrip');
+      container.innerHTML = '';
+
+      const daysOfWeek = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      // Генерируем 7 дней: 6 дней назад + сегодня
+      const stripDays = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(today.getDate() - i);
+        stripDays.push(d);
+      }
+
+      // Параболические смещения дуги (вершина по центру)
+      const arcOffsets = [14, 7, 2, 0, 2, 7, 14];
+
+      if (!selectedDateTimestamp && allEntries.length > 0) {
+        selectedDateTimestamp = allEntries[allEntries.length - 1].timestamp;
+      }
+
+      stripDays.forEach((d, idx) => {
+        const dTimestamp = d.getTime();
+        const dayNum = d.getDate();
+        const dayName = daysOfWeek[d.getDay()];
+
+        // Ищем замер на эту дату
+        const entryIdx = allEntries.findIndex(e => {
+          const ed = new Date(e.timestamp);
+          return ed.getFullYear() === d.getFullYear() && ed.getMonth() === d.getMonth() && ed.getDate() === d.getDate();
+        });
+
+        const entry = entryIdx !== -1 ? allEntries[entryIdx] : null;
+        let diffText = "—";
+        let diffColor = "text-slate-400";
+
+        if (entry) {
+          const prevEntry = entryIdx > 0 ? allEntries[entryIdx - 1] : null;
+          if (prevEntry) {
+            const diff = parseFloat((entry.weight - prevEntry.weight).toFixed(1));
+            if (diff < 0) {
+              diffText = `${diff}`;
+              diffColor = "text-emerald-600 font-bold";
+            } else if (diff > 0) {
+              diffText = `+${diff}`;
+              diffColor = "text-rose-500 font-bold";
+            } else {
+              diffText = `0.0`;
+              diffColor = "text-slate-500 font-medium";
+            }
+          } else {
+            diffText = `${entry.weight}`;
+            diffColor = "text-blue-600 font-bold";
+          }
+        }
+
+        const isSelected = entry && entry.timestamp === selectedDateTimestamp;
+        const isToday = d.toDateString() === (new Date()).toDateString();
+
+        const col = document.createElement('div');
+        col.className = 'flex flex-col items-center justify-center cursor-pointer transition-all duration-300';
+        col.style.transform = `translateY(${arcOffsets[idx]}px)`;
+
+        col.innerHTML = `
+          <!-- Разница веса за сутки -->
+          <span class="text-[9px] mb-1 tracking-tight ${diffColor}">${diffText}</span>
+          
+          <!-- Кружок с числом -->
+          <div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+            isSelected 
+              ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/35 ring-4 ring-blue-500/20 scale-110' 
+              : (isToday 
+                  ? 'bg-white text-blue-600 border-2 border-blue-500 font-extrabold shadow-sm' 
+                  : 'bg-white/90 text-slate-700 border border-slate-200/80 shadow-sm hover:bg-white')
+          }">
+            ${dayNum}
+          </div>
+          
+          <!-- День недели -->
+          <span class="text-[10px] mt-1 font-semibold ${isSelected ? 'text-blue-600' : 'text-slate-400'}">${dayName}</span>
+        `;
+
+        col.addEventListener('click', () => {
+          if (entry) {
+            selectedDateTimestamp = entry.timestamp;
+            renderDashboard(globalData[activeUserId]);
+          }
+        });
+
+        container.appendChild(col);
+      });
+    }
+
     function renderDashboard(userData) {
       if (!userData || !userData.entries || userData.entries.length === 0) {
         showError("У пользователя нет данных о весе.");
         return;
       }
 
-      let entries = userData.entries;
-      
-      if (currentPeriod !== 'all') {
-        const daysLimit = parseInt(currentPeriod);
-        const latestTimestamp = entries[entries.length - 1].timestamp;
-        const cutoffTime = latestTimestamp - (daysLimit * 24 * 60 * 60 * 1000);
-        entries = entries.filter(e => e.timestamp >= cutoffTime);
+      const allEntries = userData.entries;
+      renderCurvedDateStrip(allEntries);
+
+      let targetEntry = allEntries[allEntries.length - 1];
+      let isViewingPast = false;
+
+      if (selectedDateTimestamp) {
+        const found = allEntries.find(e => e.timestamp === selectedDateTimestamp);
+        if (found) {
+          targetEntry = found;
+          if (found.timestamp !== allEntries[allEntries.length - 1].timestamp) {
+            isViewingPast = true;
+          }
+        }
       }
 
-      const allEntries = userData.entries;
-      const latest = allEntries[allEntries.length - 1];
-      const prev = allEntries.length > 1 ? allEntries[allEntries.length - 2] : latest;
+      const targetEntryIndex = allEntries.findIndex(e => e.timestamp === targetEntry.timestamp);
+      const prev = targetEntryIndex > 0 ? allEntries[targetEntryIndex - 1] : targetEntry;
       const start = userData.start || allEntries[0].weight;
       const target = userData.target;
 
-      document.getElementById('currWeight').textContent = `${latest.weight} кг`;
+      document.getElementById('currWeightLabel').textContent = isViewingPast 
+        ? `Замер за ${targetEntry.dateStr}` 
+        : `Текущий вес`;
+
+      document.getElementById('currWeight').textContent = `${targetEntry.weight} кг`;
       document.getElementById('startWeight').textContent = `${start} кг`;
       document.getElementById('targetWeight').textContent = target ? `${target} кг` : "—";
 
-      const diffDay = parseFloat((latest.weight - prev.weight).toFixed(1));
+      const diffDay = parseFloat((targetEntry.weight - prev.weight).toFixed(1));
       const badge = document.getElementById('currDiffBadge');
       if (diffDay < 0) {
         badge.textContent = `${diffDay} кг за сутки`;
@@ -358,25 +478,35 @@
       }
 
       const smaValuesAll = calculateSMA(allEntries);
-      document.getElementById('trendWeight').textContent = `${smaValuesAll[smaValuesAll.length - 1]} кг`;
+      const smaTarget = smaValuesAll[targetEntryIndex];
+      document.getElementById('trendWeight').textContent = `${smaTarget} кг`;
 
       if (target) {
         const totalDist = Math.abs(target - start);
-        const currentDist = Math.abs(latest.weight - start);
+        const currentDist = Math.abs(targetEntry.weight - start);
         let pct = totalDist > 0 ? Math.round((currentDist / totalDist) * 100) : 100;
         pct = Math.max(0, Math.min(100, pct));
         document.getElementById('progressText').textContent = `${pct}%`;
         
-        const etaDateStr = calculateGoalETA(allEntries, target, latest.weight);
+        const etaDateStr = calculateGoalETA(allEntries, target, targetEntry.weight);
         document.getElementById('goalEtaText').textContent = etaDateStr;
       } else {
         document.getElementById('progressText').textContent = `0%`;
         document.getElementById('goalEtaText').textContent = `Нет цели`;
       }
 
-      const labels = entries.map(e => e.dateStr);
-      const weights = entries.map(e => e.weight);
-      const smaValues = calculateSMA(entries);
+      // Подготовка данных графика под выбранный период
+      let chartEntries = allEntries;
+      if (currentPeriod !== 'all') {
+        const daysLimit = parseInt(currentPeriod);
+        const latestTimestamp = allEntries[allEntries.length - 1].timestamp;
+        const cutoffTime = latestTimestamp - (daysLimit * 24 * 60 * 60 * 1000);
+        chartEntries = allEntries.filter(e => e.timestamp >= cutoffTime);
+      }
+
+      const labels = chartEntries.map(e => e.dateStr);
+      const weights = chartEntries.map(e => e.weight);
+      const smaValues = calculateSMA(chartEntries);
 
       if (chartInstance) chartInstance.destroy();
 
@@ -396,11 +526,10 @@
               borderColor: '#2563eb',
               backgroundColor: gradient,
               borderWidth: 2.5,
-              pointRadius: 0,
-              pointHoverRadius: 5,
-              pointHoverBackgroundColor: '#2563eb',
-              pointHoverBorderColor: '#ffffff',
-              pointHoverBorderWidth: 2,
+              pointRadius: chartEntries.map(e => e.timestamp === targetEntry.timestamp ? 5 : 0),
+              pointBackgroundColor: '#2563eb',
+              pointBorderColor: '#ffffff',
+              pointBorderWidth: 2,
               tension: 0.35,
               fill: true
             },
@@ -410,7 +539,6 @@
               borderColor: '#059669',
               borderWidth: 2,
               pointRadius: 0,
-              pointHoverRadius: 0,
               borderDash: [4, 4],
               tension: 0.35,
               fill: false
