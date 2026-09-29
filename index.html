@@ -10,6 +10,11 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- Inter Font -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Tailwind: darkMode 'class' ДОЛЖЕН быть объявлен ДО загрузки cdn.tailwindcss.com,
+       иначе dark: варианты классов не будут работать -->
+  <script>
+    tailwind = { config: { darkMode: 'class' } };
+  </script>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     html, body {
@@ -21,6 +26,10 @@
       margin: 0;
       padding: 0;
       -webkit-tap-highlight-color: transparent;
+      transition: background-color 0.3s ease;
+    }
+    html.dark, html.dark body {
+      background-color: #0b0e14;
     }
     #splashScreen {
       transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.5s cubic-bezier(0.4, 0, 0.2, 1);
@@ -41,37 +50,37 @@
     }
   </style>
 </head>
-<body class="text-slate-900 font-sans antialiased selection:bg-blue-600 selection:text-white flex flex-col items-center">
+<body class="text-slate-900 dark:text-slate-100 font-sans antialiased selection:bg-blue-600 selection:text-white flex flex-col items-center">
 
-  <!-- СВЕТЛЫЙ ЭКРАН ЗАГРУЗКИ В СТИЛЕ STEPN -->
-  <div id="splashScreen" class="fixed inset-0 z-50 bg-[#f3f6fc] flex flex-col items-center justify-center p-6 text-center">
+  <!-- ЭКРАН ЗАГРУЗКИ -->
+  <div id="splashScreen" class="fixed inset-0 z-50 bg-[#f3f6fc] dark:bg-[#0b0e14] flex flex-col items-center justify-center p-6 text-center">
     <div class="relative flex items-center justify-center w-28 h-28 mb-6">
-      <div class="absolute inset-0 rounded-[32px] bg-gradient-to-tr from-blue-500/20 to-emerald-400/20 blur-xl animate-pulse"></div>
-      <div class="absolute inset-0 rounded-[32px] bg-white border border-slate-200/80 shadow-[0_15px_35px_rgba(37,99,235,0.1)] flex items-center justify-center">
-        <svg class="w-14 h-14 text-blue-600 drop-shadow-[0_4px_10px_rgba(37,99,235,0.25)]" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+      <div class="absolute inset-0 rounded-[32px] bg-gradient-to-tr from-blue-500/20 to-blue-400/10 blur-xl animate-pulse"></div>
+      <div class="absolute inset-0 rounded-[32px] bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-700/60 shadow-[0_15px_35px_rgba(37,99,235,0.1)] flex items-center justify-center">
+        <svg class="w-14 h-14 text-blue-600 dark:text-blue-400 drop-shadow-[0_4px_10px_rgba(37,99,235,0.25)]" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
           <path d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3c1.3 1.5 3.3 2.5 5.5 2.5v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.2L6 8.3V13h2V9.6l1.8-.7z"/>
         </svg>
       </div>
     </div>
     
-    <h2 class="font-extrabold text-slate-900 text-base tracking-[0.2em] uppercase">WEIGHT TRACKER <span class="text-blue-600">AI</span></h2>
+    <h2 class="font-extrabold text-slate-900 dark:text-slate-100 text-base tracking-[0.2em] uppercase">WEIGHT TRACKER <span class="text-blue-600 dark:text-blue-400">AI</span></h2>
     
-    <div class="w-48 h-1.5 bg-slate-200 rounded-full mt-6 overflow-hidden relative shadow-inner">
-      <div class="absolute top-0 left-0 bottom-0 w-1/2 bg-gradient-to-r from-blue-600 via-indigo-500 to-emerald-400 rounded-full stepn-bar shadow-[0_0_10px_rgba(37,99,235,0.4)]"></div>
+    <div class="w-48 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full mt-6 overflow-hidden relative shadow-inner">
+      <div class="absolute top-0 left-0 bottom-0 w-1/2 bg-gradient-to-r from-blue-600 to-blue-400 rounded-full stepn-bar shadow-[0_0_10px_rgba(37,99,235,0.4)]"></div>
     </div>
-    <p class="text-slate-400 text-[10px] mt-3 font-bold tracking-widest uppercase">Синхронизация данных...</p>
+    <p class="text-slate-400 dark:text-slate-500 text-[11px] mt-3 font-bold tracking-widest uppercase">Синхронизация данных...</p>
   </div>
 
-  <!-- Фоновые сферы -->
-  <div class="fixed top-[-10%] left-[-10%] w-[350px] h-[350px] bg-blue-400/20 rounded-full blur-[100px] pointer-events-none"></div>
-  <div class="fixed bottom-[-10%] right-[-10%] w-[350px] h-[350px] bg-purple-400/15 rounded-full blur-[100px] pointer-events-none"></div>
+  <!-- Фоновые сферы (в тёмной теме приглушены сильнее, чтобы не слепить) -->
+  <div class="fixed top-[-10%] left-[-10%] w-[350px] h-[350px] bg-blue-400/20 dark:bg-blue-500/10 rounded-full blur-[100px] pointer-events-none"></div>
+  <div class="fixed bottom-[-10%] right-[-10%] w-[350px] h-[350px] bg-blue-300/10 dark:bg-blue-500/5 rounded-full blur-[100px] pointer-events-none"></div>
 
   <!-- Основной контейнер дашборда -->
   <main class="w-full max-w-[420px] mx-auto px-4 py-3 space-y-3 relative z-10">
 
     <!-- ПЕРЕКЛЮЧАТЕЛЬ ПОЛЬЗОВАТЕЛЕЙ -->
     <div id="userSelectorContainer" class="hidden flex justify-center mb-1 relative z-30">
-      <div id="userTabs" class="flex items-center space-x-1.5 bg-white/90 backdrop-blur-md p-1.5 rounded-full border border-slate-200/90 shadow-sm">
+      <div id="userTabs" class="flex items-center space-x-1.5 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-1.5 rounded-full border border-slate-200/90 dark:border-slate-700/60 shadow-sm">
         <!-- Заполняется динамически -->
       </div>
     </div>
@@ -79,87 +88,94 @@
     <!-- ПОЛУКРУГЛЫЙ КАЛЕНДАРНЫЙ СТРИП (СТРОГО ПН - ВС) -->
     <div id="dateStripWrapper" class="hidden relative w-full pt-1 pb-1 select-none z-10">
       
-      <!-- Шапка стрипа: Период (Пн - Вс) и кнопка "Сегодня" -->
-      <div class="flex justify-between items-center px-2 mb-1 text-[11px]">
-        <div class="flex items-center gap-1.5 text-slate-500 font-semibold">
-          <button onclick="changeWeek(-1)" class="p-1.5 rounded-full hover:bg-slate-200/60 active:scale-95 transition text-slate-600">
+      <div class="flex justify-between items-center px-2 mb-1 text-[12px]">
+        <div class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-semibold">
+          <button onclick="changeWeek(-1)" class="p-1.5 rounded-full hover:bg-slate-200/60 dark:hover:bg-slate-800 active:scale-95 transition text-slate-600 dark:text-slate-300">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
           </button>
           <span id="weekPeriodLabel">Неделя</span>
-          <button id="nextWeekBtn" onclick="changeWeek(1)" class="p-1.5 rounded-full hover:bg-slate-200/60 active:scale-95 transition text-slate-600 disabled:opacity-30 disabled:pointer-events-none">
+          <button id="nextWeekBtn" onclick="changeWeek(1)" class="p-1.5 rounded-full hover:bg-slate-200/60 dark:hover:bg-slate-800 active:scale-95 transition text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:pointer-events-none">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
           </button>
         </div>
-        <button id="todayBtn" onclick="resetToToday()" class="hidden px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-600 font-bold border border-blue-200 shadow-xs hover:bg-blue-100 transition active:scale-95 text-[10px]">
+        <button id="todayBtn" onclick="resetToToday()" class="hidden px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-300 font-bold border border-blue-200 dark:border-blue-500/30 shadow-xs hover:bg-blue-100 dark:hover:bg-blue-500/25 transition active:scale-95 text-[11px]">
           Текущая неделя
         </button>
       </div>
 
-      <!-- Мягкое свечение в центре -->
       <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-20 bg-blue-500/10 rounded-full blur-2xl pointer-events-none"></div>
       
-      <!-- Сама дуга с 7 днями (Пн-Вс) -->
       <div id="curvedDateStrip" class="relative z-10 flex items-center justify-between px-1 h-[95px] touch-pan-y">
         <!-- Заполняется динамически -->
       </div>
+
+      <!-- Состояние "нет замеров за эту неделю" -->
+      <p id="emptyWeekNote" class="hidden text-center text-[11px] font-semibold text-slate-400 dark:text-slate-500 -mt-2">
+        Нет замеров за эту неделю
+      </p>
     </div>
 
     <!-- Ошибка -->
-    <div id="errorBox" class="hidden bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl text-xs font-medium shadow-sm"></div>
+    <div id="errorBox" class="hidden bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 text-red-600 dark:text-red-300 px-4 py-3 rounded-2xl text-xs font-medium shadow-sm">
+      <p id="errorText"></p>
+      <button id="retryBtn" onclick="retryFetch()" class="mt-2.5 px-3 py-1.5 rounded-lg bg-red-600 text-white text-[11px] font-bold active:scale-95 transition">
+        Повторить попытку
+      </button>
+    </div>
 
     <!-- Основной контент -->
     <div id="dashboardContent" class="hidden space-y-3.5 pb-6">
 
-      <!-- Карточка 1: Главная синяя градиентная карточка -->
+      <!-- Карточка 1: Главная синяя градиентная карточка (единственный яркий акцент на экране) -->
       <div class="bg-gradient-to-br from-[#1d4ed8] via-[#2563eb] to-[#0284c7] text-white rounded-[28px] p-5 relative overflow-hidden shadow-[0_15px_30px_rgba(37,99,235,0.25)]">
         <div class="absolute -right-10 -top-10 w-40 h-40 bg-white/15 rounded-full blur-2xl pointer-events-none"></div>
 
         <div class="flex justify-between items-start relative z-10">
           <div>
-            <p id="currWeightLabel" class="text-[10px] font-bold uppercase tracking-widest text-blue-100/80">Текущий вес</p>
+            <p id="currWeightLabel" class="text-[11px] font-bold uppercase tracking-widest text-blue-100/80">Текущий вес</p>
             <p id="currWeight" class="text-3xl font-extrabold tracking-tight mt-1 text-white">-</p>
           </div>
-          <span id="currDiffBadge" class="text-[11px] font-semibold px-3 py-1 rounded-full border backdrop-blur-md">--</span>
+          <span id="currDiffBadge" class="text-[12px] font-semibold px-3 py-1 rounded-full border backdrop-blur-md">--</span>
         </div>
 
         <div class="grid grid-cols-3 gap-2 mt-5 pt-4 border-t border-white/15 relative z-10">
           <div>
-            <p class="text-[9px] font-bold uppercase tracking-wider text-blue-100/70">Тренд (SMA 7)</p>
+            <p class="text-[10px] font-bold uppercase tracking-wider text-blue-100/70">Тренд (SMA 7)</p>
             <p id="trendWeight" class="text-xs font-extrabold text-white mt-0.5">-</p>
           </div>
           <div>
-            <p class="text-[9px] font-bold uppercase tracking-wider text-blue-100/70">Старт</p>
+            <p class="text-[10px] font-bold uppercase tracking-wider text-blue-100/70">Старт</p>
             <p id="startWeight" class="text-xs font-extrabold text-white/90 mt-0.5">-</p>
           </div>
           <div>
-            <p class="text-[9px] font-bold uppercase tracking-wider text-blue-100/70">Цель</p>
+            <p class="text-[10px] font-bold uppercase tracking-wider text-blue-100/70">Цель</p>
             <p id="targetWeight" class="text-xs font-extrabold text-emerald-300 mt-0.5">-</p>
           </div>
         </div>
       </div>
 
       <!-- Карточка 2: График и периоды -->
-      <div class="bg-white/95 backdrop-blur-xl border border-white/80 rounded-[28px] p-5 shadow-[0_10px_25px_rgba(0,0,0,0.04)] relative overflow-hidden">
+      <div class="bg-white/95 dark:bg-slate-900/90 backdrop-blur-xl border border-white/80 dark:border-slate-700/60 rounded-[28px] p-5 shadow-[0_10px_25px_rgba(0,0,0,0.04)] relative overflow-hidden">
         
         <div class="flex flex-col gap-2.5 mb-3">
           <div class="flex flex-wrap justify-between items-start gap-2">
             <div>
-              <h2 class="text-xs font-bold tracking-tight text-slate-900">Прогресс</h2>
+              <h2 class="text-xs font-bold tracking-tight text-slate-900 dark:text-slate-100">Прогресс</h2>
             </div>
-            <div class="flex items-center space-x-2.5 text-[10px] font-medium text-slate-500">
+            <div class="flex items-center space-x-2.5 text-[11px] font-medium text-slate-500 dark:text-slate-400">
               <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-600 inline-block"></span> Факт</span>
               <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span> Тренд</span>
             </div>
           </div>
 
           <!-- Выбор периода -->
-          <div class="grid grid-cols-6 gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/60 text-center">
-            <button onclick="setPeriod('14')" id="btn-14" class="period-btn py-1 rounded-lg transition text-slate-600 text-[11px] font-medium">14д</button>
-            <button onclick="setPeriod('30')" id="btn-30" class="period-btn py-1 rounded-lg transition text-slate-600 text-[11px] font-medium">30д</button>
-            <button onclick="setPeriod('90')" id="btn-90" class="period-btn py-1 rounded-lg transition text-slate-600 text-[11px] font-medium">90д</button>
-            <button onclick="setPeriod('180')" id="btn-180" class="period-btn py-1 rounded-lg transition text-slate-600 text-[11px] font-medium">180д</button>
-            <button onclick="setPeriod('365')" id="btn-365" class="period-btn py-1 rounded-lg transition text-slate-600 text-[11px] font-medium">Год</button>
-            <button onclick="setPeriod('all')" id="btn-all" class="period-btn py-1 rounded-lg transition bg-white text-blue-600 shadow-sm font-semibold text-[11px]">Все</button>
+          <div class="grid grid-cols-6 gap-1 bg-slate-100/80 dark:bg-slate-800/70 p-1 rounded-xl border border-slate-200/60 dark:border-slate-700/50 text-center">
+            <button onclick="setPeriod('14')" id="btn-14" class="period-btn py-1 rounded-lg transition text-slate-600 dark:text-slate-300 text-[12px] font-medium">14д</button>
+            <button onclick="setPeriod('30')" id="btn-30" class="period-btn py-1 rounded-lg transition text-slate-600 dark:text-slate-300 text-[12px] font-medium">30д</button>
+            <button onclick="setPeriod('90')" id="btn-90" class="period-btn py-1 rounded-lg transition text-slate-600 dark:text-slate-300 text-[12px] font-medium">90д</button>
+            <button onclick="setPeriod('180')" id="btn-180" class="period-btn py-1 rounded-lg transition text-slate-600 dark:text-slate-300 text-[12px] font-medium">180д</button>
+            <button onclick="setPeriod('365')" id="btn-365" class="period-btn py-1 rounded-lg transition text-slate-600 dark:text-slate-300 text-[12px] font-medium">Год</button>
+            <button onclick="setPeriod('all')" id="btn-all" class="period-btn py-1 rounded-lg transition bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-300 shadow-sm font-semibold text-[12px]">Все</button>
           </div>
         </div>
 
@@ -169,18 +185,16 @@
         </div>
       </div>
 
-      <!-- Премиальные плашки снизу -->
+      <!-- Нижние плашки: один акцентный цвет (синий), не три разных градиента -->
       <div class="grid grid-cols-2 gap-3">
-        <div class="bg-gradient-to-br from-purple-600 via-indigo-600 to-pink-600 text-white rounded-[24px] p-4 shadow-lg shadow-purple-500/15 relative overflow-hidden flex flex-col justify-between">
-          <div class="absolute -right-6 -bottom-6 w-16 h-16 bg-white/15 rounded-full blur-xl pointer-events-none"></div>
-          <p class="text-[10px] font-bold uppercase tracking-wider text-purple-100/80">Выполнение цели</p>
-          <div id="progressText" class="text-xl font-extrabold tracking-tight mt-1 text-white">--%</div>
+        <div class="bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-700/60 rounded-[24px] p-4 shadow-sm relative overflow-hidden flex flex-col justify-between">
+          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Выполнение цели</p>
+          <div id="progressText" class="text-xl font-extrabold tracking-tight mt-1 text-blue-600 dark:text-blue-400">--%</div>
         </div>
 
-        <div class="bg-gradient-to-br from-blue-600 via-cyan-600 to-teal-600 text-white rounded-[24px] p-4 shadow-lg shadow-blue-500/15 relative overflow-hidden flex flex-col justify-between">
-          <div class="absolute -right-6 -bottom-6 w-16 h-16 bg-white/15 rounded-full blur-xl pointer-events-none"></div>
-          <p class="text-[10px] font-bold uppercase tracking-wider text-cyan-100/80">🎯 Прогноз цели</p>
-          <div id="goalEtaText" class="text-xs font-extrabold tracking-tight mt-1 text-white truncate">--</div>
+        <div class="bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-700/60 rounded-[24px] p-4 shadow-sm relative overflow-hidden flex flex-col justify-between">
+          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">🎯 Прогноз цели</p>
+          <div id="goalEtaText" class="text-xs font-extrabold tracking-tight mt-1 text-blue-600 dark:text-blue-400 truncate">--</div>
         </div>
       </div>
 
@@ -213,11 +227,27 @@
       }
     }
 
+    // Подхватываем тему Telegram (light/dark), чтобы приложение не выглядело
+    // чужеродным белым пятном в тёмном интерфейсе клиента.
+    function applyTelegramTheme() {
+      let isDark = false;
+      try {
+        if (window.Telegram && window.Telegram.WebApp) {
+          isDark = window.Telegram.WebApp.colorScheme === 'dark';
+        }
+      } catch (e) {}
+      document.documentElement.classList.toggle('dark', isDark);
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
       if (window.Telegram && window.Telegram.WebApp) {
         window.Telegram.WebApp.ready();
         window.Telegram.WebApp.expand();
+        try {
+          window.Telegram.WebApp.onEvent('themeChanged', applyTelegramTheme);
+        } catch (e) {}
       }
+      applyTelegramTheme();
       initSwipeListeners();
       fetchData();
     });
@@ -239,19 +269,17 @@
       function handleSwipeGesture() {
         const threshold = 40;
         if (touchEndX - touchStartX > threshold) {
-          // Свайп вправо -> прошлая неделя
           changeWeek(-1);
         } else if (touchStartX - touchEndX > threshold) {
-          // Свайп влево -> следующая неделя
           changeWeek(1);
         }
       }
     }
 
     function changeWeek(direction) {
-      if (direction === 1 && currentWeekOffset >= 0) return; // Запрет листания в будущие недели
+      if (direction === 1 && currentWeekOffset >= 0) return;
       currentWeekOffset += direction;
-      selectedDateTimestamp = null; // Сбрасываем выбранный день, чтобы подставить актуальный для новой недели
+      selectedDateTimestamp = null;
       safeHaptic('light');
       renderDashboard();
     }
@@ -275,14 +303,22 @@
         try {
           data = JSON.parse(text);
         } catch (e) {
-          throw new Error("Сервер вернул некорректный ответ (проверьте URL Web App и доступ «Все»).");
+          throw new Error("Сервер Google просыпается или вернул некорректный ответ. Обычно помогает повторная попытка через несколько секунд.");
         }
 
         handleData(data);
       } catch (err) {
         hideSplash();
-        showError("Ошибка подключения: " + err.message);
+        showError(err.message || "Не удалось подключиться к серверу.");
       }
+    }
+
+    function retryFetch() {
+      safeHaptic('light');
+      document.getElementById('errorBox').classList.add('hidden');
+      document.getElementById('splashScreen').style.opacity = '1';
+      document.getElementById('splashScreen').style.visibility = 'visible';
+      fetchData();
     }
 
     function hideSplash() {
@@ -344,7 +380,7 @@
         btn.className = `px-4 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer select-none ${
           isActive 
             ? 'bg-blue-600 text-white shadow-sm ring-2 ring-blue-600/30' 
-            : 'text-slate-600 hover:text-slate-900 bg-transparent'
+            : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-transparent'
         }`;
         btn.textContent = user.name || uid;
 
@@ -371,7 +407,7 @@
     function showError(msg) {
       hideSplash();
       const errBox = document.getElementById('errorBox');
-      errBox.textContent = msg;
+      document.getElementById('errorText').textContent = msg;
       errBox.classList.remove('hidden');
     }
 
@@ -379,11 +415,11 @@
       currentPeriod = period;
       safeHaptic('light');
       document.querySelectorAll('.period-btn').forEach(btn => {
-        btn.className = "period-btn py-1 rounded-lg transition text-slate-600 text-[11px] font-medium";
+        btn.className = "period-btn py-1 rounded-lg transition text-slate-600 dark:text-slate-300 text-[12px] font-medium";
       });
       const activeBtn = document.getElementById(`btn-${period}`);
       if (activeBtn) {
-        activeBtn.className = "period-btn py-1 rounded-lg transition bg-white text-blue-600 shadow-sm font-semibold text-[11px]";
+        activeBtn.className = "period-btn py-1 rounded-lg transition bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-300 shadow-sm font-semibold text-[12px]";
       }
       renderDashboard();
     }
@@ -397,28 +433,46 @@
       });
     }
 
+    // ПРОГНОЗ ЦЕЛИ ЧЕРЕЗ ЛИНЕЙНУЮ РЕГРЕССИЮ (метод наименьших квадратов)
+    // по ВСЕМ точкам периода, а не по двум крайним замерам — иначе два близких
+    // по времени замера (например, 2 дня) дают абсурдный темп вроде "-5 кг/неделю",
+    // пересчитанный на неделю из шумного суточного колебания.
+    // Защита от малых выборок: нужно минимум 5 записей И минимум 7 дней между
+    // первым и последним замером в окне, иначе прогноз просто не строится.
     function calculateGoalETA(entries, target, currentWeight) {
-      if (!target || entries.length < 2) return "Не задана цель";
-      
-      const recent = entries.slice(-14);
-      const first = recent[0];
-      const last = recent[recent.length - 1];
-      const daysDiff = (last.timestamp - first.timestamp) / (1000 * 60 * 60 * 24);
-      
-      if (daysDiff <= 0) return "Расчет...";
-      const weightDiff = last.weight - first.weight;
-      const ratePerDay = weightDiff / daysDiff;
-      
-      if (ratePerDay >= 0 && currentWeight > target) return "Нужен дефицит";
-      if (ratePerDay <= 0 && currentWeight < target) return "Нужен профицит";
-      if (ratePerDay === 0) return "Вес стабилен";
+      if (!target) return "Нет цели";
 
-      const remainingWeight = target - currentWeight;
-      const daysToTarget = remainingWeight / ratePerDay;
-      
-      if (daysToTarget < 0 || isNaN(daysToTarget) || !isFinite(daysToTarget)) return "Недоступно";
-      
-      const targetDate = new Date(Date.now() + daysToTarget * 24 * 60 * 60 * 1000);
+      // Берём разумное окно — последние 30 дней (или все записи, если их меньше)
+      const windowEntries = entries.slice(-30);
+      if (windowEntries.length < 5) return "Мало данных";
+
+      const firstTs = windowEntries[0].timestamp;
+      const lastTs = windowEntries[windowEntries.length - 1].timestamp;
+      const daysSpan = (lastTs - firstTs) / (1000 * 60 * 60 * 24);
+      if (daysSpan < 7) return "Мало данных";
+
+      // Линейная регрессия: x — дни от первой точки окна, y — вес
+      let n = windowEntries.length;
+      let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+      windowEntries.forEach(e => {
+        const x = (e.timestamp - firstTs) / (1000 * 60 * 60 * 24);
+        const y = e.weight;
+        sumX += x; sumY += y; sumXY += x * y; sumX2 += x * x;
+      });
+      const denominator = (n * sumX2 - sumX * sumX);
+      if (denominator === 0) return "Вес стабилен";
+      const dailySlope = (n * sumXY - sumX * sumY) / denominator;
+
+      const leftKg = currentWeight - target; // положительное — нужно худеть
+
+      if (Math.abs(dailySlope) < 0.005) return "Вес стабилен";
+      if (leftKg > 0 && dailySlope >= 0) return "Нужен дефицит";
+      if (leftKg < 0 && dailySlope <= 0) return "Нужен профицит";
+
+      const daysNeeded = Math.abs(leftKg / dailySlope);
+      if (!isFinite(daysNeeded) || daysNeeded < 0) return "Недоступно";
+
+      const targetDate = new Date(Date.now() + daysNeeded * 24 * 60 * 60 * 1000);
       return targetDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
     }
 
@@ -433,19 +487,15 @@
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      // Находим понедельник текущей недели
-      // В JS: 0 - Вс, 1 - Пн, 2 - Вт, ..., 6 - Сб
       const dayOfWeek = today.getDay();
       const diffToMonday = (dayOfWeek === 0 ? -6 : 1 - dayOfWeek);
       
       const currentMonday = new Date(today);
       currentMonday.setDate(today.getDate() + diffToMonday);
 
-      // Находим понедельник целевой недели с учетом листания (currentWeekOffset)
       const targetMonday = new Date(currentMonday);
       targetMonday.setDate(currentMonday.getDate() + (currentWeekOffset * 7));
 
-      // Заполняем строго 7 дней от Понедельника (0) до Воскресенья (6)
       const stripDays = [];
       for (let i = 0; i < 7; i++) {
         const d = new Date(targetMonday);
@@ -453,7 +503,6 @@
         stripDays.push(d);
       }
 
-      // Обновляем текст периода (например: "22 сен — 28 сен")
       const firstDay = stripDays[0];
       const lastDay = stripDays[6];
       const periodLabel = `${firstDay.getDate()} ${monthsRu[firstDay.getMonth()]} — ${lastDay.getDate()} ${monthsRu[lastDay.getMonth()]}`;
@@ -469,15 +518,22 @@
         todayBtn.classList.add('hidden');
       }
 
-      // Параболический изгиб дуги: вершина ровно по центру (Четверг, index 3)
       const arcOffsets = [14, 7, 2, 0, 2, 7, 14];
 
-      // Проверяем, есть ли замеры в выбранной неделе
       const weekStartTs = stripDays[0].getTime();
       const weekEndTs = stripDays[6].getTime() + 86400000 - 1;
       const entriesInWeek = allEntries.filter(e => e.timestamp >= weekStartTs && e.timestamp <= weekEndTs);
 
-      // Если выбранный день не входит в текущую просматриваемую неделю — выбираем последний день недели с замером
+      // Явно показываем состояние "нет замеров за эту неделю", вместо тихого
+      // фолбэка на последний вес вообще (что раньше выглядело как рассинхрон
+      // между верхней карточкой и пустой дугой дат).
+      const emptyNote = document.getElementById('emptyWeekNote');
+      if (entriesInWeek.length === 0) {
+        emptyNote.classList.remove('hidden');
+      } else {
+        emptyNote.classList.add('hidden');
+      }
+
       const isSelectedInWeek = entriesInWeek.some(e => e.timestamp === selectedDateTimestamp);
       if (!isSelectedInWeek) {
         if (entriesInWeek.length > 0) {
@@ -489,10 +545,9 @@
 
       stripDays.forEach((d, idx) => {
         const dayNum = d.getDate();
-        const dayName = daysOfWeek[idx]; // Строго Пн, Вт, Ср, Чт, Пт, Сб, Вс
+        const dayName = daysOfWeek[idx];
         const isFuture = (d.getTime() > today.getTime());
 
-        // Ищем замер за этот день
         const entryIdx = allEntries.findIndex(e => {
           const ed = new Date(e.timestamp);
           return ed.getFullYear() === d.getFullYear() && ed.getMonth() === d.getMonth() && ed.getDate() === d.getDate();
@@ -500,7 +555,7 @@
 
         const entry = entryIdx !== -1 ? allEntries[entryIdx] : null;
         let diffText = "—";
-        let diffColor = "text-slate-400";
+        let diffColor = "text-slate-400 dark:text-slate-500";
 
         if (entry) {
           const prevEntry = entryIdx > 0 ? allEntries[entryIdx - 1] : null;
@@ -508,17 +563,17 @@
             const diff = parseFloat((entry.weight - prevEntry.weight).toFixed(1));
             if (diff < 0) {
               diffText = `${diff}`;
-              diffColor = "text-emerald-600 font-bold";
+              diffColor = "text-emerald-600 dark:text-emerald-400 font-bold";
             } else if (diff > 0) {
               diffText = `+${diff}`;
-              diffColor = "text-rose-500 font-bold";
+              diffColor = "text-rose-500 dark:text-rose-400 font-bold";
             } else {
               diffText = `0.0`;
-              diffColor = "text-slate-500 font-medium";
+              diffColor = "text-slate-500 dark:text-slate-400 font-medium";
             }
           } else {
             diffText = `${entry.weight}`;
-            diffColor = "text-blue-600 font-bold";
+            diffColor = "text-blue-600 dark:text-blue-400 font-bold";
           }
         }
 
@@ -532,22 +587,19 @@
         col.style.transform = `translateY(${arcOffsets[idx]}px)`;
 
         col.innerHTML = `
-          <!-- Суточная дельта веса -->
-          <span class="text-[9px] mb-1 tracking-tight ${diffColor}">${diffText}</span>
+          <span class="text-[10px] mb-1 tracking-tight ${diffColor}">${diffText}</span>
           
-          <!-- Кружок даты -->
           <div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
             isSelected 
               ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/35 ring-4 ring-blue-500/20 scale-110' 
               : (isToday 
-                  ? 'bg-white text-blue-600 border-2 border-blue-500 font-extrabold shadow-sm' 
-                  : (entry ? 'bg-white text-slate-800 border border-slate-200 shadow-xs' : 'bg-slate-100 text-slate-400 border border-slate-200/50'))
+                  ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 border-2 border-blue-500 font-extrabold shadow-sm' 
+                  : (entry ? 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-xs' : 'bg-slate-100 dark:bg-slate-800/50 text-slate-400 dark:text-slate-600 border border-slate-200/50 dark:border-slate-700/50'))
           }">
             ${dayNum}
           </div>
           
-          <!-- День недели (Пн, Вт, Ср, Чт, Пт, Сб, Вс) -->
-          <span class="text-[10px] mt-1 font-semibold ${isSelected ? 'text-blue-600 font-bold' : 'text-slate-400'}">${dayName}</span>
+          <span class="text-[11px] mt-1 font-semibold ${isSelected ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-400 dark:text-slate-500'}">${dayName}</span>
         `;
 
         if (!isFuture) {
@@ -612,13 +664,13 @@
       const badge = document.getElementById('currDiffBadge');
       if (diffDay < 0) {
         badge.textContent = `${diffDay} кг за сутки`;
-        badge.className = "text-[11px] font-semibold px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-100 border border-emerald-400/30 backdrop-blur-md";
+        badge.className = "text-[12px] font-semibold px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-100 border border-emerald-400/30 backdrop-blur-md";
       } else if (diffDay > 0) {
         badge.textContent = `+${diffDay} кг за сутки`;
-        badge.className = "text-[11px] font-semibold px-3 py-1 rounded-full bg-red-500/20 text-red-100 border border-red-400/30 backdrop-blur-md";
+        badge.className = "text-[12px] font-semibold px-3 py-1 rounded-full bg-red-500/20 text-red-100 border border-red-400/30 backdrop-blur-md";
       } else {
         badge.textContent = `Без изменений`;
-        badge.className = "text-[11px] font-semibold px-3 py-1 rounded-full bg-white/15 text-white/90 border border-white/20 backdrop-blur-md";
+        badge.className = "text-[12px] font-semibold px-3 py-1 rounded-full bg-white/15 text-white/90 border border-white/20 backdrop-blur-md";
       }
 
       const smaValuesAll = calculateSMA(allEntries);
@@ -653,9 +705,10 @@
 
       if (chartInstance) chartInstance.destroy();
 
+      const isDark = document.documentElement.classList.contains('dark');
       const ctx = document.getElementById('weightChart').getContext('2d');
       const gradient = ctx.createLinearGradient(0, 0, 0, 180);
-      gradient.addColorStop(0, 'rgba(37, 99, 235, 0.15)');
+      gradient.addColorStop(0, isDark ? 'rgba(59, 130, 246, 0.25)' : 'rgba(37, 99, 235, 0.15)');
       gradient.addColorStop(1, 'rgba(37, 99, 235, 0.0)');
 
       chartInstance = new Chart(ctx, {
@@ -710,11 +763,11 @@
           scales: {
             x: {
               grid: { display: false },
-              ticks: { color: '#64748b', font: { size: 9, family: 'Inter' }, maxTicksLimit: 6 }
+              ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { size: 10, family: 'Inter' }, maxTicksLimit: 6 }
             },
             y: {
-              grid: { color: 'rgba(0, 0, 0, 0.03)' },
-              ticks: { color: '#64748b', font: { size: 9, family: 'Inter' } }
+              grid: { color: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)' },
+              ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { size: 10, family: 'Inter' } }
             }
           }
         }
