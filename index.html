@@ -4,330 +4,306 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Weight Tracker</title>
-  <!-- Telegram WebApp -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- Inter Font -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <!-- Tailwind: darkMode 'class' ДОЛЖЕН быть объявлен ДО загрузки cdn.tailwindcss.com,
-       иначе dark: варианты классов не будут работать -->
-  <script>
-    tailwind = { config: { darkMode: 'class' } };
-  </script>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:ital,wght@0,600;0,700;1,700;1,800&display=swap" rel="stylesheet">
   <style>
+    /* =====================================================================
+       Стиль «взвешивание перед боем»: бетонный фон, графит, сигнальный жёлтый.
+       Сжатый курсивный шрифт как на спортивном табло.
+       ===================================================================== */
+    :root {
+      --bg:      #E6E9EC;   /* бетон */
+      --panel:   #F5F6F7;
+      --ink:     #17212B;   /* графит */
+      --muted:   #6A7581;
+      --rule:    #CBD1D7;
+      --volt:    #FFC21A;   /* сигнальный жёлтый */
+      --volt-ink:#1A1400;
+      --down:    #0E9E89;   /* вес ушёл */
+      --up:      #E0484D;   /* вес прибавился */
+      --display: 'Barlow Condensed', 'Arial Narrow', system-ui, sans-serif;
+      --text:    'Barlow', system-ui, -apple-system, sans-serif;
+    }
+    html.dark {
+      --bg:    #14181D;
+      --panel: #1D232A;
+      --ink:   #ECEFF2;
+      --muted: #8A949F;
+      --rule:  #2E363F;
+      --down:  #2CC3AC;
+      --up:    #FF6B6F;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
-      width: 100%;
       min-height: 100%;
-      overflow-x: hidden;
-      background-color: #f3f6fc;
-      touch-action: pan-y;
-      margin: 0;
-      padding: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--text);
+      -webkit-font-smoothing: antialiased;
       -webkit-tap-highlight-color: transparent;
-      transition: background-color 0.3s ease;
+      overflow-x: hidden;
+      touch-action: pan-y;
     }
-    html.dark, html.dark body {
-      background-color: #0b0e14;
+    button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+    button:focus-visible { outline: 2px solid var(--volt); outline-offset: 2px; }
+    .hidden { display: none !important; }
+
+    /* ---------- ЗАСТАВКА: «спортивный эфир» ---------- */
+    #splash {
+      position: fixed; inset: 0; z-index: 50;
+      background: var(--bg);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      transition: opacity .45s ease, visibility .45s ease;
     }
-    #splashScreen {
-      transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    /* Воркмарк поднимается на экран один раз при открытии — уверенный,
-       без повторов и без игры с цифрами */
-    @keyframes wordmark-rise {
-      0%   { opacity: 0; transform: translateY(16px); }
-      100% { opacity: 1; transform: translateY(0); }
-    }
-    .splash-wordmark {
-      animation: wordmark-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
-    }
-    /* ===== 3D-ГАНТЕЛЬ НА ЭКРАНЕ ЗАГРУЗКИ =====
-       Настоящая 3D-модель на CSS: блины и гриф собраны из тонких дисков,
-       расставленных вдоль оси, поэтому при вращении видна реальная толщина.
-       Сверху — прыжок с пружинистым приземлением и дышащая тень. */
-    .db-scene {
+    #splash.gone { opacity: 0; visibility: hidden; }
+    .sting {
       position: relative;
-      width: 220px;
+      width: 100%;
       height: 170px;
-      perspective: 700px;
-      margin-bottom: 18px;
+      overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
     }
-    .db-glow {
-      position: absolute;
-      left: 50%; top: 46%;
-      width: 170px; height: 170px;
-      margin: -85px 0 0 -85px;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(59,130,246,0.22), rgba(59,130,246,0) 65%);
-      animation: db-glow 1.4s ease-in-out infinite;
+    /* Косые плашки пролетают ЗА надписью, как в заставке спортивной трансляции */
+    .sting-slab {
+      position: absolute; top: 18px; bottom: 18px;
+      width: 62%;
+      left: 0;
+      background: var(--volt);
+      transform: translateX(-120%) skewX(-18deg);
+      animation: slab 1.7s cubic-bezier(.7, 0, .25, 1) infinite;
     }
-    @keyframes db-glow {
-      0%, 100% { transform: scale(0.92); opacity: 0.8; }
-      50%      { transform: scale(1.06); opacity: 1; }
+    .sting-slab.thin {
+      width: 9%;
+      top: 34px; bottom: 34px;
+      background: var(--ink);
+      animation-delay: .12s;
     }
-    .db-shadow {
-      position: absolute;
-      left: 50%; bottom: 8px;
-      width: 120px; height: 16px;
-      margin-left: -60px;
-      border-radius: 50%;
-      background: radial-gradient(ellipse, rgba(15,23,42,0.28), rgba(15,23,42,0) 70%);
-      animation: db-shadow 1.4s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+    @keyframes slab {
+      0%   { transform: translateX(-130%) skewX(-18deg); }
+      55%  { transform: translateX(185%)  skewX(-18deg); }
+      100% { transform: translateX(185%)  skewX(-18deg); }
     }
-    html.dark .db-shadow {
-      background: radial-gradient(ellipse, rgba(0,0,0,0.6), rgba(0,0,0,0) 70%);
+    .sting-word {
+      position: relative; z-index: 2;
+      font-family: var(--display);
+      font-style: italic; font-weight: 800;
+      font-size: clamp(48px, 15vw, 66px); line-height: .84;
+      letter-spacing: -.5px;
+      text-transform: uppercase;
+      text-align: left;
+      color: var(--ink);
     }
-    @keyframes db-shadow {
-      0%, 100% { transform: scale(0.55); opacity: 0.45; }
-      46%, 54% { transform: scale(1);    opacity: 1; }
-    }
-    .db-bounce {
-      position: absolute;
-      left: 50%; top: 50%;
-      transform-style: preserve-3d;
-      animation: db-bounce 1.4s infinite;
-    }
-    /* Прыжок: замедление в верхней точке, удар, сплющивание и отскок */
-    @keyframes db-bounce {
-      0%   { transform: translateY(-38px) scale(1, 1);       animation-timing-function: cubic-bezier(0.55, 0, 0.9, 0.45); }
-      44%  { transform: translateY(12px)  scale(1, 1);       animation-timing-function: ease-out; }
-      50%  { transform: translateY(16px)  scale(1.12, 0.86); animation-timing-function: ease-in-out; }
-      58%  { transform: translateY(8px)   scale(0.96, 1.05); animation-timing-function: cubic-bezier(0.1, 0.55, 0.45, 1); }
-      100% { transform: translateY(-38px) scale(1, 1); }
-    }
-    .db-tilt {
-      transform-style: preserve-3d;
-      transform: rotateX(-22deg) rotateZ(-14deg);
-    }
-    .db-spin {
-      transform-style: preserve-3d;
-      animation: db-spin 2.8s linear infinite;
-    }
-    @keyframes db-spin {
-      from { transform: rotateY(0deg); }
-      to   { transform: rotateY(360deg); }
-    }
-    .db-disc {
-      position: absolute;
-      border-radius: 50%;
-      backface-visibility: visible;
-    }
+    .sting-word span { display: block; padding-left: .5em; }
+    .splash-note { margin-top: 18px; font-size: 14px; color: var(--muted); }
     @media (prefers-reduced-motion: reduce) {
-      .db-bounce, .db-spin, .db-shadow, .db-glow { animation: none; }
-      .db-spin { transform: rotateY(35deg); }
+      .sting-slab { animation: none; transform: translateX(30%) skewX(-18deg); }
+      .sting-slab.thin { display: none; }
     }
-    .no-scrollbar::-webkit-scrollbar {
-      display: none;
+
+    /* ---------- КАРКАС ---------- */
+    main { max-width: 440px; margin: 0 auto; padding: 14px 18px 32px; }
+
+    /* Имена атлетов — как в карде боя */
+    .duel {
+      display: flex; align-items: baseline; justify-content: center;
+      gap: 14px; margin-bottom: 18px;
     }
-    .no-scrollbar {
-      -ms-overflow-style: none;
-      scrollbar-width: none;
+    .duel-name {
+      font-family: var(--display); font-style: italic; font-weight: 800;
+      font-size: 26px; text-transform: uppercase; letter-spacing: .2px;
+      color: var(--muted);
+      padding: 0 2px 3px;
+      position: relative;
+      transition: color .2s ease;
     }
+    .duel-name.active { color: var(--ink); }
+    .duel-name.active::after {
+      content: ""; position: absolute; left: -2px; right: -2px; bottom: 0;
+      height: 5px; background: var(--volt); transform: skewX(-18deg);
+    }
+    .duel-vs { font-family: var(--display); font-weight: 600; font-size: 15px; color: var(--muted); }
+
+    /* Неделя */
+    .week-head {
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 14px; color: var(--muted); margin-bottom: 8px;
+    }
+    .week-nav { display: flex; align-items: center; gap: 4px; }
+    .week-nav button { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; }
+    .week-nav button:disabled { opacity: .3; pointer-events: none; }
+    #weekPeriodLabel { font-weight: 600; color: var(--ink); min-width: 118px; text-align: center; }
+    #todayBtn { font-size: 13px; font-weight: 600; color: var(--ink); border-bottom: 2px solid var(--volt); padding-bottom: 1px; }
+    .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; touch-action: pan-y; }
+    .day {
+      display: flex; flex-direction: column; align-items: center; gap: 1px;
+      padding: 7px 0 6px; border-radius: 8px;
+      border: 1.5px solid transparent;
+    }
+    .day .dw { font-size: 12px; color: var(--muted); }
+    .day .dn { font-family: var(--display); font-weight: 700; font-size: 21px; line-height: 1.05; }
+    .day .dd { font-size: 11px; font-weight: 600; min-height: 14px; color: var(--muted); }
+    .day.has { background: var(--panel); }
+    .day.empty .dn { color: var(--muted); opacity: .6; }
+    .day.today { border-color: var(--ink); }
+    .day.future { opacity: .35; }
+    .day.sel { background: var(--volt); color: var(--volt-ink); }
+    .day.sel .dw, .day.sel .dd { color: var(--volt-ink); }
+    .dd.down { color: var(--down); } .dd.up { color: var(--up); }
+    #emptyWeekNote { text-align: center; font-size: 13px; color: var(--muted); margin-top: 8px; }
+
+    /* Табло веса */
+    .board { margin-top: 22px; }
+    .board-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+    #currWeightLabel { font-size: 14px; color: var(--muted); }
+    .big {
+      margin-top: 4px;
+      font-family: var(--display); font-style: italic; font-weight: 800;
+      font-size: clamp(64px, 23vw, 96px); line-height: .82; letter-spacing: -1.5px;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .big small { font-size: 30px; font-weight: 700; letter-spacing: 0; margin-left: 4px; color: var(--muted); }
+    #currDiffBadge {
+      font-family: var(--display); font-weight: 700; font-size: 19px;
+      white-space: nowrap;
+    }
+    #currDiffBadge i { font-style: normal; font-family: var(--text); font-weight: 500; font-size: 13px; color: var(--muted); margin-left: 4px; }
+    #currDiffBadge.down { color: var(--down); } #currDiffBadge.up { color: var(--up); } #currDiffBadge.flat { color: var(--muted); }
+    .stats {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      margin-top: 16px; border-top: 1.5px solid var(--ink); padding-top: 10px;
+    }
+    .stat { padding-left: 12px; border-left: 1px solid var(--rule); }
+    .stat:first-child { padding-left: 0; border-left: 0; }
+    .stat p { font-size: 12.5px; color: var(--muted); }
+    .stat b { font-family: var(--display); font-weight: 700; font-size: clamp(18px, 5.6vw, 24px); white-space: nowrap; }
+
+    /* График */
+    .chart-panel { margin-top: 24px; background: var(--panel); border-radius: 10px; padding: 14px 14px 10px; }
+    .chart-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .chart-head h2 { font-family: var(--display); font-weight: 700; font-size: 20px; }
+    .legend { display: flex; gap: 12px; font-size: 12.5px; color: var(--muted); }
+    .legend span { display: inline-flex; align-items: center; gap: 5px; }
+    .legend i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+    .periods { display: grid; grid-template-columns: repeat(6, 1fr); border: 1.5px solid var(--rule); border-radius: 7px; overflow: hidden; margin-bottom: 10px; }
+    .period-btn { padding: 6px 0; font-family: var(--display); font-weight: 600; font-size: 15px; color: var(--muted); }
+    .period-btn.active { background: var(--ink); color: var(--bg); }
+    .chart-box { position: relative; height: 210px; }
+
+    /* Путь к цели — беговая дорожка */
+    .lane-block { margin-top: 24px; }
+    .lane-top { display: flex; justify-content: space-between; align-items: baseline; }
+    .lane-top h2 { font-family: var(--display); font-weight: 700; font-size: 20px; }
+    #progressText { font-family: var(--display); font-style: italic; font-weight: 800; font-size: 34px; line-height: 1; }
+    .lane {
+      position: relative; height: 16px; margin-top: 8px; border-radius: 3px;
+      background:
+        repeating-linear-gradient(90deg, transparent 0 calc(10% - 1px), var(--rule) calc(10% - 1px) 10%),
+        var(--panel);
+      overflow: hidden;
+    }
+    #laneFill {
+      position: absolute; left: 0; top: 0; bottom: 0; width: 0%;
+      background: var(--volt);
+      transition: width .7s cubic-bezier(.2, .8, .2, 1);
+    }
+    #laneFill::after {
+      content: ""; position: absolute; right: -4px; top: -2px; bottom: -2px; width: 8px;
+      background: var(--ink); transform: skewX(-18deg);
+    }
+    .lane-ends { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--muted); margin-top: 5px; }
+    .forecast { margin-top: 14px; font-size: 15px; }
+    .forecast b { font-family: var(--display); font-weight: 700; font-size: 20px; }
+
+    /* Ошибка */
+    #errorBox { margin: 40px 0; border-left: 4px solid var(--up); padding: 4px 0 4px 14px; }
+    #errorText { font-size: 15px; line-height: 1.4; }
+    #retryBtn { margin-top: 12px; background: var(--ink); color: var(--bg); font-weight: 600; font-size: 14px; padding: 9px 16px; border-radius: 7px; }
   </style>
 </head>
-<body class="text-slate-900 dark:text-slate-100 font-sans antialiased selection:bg-blue-600 selection:text-white flex flex-col items-center">
+<body>
 
-  <!-- ЭКРАН ЗАГРУЗКИ: глянцевая 3D-гантель вращается и подпрыгивает над надписью -->
-  <div id="splashScreen" class="fixed inset-0 z-50 bg-[#f3f6fc] dark:bg-[#0b0e14] flex flex-col items-center justify-center p-6 text-center">
-
-    <div class="db-scene" aria-hidden="true">
-      <div class="db-glow"></div>
-      <div class="db-shadow"></div>
-      <div class="db-bounce">
-        <div class="db-tilt">
-          <div class="db-spin" id="dbModel"></div>
-        </div>
-      </div>
+  <!-- ЗАСТАВКА: жёлтая косая плашка пролетает за надписью, как в спортивном эфире -->
+  <div id="splash">
+    <div class="sting" aria-hidden="true">
+      <div class="sting-slab"></div>
+      <div class="sting-slab thin"></div>
+      <div class="sting-word">Weight<span>Tracker</span></div>
     </div>
-
-    <h1 class="splash-wordmark font-extrabold text-slate-900 dark:text-white text-[2.3rem] leading-[0.92] tracking-tight uppercase">
-      Weight<br/><span class="text-blue-600 dark:text-blue-400">Tracker</span>
-    </h1>
-    <p class="text-slate-400 dark:text-slate-500 text-[11px] font-medium mt-4">Загружаем ваш прогресс</p>
+    <p class="splash-note">Загружаем ваш прогресс</p>
   </div>
 
-  <script>
-    // Сборка 3D-гантели: каждый цилиндр (блин, втулка, гриф) = два глянцевых
-    // торца + боковая поверхность из граней, повёрнутых вокруг оси X.
-    // Грани слегка перекрываются, поэтому под любым углом поверхность сплошная.
-    (function () {
-      const root = document.getElementById('dbModel');
-      if (!root) return;
-      const frag = document.createDocumentFragment();
-
-      function el(w, h, bg, transform, radius) {
-        const d = document.createElement('div');
-        d.className = 'db-disc';
-        d.style.width = w + 'px';
-        d.style.height = h + 'px';
-        d.style.left = (-w / 2) + 'px';
-        d.style.top = (-h / 2) + 'px';
-        d.style.background = bg;
-        d.style.borderRadius = radius || '0';
-        d.style.transform = transform;
-        frag.appendChild(d);
-      }
-      function mix(c1, c2, t) {
-        const h = c => [1, 3, 5].map(i => parseInt(c.substr(i, 2), 16));
-        const a = h(c1), b = h(c2);
-        return 'rgb(' + a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(',') + ')';
-      }
-      function cylinder(x0, x1, r, facets, dark, light, cap) {
-        const len = x1 - x0, cx = (x0 + x1) / 2;
-        const fw = 2 * r * Math.tan(Math.PI / facets) + 1;      // +1px против щелей
-        for (let i = 0; i < facets; i++) {
-          const ang = (360 / facets) * i;
-          // запечённый свет сверху-спереди
-          const lit = (Math.cos((ang - 35) * Math.PI / 180) + 1) / 2;
-          el(len, fw, mix(dark, light, lit),
-             'translateX(' + cx + 'px) rotateX(' + ang + 'deg) translateZ(' + r + 'px)');
-        }
-        [x0, x1].forEach(x => el(r * 2, r * 2, cap,
-          'translateX(' + x + 'px) rotateY(90deg)', '50%'));
-      }
-
-      const plateCap  = 'radial-gradient(circle at 34% 30%, #bfdbfe 0%, #60a5fa 22%, #2563eb 55%, #1e3a8a 100%)';
-      const collarCap = 'radial-gradient(circle at 34% 30%, #e2e8f0 0%, #64748b 60%, #334155 100%)';
-      const barCap    = 'radial-gradient(circle at 35% 30%, #ffffff, #94a3b8 70%)';
-
-      cylinder(-46, 46, 6, 10, '#64748b', '#f1f5f9', barCap);                  // гриф
-      [-1, 1].forEach(sgn => {
-        cylinder(sgn < 0 ? -38 : 32, sgn < 0 ? -32 : 38, 10, 14, '#334155', '#cbd5e1', collarCap); // втулка
-        cylinder(sgn < 0 ? -58 : 39, sgn < 0 ? -39 : 58, 30, 24, '#1e3a8a', '#60a5fa', plateCap);   // блин
-      });
-      root.appendChild(frag);
-    })();
-  </script>
-
-  <!-- Фоновые сферы (в тёмной теме приглушены сильнее, чтобы не слепить) -->
-  <div class="fixed top-[-10%] left-[-10%] w-[350px] h-[350px] bg-blue-400/20 dark:bg-blue-500/10 rounded-full blur-[100px] pointer-events-none"></div>
-  <div class="fixed bottom-[-10%] right-[-10%] w-[350px] h-[350px] bg-blue-300/10 dark:bg-blue-500/5 rounded-full blur-[100px] pointer-events-none"></div>
-
-  <!-- Основной контейнер дашборда -->
-  <main class="w-full max-w-[420px] mx-auto px-4 py-3 space-y-3 relative z-10">
-
-    <!-- ПЕРЕКЛЮЧАТЕЛЬ ПОЛЬЗОВАТЕЛЕЙ -->
-    <div id="userSelectorContainer" class="hidden flex justify-center mb-1 relative z-30">
-      <div id="userTabs" class="flex items-center space-x-1.5 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-1.5 rounded-full border border-slate-200/90 dark:border-slate-700/60 shadow-sm">
-        <!-- Заполняется динамически -->
-      </div>
-    </div>
-
-    <!-- ПОЛУКРУГЛЫЙ КАЛЕНДАРНЫЙ СТРИП (СТРОГО ПН - ВС) -->
-    <div id="dateStripWrapper" class="hidden relative w-full pt-1 pb-1 select-none z-10">
-      
-      <div class="flex justify-between items-center px-2 mb-1 text-[12px]">
-        <div class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 font-semibold">
-          <button onclick="changeWeek(-1)" class="p-1.5 rounded-full hover:bg-slate-200/60 dark:hover:bg-slate-800 active:scale-95 transition text-slate-600 dark:text-slate-300">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
-          </button>
-          <span id="weekPeriodLabel">Неделя</span>
-          <button id="nextWeekBtn" onclick="changeWeek(1)" class="p-1.5 rounded-full hover:bg-slate-200/60 dark:hover:bg-slate-800 active:scale-95 transition text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:pointer-events-none">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
-          </button>
-        </div>
-        <button id="todayBtn" onclick="resetToToday()" class="hidden px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-300 font-bold border border-blue-200 dark:border-blue-500/30 shadow-xs hover:bg-blue-100 dark:hover:bg-blue-500/25 transition active:scale-95 text-[11px]">
-          Текущая неделя
-        </button>
-      </div>
-
-      <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-20 bg-blue-500/10 rounded-full blur-2xl pointer-events-none"></div>
-      
-      <div id="curvedDateStrip" class="relative z-10 flex items-center justify-between px-1 h-[95px] touch-pan-y">
-        <!-- Заполняется динамически -->
-      </div>
-
-      <!-- Состояние "нет замеров за эту неделю" -->
-      <p id="emptyWeekNote" class="hidden text-center text-[11px] font-semibold text-slate-400 dark:text-slate-500 -mt-2">
-        Нет замеров за эту неделю
-      </p>
-    </div>
-
-    <!-- Ошибка -->
-    <div id="errorBox" class="hidden bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 text-red-600 dark:text-red-300 px-4 py-3 rounded-2xl text-xs font-medium shadow-sm">
+  <main>
+    <div id="errorBox" class="hidden">
       <p id="errorText"></p>
-      <button id="retryBtn" onclick="retryFetch()" class="mt-2.5 px-3 py-1.5 rounded-lg bg-red-600 text-white text-[11px] font-bold active:scale-95 transition">
-        Повторить попытку
-      </button>
+      <button id="retryBtn" onclick="retryFetch()">Повторить попытку</button>
     </div>
 
-    <!-- Основной контент -->
-    <div id="dashboardContent" class="hidden space-y-3.5 pb-6">
+    <div id="dashboard" class="hidden">
+      <nav id="userTabs" class="duel hidden"></nav>
 
-      <!-- Карточка 1: Главная синяя градиентная карточка (единственный яркий акцент на экране) -->
-      <div class="bg-gradient-to-br from-[#1d4ed8] via-[#2563eb] to-[#0284c7] text-white rounded-[28px] p-5 relative overflow-hidden shadow-[0_15px_30px_rgba(37,99,235,0.25)]">
-        <div class="absolute -right-10 -top-10 w-40 h-40 bg-white/15 rounded-full blur-2xl pointer-events-none"></div>
-
-        <div class="flex justify-between items-start relative z-10">
-          <div>
-            <p id="currWeightLabel" class="text-[11px] font-bold uppercase tracking-widest text-blue-100/80">Текущий вес</p>
-            <p id="currWeight" class="text-3xl font-extrabold tracking-tight mt-1 text-white">-</p>
+      <section>
+        <div class="week-head">
+          <div class="week-nav">
+            <button onclick="changeWeek(-1)" aria-label="Прошлая неделя">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 19l-7-7 7-7"/></svg>
+            </button>
+            <span id="weekPeriodLabel">Неделя</span>
+            <button id="nextWeekBtn" onclick="changeWeek(1)" aria-label="Следующая неделя">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
+            </button>
           </div>
-          <span id="currDiffBadge" class="text-[12px] font-semibold px-3 py-1 rounded-full border backdrop-blur-md">--</span>
+          <button id="todayBtn" class="hidden" onclick="resetToToday()">К этой неделе</button>
         </div>
+        <div id="days" class="days"></div>
+        <p id="emptyWeekNote" class="hidden">На этой неделе замеров нет</p>
+      </section>
 
-        <div class="grid grid-cols-3 gap-2 mt-5 pt-4 border-t border-white/15 relative z-10">
-          <div>
-            <p class="text-[10px] font-bold uppercase tracking-wider text-blue-100/70">Тренд (SMA 7)</p>
-            <p id="trendWeight" class="text-xs font-extrabold text-white mt-0.5">-</p>
-          </div>
-          <div>
-            <p class="text-[10px] font-bold uppercase tracking-wider text-blue-100/70">Старт</p>
-            <p id="startWeight" class="text-xs font-extrabold text-white/90 mt-0.5">-</p>
-          </div>
-          <div>
-            <p class="text-[10px] font-bold uppercase tracking-wider text-blue-100/70">Цель</p>
-            <p id="targetWeight" class="text-xs font-extrabold text-emerald-300 mt-0.5">-</p>
-          </div>
+      <section class="board">
+        <div class="board-top">
+          <p id="currWeightLabel">Текущий вес</p>
+          <div id="currDiffBadge" class="flat">—</div>
         </div>
-      </div>
+        <div class="big"><span id="currWeight">—</span><small>кг</small></div>
+        <div class="stats">
+          <div class="stat"><p>Тренд за 7 дней</p><b id="trendWeight">—</b></div>
+          <div class="stat"><p>Старт</p><b id="startWeight">—</b></div>
+          <div class="stat"><p>Цель</p><b id="targetWeight">—</b></div>
+        </div>
+      </section>
 
-      <!-- Карточка 2: График и периоды -->
-      <div class="bg-white/95 dark:bg-slate-900/90 backdrop-blur-xl border border-white/80 dark:border-slate-700/60 rounded-[28px] p-5 shadow-[0_10px_25px_rgba(0,0,0,0.04)] relative overflow-hidden">
-        
-        <div class="flex flex-col gap-2.5 mb-3">
-          <div class="flex flex-wrap justify-between items-start gap-2">
-            <div>
-              <h2 class="text-xs font-bold tracking-tight text-slate-900 dark:text-slate-100">Прогресс</h2>
-            </div>
-            <div class="flex items-center space-x-2.5 text-[11px] font-medium text-slate-500 dark:text-slate-400">
-              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-600 inline-block"></span> Факт</span>
-              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span> Тренд</span>
-            </div>
-          </div>
-
-          <!-- Выбор периода -->
-          <div class="grid grid-cols-6 gap-1 bg-slate-100/80 dark:bg-slate-800/70 p-1 rounded-xl border border-slate-200/60 dark:border-slate-700/50 text-center">
-            <button onclick="setPeriod('14')" id="btn-14" class="period-btn py-1 rounded-lg transition text-slate-600 dark:text-slate-300 text-[12px] font-medium">14д</button>
-            <button onclick="setPeriod('30')" id="btn-30" class="period-btn py-1 rounded-lg transition text-slate-600 dark:text-slate-300 text-[12px] font-medium">30д</button>
-            <button onclick="setPeriod('90')" id="btn-90" class="period-btn py-1 rounded-lg transition text-slate-600 dark:text-slate-300 text-[12px] font-medium">90д</button>
-            <button onclick="setPeriod('180')" id="btn-180" class="period-btn py-1 rounded-lg transition text-slate-600 dark:text-slate-300 text-[12px] font-medium">180д</button>
-            <button onclick="setPeriod('365')" id="btn-365" class="period-btn py-1 rounded-lg transition text-slate-600 dark:text-slate-300 text-[12px] font-medium">Год</button>
-            <button onclick="setPeriod('all')" id="btn-all" class="period-btn py-1 rounded-lg transition bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-300 shadow-sm font-semibold text-[12px]">Все</button>
+      <section class="chart-panel">
+        <div class="chart-head">
+          <h2>Динамика</h2>
+          <div class="legend">
+            <span><i style="background:var(--ink)"></i>Факт</span>
+            <span><i style="background:var(--volt)"></i>Тренд</span>
           </div>
         </div>
-
-        <!-- График -->
-        <div class="relative w-full h-[200px]">
-          <canvas id="weightChart"></canvas>
+        <div class="periods">
+          <button class="period-btn" data-p="14" onclick="setPeriod('14')">14д</button>
+          <button class="period-btn" data-p="30" onclick="setPeriod('30')">30д</button>
+          <button class="period-btn" data-p="90" onclick="setPeriod('90')">90д</button>
+          <button class="period-btn" data-p="180" onclick="setPeriod('180')">180д</button>
+          <button class="period-btn" data-p="365" onclick="setPeriod('365')">Год</button>
+          <button class="period-btn active" data-p="all" onclick="setPeriod('all')">Все</button>
         </div>
-      </div>
+        <div class="chart-box"><canvas id="weightChart"></canvas></div>
+      </section>
 
-      <!-- Нижние плашки: один акцентный цвет (синий), не три разных градиента -->
-      <div class="grid grid-cols-2 gap-3">
-        <div class="bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-700/60 rounded-[24px] p-4 shadow-sm relative overflow-hidden flex flex-col justify-between">
-          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Выполнение цели</p>
-          <div id="progressText" class="text-xl font-extrabold tracking-tight mt-1 text-blue-600 dark:text-blue-400">--%</div>
+      <section class="lane-block">
+        <div class="lane-top">
+          <h2>Путь к цели</h2>
+          <span id="progressText">—</span>
         </div>
-
-        <div class="bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-700/60 rounded-[24px] p-4 shadow-sm relative overflow-hidden flex flex-col justify-between">
-          <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">🎯 Прогноз цели</p>
-          <div id="goalEtaText" class="text-xs font-extrabold tracking-tight mt-1 text-blue-600 dark:text-blue-400 truncate">--</div>
-        </div>
-      </div>
-
+        <div class="lane"><div id="laneFill"></div></div>
+        <div class="lane-ends"><span id="laneStart">Старт</span><span id="laneGoal">Цель</span></div>
+        <p class="forecast">Цель будет взята: <b id="goalEtaText">—</b></p>
+      </section>
     </div>
   </main>
 
@@ -339,76 +315,56 @@
     let activeUserId = null;
     let currentPeriod = 'all';
     let selectedDateTimestamp = null;
-    let currentWeekOffset = 0; // 0 = текущая неделя, -1 = прошлая неделя Пн-Вс и т.д.
+    let currentWeekOffset = 0;
+
+    const $ = id => document.getElementById(id);
+    const cssVar = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    const fmt = n => String(n).replace('.', ',');
 
     function safeHaptic(type = 'light') {
       try {
-        if (!window.Telegram || !window.Telegram.WebApp || !window.Telegram.WebApp.HapticFeedback) return;
-        const hf = window.Telegram.WebApp.HapticFeedback;
-        if (type === 'selection') {
-          hf.selectionChanged();
-        } else if (['light', 'medium', 'heavy', 'rigid', 'soft'].includes(type)) {
-          hf.impactOccurred(type);
-        } else if (['error', 'success', 'warning'].includes(type)) {
-          hf.notificationOccurred(type);
-        }
-      } catch (e) {
-        console.warn('Haptic warning:', e);
-      }
+        const hf = window.Telegram?.WebApp?.HapticFeedback;
+        if (!hf) return;
+        if (type === 'selection') hf.selectionChanged();
+        else if (['light', 'medium', 'heavy', 'rigid', 'soft'].includes(type)) hf.impactOccurred(type);
+        else hf.notificationOccurred(type);
+      } catch (e) {}
     }
 
-    // Подхватываем тему Telegram (light/dark), чтобы приложение не выглядело
-    // чужеродным белым пятном в тёмном интерфейсе клиента.
+    // Тема Telegram: тёмная или светлая
     function applyTelegramTheme() {
       let isDark = false;
-      try {
-        if (window.Telegram && window.Telegram.WebApp) {
-          isDark = window.Telegram.WebApp.colorScheme === 'dark';
-        }
-      } catch (e) {}
+      try { isDark = window.Telegram?.WebApp?.colorScheme === 'dark'; } catch (e) {}
       document.documentElement.classList.toggle('dark', isDark);
+      if (chartInstance) renderDashboard();
     }
 
     window.addEventListener('DOMContentLoaded', () => {
-      if (window.Telegram && window.Telegram.WebApp) {
-        window.Telegram.WebApp.ready();
-        window.Telegram.WebApp.expand();
-        try {
-          window.Telegram.WebApp.onEvent('themeChanged', applyTelegramTheme);
-        } catch (e) {}
+      const tg = window.Telegram?.WebApp;
+      if (tg) {
+        tg.ready();
+        tg.expand();
+        try { tg.onEvent('themeChanged', applyTelegramTheme); } catch (e) {}
       }
       applyTelegramTheme();
-      initSwipeListeners();
+      initSwipe();
       fetchData();
     });
 
-    function initSwipeListeners() {
-      const container = document.getElementById('curvedDateStrip');
-      let touchStartX = 0;
-      let touchEndX = 0;
-
-      container.addEventListener('touchstart', (e) => {
-        touchStartX = e.changedTouches[0].screenX;
+    function initSwipe() {
+      const el = $('days');
+      let x0 = 0;
+      el.addEventListener('touchstart', e => { x0 = e.changedTouches[0].screenX; }, { passive: true });
+      el.addEventListener('touchend', e => {
+        const dx = e.changedTouches[0].screenX - x0;
+        if (dx > 40) changeWeek(-1);
+        else if (dx < -40) changeWeek(1);
       }, { passive: true });
-
-      container.addEventListener('touchend', (e) => {
-        touchEndX = e.changedTouches[0].screenX;
-        handleSwipeGesture();
-      }, { passive: true });
-
-      function handleSwipeGesture() {
-        const threshold = 40;
-        if (touchEndX - touchStartX > threshold) {
-          changeWeek(-1);
-        } else if (touchStartX - touchEndX > threshold) {
-          changeWeek(1);
-        }
-      }
     }
 
-    function changeWeek(direction) {
-      if (direction === 1 && currentWeekOffset >= 0) return;
-      currentWeekOffset += direction;
+    function changeWeek(dir) {
+      if (dir === 1 && currentWeekOffset >= 0) return;
+      currentWeekOffset += dir;
       selectedDateTimestamp = null;
       safeHaptic('light');
       renderDashboard();
@@ -422,482 +378,287 @@
     }
 
     async function fetchData() {
-      const initData = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp.initData : "";
-      const url = `${APPS_SCRIPT_URL}?initData=${encodeURIComponent(initData)}`;
-
+      const initData = window.Telegram?.WebApp?.initData || "";
       try {
-        const response = await fetch(url);
-        const text = await response.text();
-        
+        const res = await fetch(`${APPS_SCRIPT_URL}?initData=${encodeURIComponent(initData)}`);
+        const text = await res.text();
         let data;
-        try {
-          data = JSON.parse(text);
-        } catch (e) {
-          throw new Error("Сервер Google просыпается или вернул некорректный ответ. Обычно помогает повторная попытка через несколько секунд.");
-        }
-
+        try { data = JSON.parse(text); }
+        catch (e) { throw new Error("Сервер Google ещё просыпается. Нажмите «Повторить попытку» через несколько секунд."); }
         handleData(data);
       } catch (err) {
-        hideSplash();
-        showError(err.message || "Не удалось подключиться к серверу.");
+        showError(err.message || "Не удалось подключиться к серверу. Проверьте интернет и повторите попытку.");
       }
     }
 
     function retryFetch() {
       safeHaptic('light');
-      document.getElementById('errorBox').classList.add('hidden');
-      document.getElementById('splashScreen').style.opacity = '1';
-      document.getElementById('splashScreen').style.visibility = 'visible';
+      $('errorBox').classList.add('hidden');
+      $('splash').classList.remove('gone');
       fetchData();
     }
 
-    function hideSplash() {
-      const splash = document.getElementById('splashScreen');
-      if (splash) {
-        splash.style.opacity = '0';
-        splash.style.visibility = 'hidden';
-      }
+    function hideSplash() { $('splash').classList.add('gone'); }
+
+    function showError(msg) {
+      hideSplash();
+      $('errorText').textContent = msg;
+      $('errorBox').classList.remove('hidden');
     }
 
     function handleData(response) {
       hideSplash();
-
-      if (response.error) {
-        showError(response.message || "Ошибка авторизации.");
-        return;
-      }
+      if (response.error) { showError(response.message || "Нет доступа. Откройте приложение через бота."); return; }
 
       globalData = response;
-      const userIds = Object.keys(globalData);
+      const ids = Object.keys(globalData);
+      if (ids.length === 0) { showError("Замеров пока нет. Отправьте вес боту, и он появится здесь."); return; }
 
-      if (userIds.length === 0) {
-        showError("В базе данных нет записей.");
-        return;
-      }
-
-      let defaultUid = userIds[0];
-      if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
-        const tgId = String(window.Telegram.WebApp.initDataUnsafe.user.id);
-        if (globalData[tgId]) defaultUid = tgId;
-      }
-
-      activeUserId = String(defaultUid);
+      let def = ids[0];
+      const tgId = String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id || '');
+      if (tgId && globalData[tgId]) def = tgId;
+      activeUserId = String(def);
 
       renderUserTabs();
-      document.getElementById('dateStripWrapper').classList.remove('hidden');
-      document.getElementById('dashboardContent').classList.remove('hidden');
+      $('dashboard').classList.remove('hidden');
       renderDashboard();
     }
 
     function renderUserTabs() {
-      const container = document.getElementById('userSelectorContainer');
-      const userTabs = document.getElementById('userTabs');
-      const userIds = Object.keys(globalData);
-
-      if (userIds.length <= 1) {
-        container.classList.add('hidden');
-        return;
-      }
-
-      container.classList.remove('hidden');
-      userTabs.innerHTML = '';
-
-      userIds.forEach(uid => {
-        const user = globalData[uid];
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        const isActive = (String(uid) === String(activeUserId));
-        btn.className = `px-4 py-1.5 text-xs font-semibold rounded-full transition-all cursor-pointer select-none ${
-          isActive 
-            ? 'bg-blue-600 text-white shadow-sm ring-2 ring-blue-600/30' 
-            : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white bg-transparent'
-        }`;
-        btn.textContent = user.name || uid;
-
-        btn.onclick = function(e) {
-          e.preventDefault();
-          selectUser(uid);
-        };
-
-        userTabs.appendChild(btn);
+      const nav = $('userTabs');
+      const ids = Object.keys(globalData);
+      if (ids.length <= 1) { nav.classList.add('hidden'); return; }
+      nav.classList.remove('hidden');
+      nav.innerHTML = '';
+      ids.forEach((uid, i) => {
+        if (i > 0) {
+          const vs = document.createElement('span');
+          vs.className = 'duel-vs';
+          vs.textContent = 'vs';
+          nav.appendChild(vs);
+        }
+        const b = document.createElement('button');
+        b.className = 'duel-name' + (String(uid) === activeUserId ? ' active' : '');
+        b.textContent = globalData[uid].name || uid;
+        b.onclick = () => selectUser(uid);
+        nav.appendChild(b);
       });
     }
 
     function selectUser(uid) {
-      if (String(activeUserId) === String(uid)) return;
+      if (String(uid) === activeUserId) return;
       activeUserId = String(uid);
       selectedDateTimestamp = null;
       currentWeekOffset = 0;
-      
       safeHaptic('selection');
       renderUserTabs();
       renderDashboard();
     }
 
-    function showError(msg) {
-      hideSplash();
-      const errBox = document.getElementById('errorBox');
-      document.getElementById('errorText').textContent = msg;
-      errBox.classList.remove('hidden');
-    }
-
-    function setPeriod(period) {
-      currentPeriod = period;
+    function setPeriod(p) {
+      currentPeriod = p;
       safeHaptic('light');
-      document.querySelectorAll('.period-btn').forEach(btn => {
-        btn.className = "period-btn py-1 rounded-lg transition text-slate-600 dark:text-slate-300 text-[12px] font-medium";
-      });
-      const activeBtn = document.getElementById(`btn-${period}`);
-      if (activeBtn) {
-        activeBtn.className = "period-btn py-1 rounded-lg transition bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-300 shadow-sm font-semibold text-[12px]";
-      }
+      document.querySelectorAll('.period-btn').forEach(b => b.classList.toggle('active', b.dataset.p === p));
       renderDashboard();
     }
 
-    function calculateSMA(entries, windowSize = 7) {
-      return entries.map((entry, index, arr) => {
-        const start = Math.max(0, index - windowSize + 1);
-        const subset = arr.slice(start, index + 1);
-        const sum = subset.reduce((acc, curr) => acc + (parseFloat(curr.weight) || 0), 0);
-        return parseFloat((sum / subset.length).toFixed(1));
+    function calculateSMA(entries, w = 7) {
+      return entries.map((_, i, arr) => {
+        const sub = arr.slice(Math.max(0, i - w + 1), i + 1);
+        return parseFloat((sub.reduce((s, e) => s + (parseFloat(e.weight) || 0), 0) / sub.length).toFixed(1));
       });
     }
 
-    // ПРОГНОЗ ЦЕЛИ ЧЕРЕЗ ЛИНЕЙНУЮ РЕГРЕССИЮ (метод наименьших квадратов)
-    // по ВСЕМ точкам периода, а не по двум крайним замерам — иначе два близких
-    // по времени замера (например, 2 дня) дают абсурдный темп вроде "-5 кг/неделю",
-    // пересчитанный на неделю из шумного суточного колебания.
-    // Защита от малых выборок: нужно минимум 5 записей И минимум 7 дней между
-    // первым и последним замером в окне, иначе прогноз просто не строится.
-    function calculateGoalETA(entries, target, currentWeight) {
-      if (!target) return "Нет цели";
-
-      // Берём разумное окно — последние 30 дней (или все записи, если их меньше)
-      const windowEntries = entries.slice(-30);
-      if (windowEntries.length < 5) return "Мало данных";
-
-      const firstTs = windowEntries[0].timestamp;
-      const lastTs = windowEntries[windowEntries.length - 1].timestamp;
-      const daysSpan = (lastTs - firstTs) / (1000 * 60 * 60 * 24);
-      if (daysSpan < 7) return "Мало данных";
-
-      // Линейная регрессия: x — дни от первой точки окна, y — вес
-      let n = windowEntries.length;
-      let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
-      windowEntries.forEach(e => {
-        const x = (e.timestamp - firstTs) / (1000 * 60 * 60 * 24);
-        const y = e.weight;
-        sumX += x; sumY += y; sumXY += x * y; sumX2 += x * x;
-      });
-      const denominator = (n * sumX2 - sumX * sumX);
-      if (denominator === 0) return "Вес стабилен";
-      const dailySlope = (n * sumXY - sumX * sumY) / denominator;
-
-      const leftKg = currentWeight - target; // положительное — нужно худеть
-
-      if (Math.abs(dailySlope) < 0.005) return "Вес стабилен";
-      if (leftKg > 0 && dailySlope >= 0) return "Нужен дефицит";
-      if (leftKg < 0 && dailySlope <= 0) return "Нужен профицит";
-
-      const daysNeeded = Math.abs(leftKg / dailySlope);
-      if (!isFinite(daysNeeded) || daysNeeded < 0) return "Недоступно";
-
-      const targetDate = new Date(Date.now() + daysNeeded * 24 * 60 * 60 * 1000);
-      return targetDate.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' });
+    // Прогноз через линейную регрессию по последним 30 замерам.
+    // Нужно минимум 5 записей и 7 дней разброса, иначе прогноз не строится.
+    function calculateGoalETA(entries, target, current) {
+      if (!target) return "цель не задана";
+      const win = entries.slice(-30);
+      if (win.length < 5) return "нужно больше замеров";
+      const t0 = win[0].timestamp, DAY = 86400000;
+      if ((win[win.length - 1].timestamp - t0) / DAY < 7) return "нужна неделя замеров";
+      let n = win.length, sx = 0, sy = 0, sxy = 0, sxx = 0;
+      win.forEach(e => { const x = (e.timestamp - t0) / DAY, y = e.weight; sx += x; sy += y; sxy += x * y; sxx += x * x; });
+      const den = n * sxx - sx * sx;
+      if (den === 0) return "вес стабилен";
+      const slope = (n * sxy - sx * sy) / den;
+      const left = current - target;
+      if (Math.abs(slope) < 0.005) return "вес стабилен";
+      if (left > 0 && slope >= 0) return "нужен дефицит калорий";
+      if (left < 0 && slope <= 0) return "нужен профицит калорий";
+      const days = Math.abs(left / slope);
+      if (!isFinite(days)) return "недоступно";
+      return new Date(Date.now() + days * DAY).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
     }
 
-    // ПОСТРОЕНИЕ КАЛЕНДАРНОГО СТРИПА СТРОГО С ПОНЕДЕЛЬНИКА ПО ВОСКРЕСЕНЬЕ (ПН - ВС)
-    function renderCurvedDateStrip(allEntries) {
-      const container = document.getElementById('curvedDateStrip');
-      container.innerHTML = '';
+    function renderWeek(all) {
+      const box = $('days');
+      box.innerHTML = '';
+      const names = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+      const months = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const dow = today.getDay();
+      const monday = new Date(today);
+      monday.setDate(today.getDate() + (dow === 0 ? -6 : 1 - dow) + currentWeekOffset * 7);
+      const days = [...Array(7)].map((_, i) => { const d = new Date(monday); d.setDate(monday.getDate() + i); return d; });
 
-      const daysOfWeek = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-      const monthsRu = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
-      
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      $('weekPeriodLabel').textContent =
+        `${days[0].getDate()} ${months[days[0].getMonth()]} – ${days[6].getDate()} ${months[days[6].getMonth()]}`;
+      $('nextWeekBtn').disabled = currentWeekOffset >= 0;
+      $('todayBtn').classList.toggle('hidden', currentWeekOffset >= 0);
 
-      const dayOfWeek = today.getDay();
-      const diffToMonday = (dayOfWeek === 0 ? -6 : 1 - dayOfWeek);
-      
-      const currentMonday = new Date(today);
-      currentMonday.setDate(today.getDate() + diffToMonday);
+      const ws = days[0].getTime(), we = days[6].getTime() + 86400000 - 1;
+      const inWeek = all.filter(e => e.timestamp >= ws && e.timestamp <= we);
+      $('emptyWeekNote').classList.toggle('hidden', inWeek.length > 0);
 
-      const targetMonday = new Date(currentMonday);
-      targetMonday.setDate(currentMonday.getDate() + (currentWeekOffset * 7));
-
-      const stripDays = [];
-      for (let i = 0; i < 7; i++) {
-        const d = new Date(targetMonday);
-        d.setDate(targetMonday.getDate() + i);
-        stripDays.push(d);
+      if (!inWeek.some(e => e.timestamp === selectedDateTimestamp)) {
+        if (inWeek.length) selectedDateTimestamp = inWeek[inWeek.length - 1].timestamp;
+        else if (currentWeekOffset === 0 && all.length) selectedDateTimestamp = all[all.length - 1].timestamp;
       }
 
-      const firstDay = stripDays[0];
-      const lastDay = stripDays[6];
-      const periodLabel = `${firstDay.getDate()} ${monthsRu[firstDay.getMonth()]} — ${lastDay.getDate()} ${monthsRu[lastDay.getMonth()]}`;
-      document.getElementById('weekPeriodLabel').textContent = periodLabel;
-
-      const nextWeekBtn = document.getElementById('nextWeekBtn');
-      nextWeekBtn.disabled = (currentWeekOffset >= 0);
-
-      const todayBtn = document.getElementById('todayBtn');
-      if (currentWeekOffset < 0) {
-        todayBtn.classList.remove('hidden');
-      } else {
-        todayBtn.classList.add('hidden');
-      }
-
-      const arcOffsets = [14, 7, 2, 0, 2, 7, 14];
-
-      const weekStartTs = stripDays[0].getTime();
-      const weekEndTs = stripDays[6].getTime() + 86400000 - 1;
-      const entriesInWeek = allEntries.filter(e => e.timestamp >= weekStartTs && e.timestamp <= weekEndTs);
-
-      // Явно показываем состояние "нет замеров за эту неделю", вместо тихого
-      // фолбэка на последний вес вообще (что раньше выглядело как рассинхрон
-      // между верхней карточкой и пустой дугой дат).
-      const emptyNote = document.getElementById('emptyWeekNote');
-      if (entriesInWeek.length === 0) {
-        emptyNote.classList.remove('hidden');
-      } else {
-        emptyNote.classList.add('hidden');
-      }
-
-      const isSelectedInWeek = entriesInWeek.some(e => e.timestamp === selectedDateTimestamp);
-      if (!isSelectedInWeek) {
-        if (entriesInWeek.length > 0) {
-          selectedDateTimestamp = entriesInWeek[entriesInWeek.length - 1].timestamp;
-        } else if (currentWeekOffset === 0 && allEntries.length > 0) {
-          selectedDateTimestamp = allEntries[allEntries.length - 1].timestamp;
+      days.forEach((d, i) => {
+        const idx = all.findIndex(e => { const x = new Date(e.timestamp); return x.toDateString() === d.toDateString(); });
+        const entry = idx !== -1 ? all[idx] : null;
+        let delta = '', cls = '';
+        if (entry && idx > 0) {
+          const diff = parseFloat((entry.weight - all[idx - 1].weight).toFixed(1));
+          delta = diff > 0 ? `+${fmt(diff)}` : diff < 0 ? `−${fmt(Math.abs(diff))}` : '0';
+          cls = diff < 0 ? 'down' : diff > 0 ? 'up' : '';
         }
-      }
-
-      stripDays.forEach((d, idx) => {
-        const dayNum = d.getDate();
-        const dayName = daysOfWeek[idx];
-        const isFuture = (d.getTime() > today.getTime());
-
-        const entryIdx = allEntries.findIndex(e => {
-          const ed = new Date(e.timestamp);
-          return ed.getFullYear() === d.getFullYear() && ed.getMonth() === d.getMonth() && ed.getDate() === d.getDate();
-        });
-
-        const entry = entryIdx !== -1 ? allEntries[entryIdx] : null;
-        let diffText = "—";
-        let diffColor = "text-slate-400 dark:text-slate-500";
-
-        if (entry) {
-          const prevEntry = entryIdx > 0 ? allEntries[entryIdx - 1] : null;
-          if (prevEntry) {
-            const diff = parseFloat((entry.weight - prevEntry.weight).toFixed(1));
-            if (diff < 0) {
-              diffText = `${diff}`;
-              diffColor = "text-emerald-600 dark:text-emerald-400 font-bold";
-            } else if (diff > 0) {
-              diffText = `+${diff}`;
-              diffColor = "text-rose-500 dark:text-rose-400 font-bold";
-            } else {
-              diffText = `0.0`;
-              diffColor = "text-slate-500 dark:text-slate-400 font-medium";
-            }
-          } else {
-            diffText = `${entry.weight}`;
-            diffColor = "text-blue-600 dark:text-blue-400 font-bold";
-          }
-        }
-
-        const isSelected = entry && entry.timestamp === selectedDateTimestamp;
-        const isToday = (d.toDateString() === (new Date()).toDateString());
-
-        const col = document.createElement('div');
-        col.className = `flex flex-col items-center justify-center transition-all duration-300 ${
-          isFuture ? 'opacity-40 cursor-default' : 'cursor-pointer'
-        }`;
-        col.style.transform = `translateY(${arcOffsets[idx]}px)`;
-
-        col.innerHTML = `
-          <span class="text-[10px] mb-1 tracking-tight ${diffColor}">${diffText}</span>
-          
-          <div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
-            isSelected 
-              ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/35 ring-4 ring-blue-500/20 scale-110' 
-              : (isToday 
-                  ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 border-2 border-blue-500 font-extrabold shadow-sm' 
-                  : (entry ? 'bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-xs' : 'bg-slate-100 dark:bg-slate-800/50 text-slate-400 dark:text-slate-600 border border-slate-200/50 dark:border-slate-700/50'))
-          }">
-            ${dayNum}
-          </div>
-          
-          <span class="text-[11px] mt-1 font-semibold ${isSelected ? 'text-blue-600 dark:text-blue-400 font-bold' : 'text-slate-400 dark:text-slate-500'}">${dayName}</span>
-        `;
-
-        if (!isFuture) {
-          col.onclick = function() {
-            if (entry) {
-              selectedDateTimestamp = entry.timestamp;
-              safeHaptic('light');
-              renderDashboard();
-            }
-          };
-        }
-
-        container.appendChild(col);
+        const isFuture = d.getTime() > today.getTime();
+        const b = document.createElement('button');
+        b.className = 'day' +
+          (entry ? ' has' : ' empty') +
+          (d.toDateString() === new Date().toDateString() ? ' today' : '') +
+          (isFuture ? ' future' : '') +
+          (entry && entry.timestamp === selectedDateTimestamp ? ' sel' : '');
+        b.innerHTML = `<span class="dw">${names[i]}</span><span class="dn">${d.getDate()}</span><span class="dd ${cls}">${delta}</span>`;
+        if (entry) b.onclick = () => { selectedDateTimestamp = entry.timestamp; safeHaptic('light'); renderDashboard(); };
+        else b.disabled = true;
+        box.appendChild(b);
       });
     }
 
     function renderDashboard() {
-      document.getElementById('errorBox').classList.add('hidden');
-      const userData = globalData[activeUserId];
-
-      if (!userData || !userData.entries || userData.entries.length === 0) {
-        showError(`У пользователя ${userData ? userData.name : ''} пока нет данных о весе.`);
-        document.getElementById('currWeight').textContent = "—";
-        document.getElementById('startWeight').textContent = "—";
-        document.getElementById('targetWeight').textContent = "—";
-        document.getElementById('trendWeight').textContent = "—";
-        document.getElementById('curvedDateStrip').innerHTML = '';
-        if (chartInstance) chartInstance.destroy();
+      $('errorBox').classList.add('hidden');
+      const u = globalData[activeUserId];
+      if (!u || !u.entries || !u.entries.length) {
+        showError(`У ${u ? u.name : 'атлета'} пока нет замеров. Отправьте вес боту, и он появится здесь.`);
         return;
       }
 
-      const allEntries = userData.entries;
-      renderCurvedDateStrip(allEntries);
+      const all = u.entries;
+      renderWeek(all);
 
-      let targetEntry = allEntries[allEntries.length - 1];
-      let isViewingPast = false;
-
+      let target = all[all.length - 1], past = false;
       if (selectedDateTimestamp) {
-        const found = allEntries.find(e => e.timestamp === selectedDateTimestamp);
-        if (found) {
-          targetEntry = found;
-          if (found.timestamp !== allEntries[allEntries.length - 1].timestamp) {
-            isViewingPast = true;
-          }
-        }
+        const f = all.find(e => e.timestamp === selectedDateTimestamp);
+        if (f) { target = f; past = f.timestamp !== all[all.length - 1].timestamp; }
       }
+      const ti = all.findIndex(e => e.timestamp === target.timestamp);
+      const prev = ti > 0 ? all[ti - 1] : target;
+      const start = u.start || all[0].weight;
+      const goal = u.target;
 
-      const targetEntryIndex = allEntries.findIndex(e => e.timestamp === targetEntry.timestamp);
-      const prev = targetEntryIndex > 0 ? allEntries[targetEntryIndex - 1] : targetEntry;
-      const start = userData.start || allEntries[0].weight;
-      const target = userData.target;
+      $('currWeightLabel').textContent = past ? `Замер за ${target.dateStr}` : 'Текущий вес';
+      $('currWeight').textContent = fmt(target.weight);
+      $('startWeight').textContent = `${fmt(start)} кг`;
+      $('targetWeight').textContent = goal ? `${fmt(goal)} кг` : '—';
 
-      document.getElementById('currWeightLabel').textContent = isViewingPast 
-        ? `Замер за ${targetEntry.dateStr}` 
-        : `Текущий вес`;
+      const diff = parseFloat((target.weight - prev.weight).toFixed(1));
+      const badge = $('currDiffBadge');
+      if (ti === 0) { badge.className = 'flat'; badge.innerHTML = '—<i>первый замер</i>'; }
+      else if (diff < 0) { badge.className = 'down'; badge.innerHTML = `−${fmt(Math.abs(diff))} кг<i>за сутки</i>`; }
+      else if (diff > 0) { badge.className = 'up'; badge.innerHTML = `+${fmt(diff)} кг<i>за сутки</i>`; }
+      else { badge.className = 'flat'; badge.innerHTML = `0 кг<i>за сутки</i>`; }
 
-      document.getElementById('currWeight').textContent = `${targetEntry.weight} кг`;
-      document.getElementById('startWeight').textContent = `${start} кг`;
-      document.getElementById('targetWeight').textContent = target ? `${target} кг` : "—";
+      const smaAll = calculateSMA(all);
+      $('trendWeight').textContent = `${fmt(smaAll[ti])} кг`;
 
-      const diffDay = parseFloat((targetEntry.weight - prev.weight).toFixed(1));
-      const badge = document.getElementById('currDiffBadge');
-      if (diffDay < 0) {
-        badge.textContent = `${diffDay} кг за сутки`;
-        badge.className = "text-[12px] font-semibold px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-100 border border-emerald-400/30 backdrop-blur-md";
-      } else if (diffDay > 0) {
-        badge.textContent = `+${diffDay} кг за сутки`;
-        badge.className = "text-[12px] font-semibold px-3 py-1 rounded-full bg-red-500/20 text-red-100 border border-red-400/30 backdrop-blur-md";
+      if (goal) {
+        const total = Math.abs(goal - start);
+        const done = (start >= goal) ? start - target.weight : target.weight - start;
+        const pct = Math.max(0, Math.min(100, total > 0 ? Math.round(done / total * 100) : 100));
+        $('progressText').textContent = `${pct}%`;
+        $('laneFill').style.width = pct + '%';
+        $('laneStart').textContent = `Старт ${fmt(start)} кг`;
+        $('laneGoal').textContent = `Цель ${fmt(goal)} кг`;
+        $('goalEtaText').textContent = calculateGoalETA(all, goal, target.weight);
       } else {
-        badge.textContent = `Без изменений`;
-        badge.className = "text-[12px] font-semibold px-3 py-1 rounded-full bg-white/15 text-white/90 border border-white/20 backdrop-blur-md";
+        $('progressText').textContent = '—';
+        $('laneFill').style.width = '0%';
+        $('laneStart').textContent = `Старт ${fmt(start)} кг`;
+        $('laneGoal').textContent = 'Цель: /цель 80';
+        $('goalEtaText').textContent = 'цель не задана';
       }
 
-      const smaValuesAll = calculateSMA(allEntries);
-      const smaTarget = smaValuesAll[targetEntryIndex !== -1 ? targetEntryIndex : smaValuesAll.length - 1];
-      document.getElementById('trendWeight').textContent = `${smaTarget} кг`;
-
-      if (target) {
-        const totalDist = Math.abs(target - start);
-        const currentDist = Math.abs(targetEntry.weight - start);
-        let pct = totalDist > 0 ? Math.round((currentDist / totalDist) * 100) : 100;
-        pct = Math.max(0, Math.min(100, pct));
-        document.getElementById('progressText').textContent = `${pct}%`;
-        
-        const etaDateStr = calculateGoalETA(allEntries, target, targetEntry.weight);
-        document.getElementById('goalEtaText').textContent = etaDateStr;
-      } else {
-        document.getElementById('progressText').textContent = `0%`;
-        document.getElementById('goalEtaText').textContent = `Нет цели`;
-      }
-
-      let chartEntries = allEntries;
+      let chartEntries = all;
       if (currentPeriod !== 'all') {
-        const daysLimit = parseInt(currentPeriod);
-        const latestTimestamp = allEntries[allEntries.length - 1].timestamp;
-        const cutoffTime = latestTimestamp - (daysLimit * 24 * 60 * 60 * 1000);
-        chartEntries = allEntries.filter(e => e.timestamp >= cutoffTime);
+        const cut = all[all.length - 1].timestamp - parseInt(currentPeriod) * 86400000;
+        chartEntries = all.filter(e => e.timestamp >= cut);
       }
-
-      const labels = chartEntries.map(e => e.dateStr);
-      const weights = chartEntries.map(e => e.weight);
-      const smaValues = calculateSMA(chartEntries);
 
       if (chartInstance) chartInstance.destroy();
+      if (typeof Chart === 'undefined') return;
 
-      const isDark = document.documentElement.classList.contains('dark');
-      const ctx = document.getElementById('weightChart').getContext('2d');
-      const gradient = ctx.createLinearGradient(0, 0, 0, 180);
-      gradient.addColorStop(0, isDark ? 'rgba(59, 130, 246, 0.25)' : 'rgba(37, 99, 235, 0.15)');
-      gradient.addColorStop(1, 'rgba(37, 99, 235, 0.0)');
+      const ink = cssVar('--ink'), volt = cssVar('--volt'), muted = cssVar('--muted'), rule = cssVar('--rule'), panel = cssVar('--panel');
 
-      chartInstance = new Chart(ctx, {
+      chartInstance = new Chart($('weightChart').getContext('2d'), {
         type: 'line',
         data: {
-          labels: labels,
+          labels: chartEntries.map(e => e.dateStr),
           datasets: [
             {
-              label: 'Факт',
-              data: weights,
-              borderColor: '#2563eb',
-              backgroundColor: gradient,
-              borderWidth: 2.5,
-              pointRadius: chartEntries.map(e => e.timestamp === targetEntry.timestamp ? 5 : 0),
-              pointBackgroundColor: '#2563eb',
-              pointBorderColor: '#ffffff',
-              pointBorderWidth: 2,
-              tension: 0.35,
-              fill: true
+              label: 'Тренд',
+              data: calculateSMA(chartEntries),
+              borderColor: volt,
+              borderWidth: 5,
+              pointRadius: 0,
+              tension: 0.4,
+              order: 2
             },
             {
-              label: 'Тренд',
-              data: smaValues,
-              borderColor: '#059669',
+              label: 'Факт',
+              data: chartEntries.map(e => e.weight),
+              borderColor: ink,
               borderWidth: 2,
-              pointRadius: 0,
-              borderDash: [4, 4],
-              tension: 0.35,
-              fill: false
+              pointRadius: chartEntries.map(e => e.timestamp === target.timestamp ? 5 : 2),
+              pointBackgroundColor: chartEntries.map(e => e.timestamp === target.timestamp ? volt : ink),
+              pointBorderColor: ink,
+              pointBorderWidth: chartEntries.map(e => e.timestamp === target.timestamp ? 2 : 0),
+              tension: 0.25,
+              order: 1
             }
           ]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
           plugins: {
             legend: { display: false },
             tooltip: {
-              mode: 'index',
-              intersect: false,
-              backgroundColor: 'rgba(15, 23, 42, 0.9)',
-              titleColor: '#ffffff',
-              bodyColor: '#cbd5e1',
-              borderColor: 'rgba(255, 255, 255, 0.1)',
-              borderWidth: 1,
+              backgroundColor: ink,
+              titleColor: panel,
+              bodyColor: panel,
+              titleFont: { family: 'Barlow Condensed', weight: '700', size: 15 },
+              bodyFont: { family: 'Barlow', size: 13 },
               padding: 10,
-              cornerRadius: 12,
-              boxPadding: 3,
-              usePointStyle: true,
+              cornerRadius: 6,
+              displayColors: false,
+              callbacks: { label: c => `${c.dataset.label}: ${fmt(c.parsed.y)} кг` }
             }
           },
           scales: {
             x: {
               grid: { display: false },
-              ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { size: 10, family: 'Inter' }, maxTicksLimit: 6 }
+              border: { color: rule },
+              ticks: { color: muted, font: { family: 'Barlow', size: 11 }, maxTicksLimit: 6, maxRotation: 0 }
             },
             y: {
-              grid: { color: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)' },
-              ticks: { color: isDark ? '#94a3b8' : '#64748b', font: { size: 10, family: 'Inter' } }
+              grid: { color: rule, drawTicks: false },
+              border: { display: false },
+              ticks: { color: muted, font: { family: 'Barlow', size: 11 }, padding: 6, maxTicksLimit: 5, callback: v => fmt(Number(v.toFixed(1))) }
             }
           }
         }
