@@ -68,24 +68,26 @@
       display: flex; align-items: center; justify-content: center;
     }
     /* Косые плашки пролетают ЗА надписью, как в заставке спортивной трансляции */
+    /* Плашки движутся через всю ширину экрана (left в %, а не translate от
+       собственной ширины) и в конце полностью улетают за правый край */
     .sting-slab {
       position: absolute; top: 18px; bottom: 18px;
       width: 62%;
-      left: 0;
+      left: -80%;
       background: var(--volt);
-      transform: translateX(-120%) skewX(-18deg);
+      transform: skewX(-18deg);
       animation: slab 1.7s cubic-bezier(.7, 0, .25, 1) infinite;
     }
     .sting-slab.thin {
-      width: 9%;
-      top: 34px; bottom: 34px;
-      background: var(--ink);
-      animation-delay: .12s;
+      width: 7%;
+      top: 30px; bottom: 30px;
+      opacity: .55;
+      animation-delay: .14s;
     }
     @keyframes slab {
-      0%   { transform: translateX(-130%) skewX(-18deg); }
-      55%  { transform: translateX(185%)  skewX(-18deg); }
-      100% { transform: translateX(185%)  skewX(-18deg); }
+      0%   { left: -80%; }
+      60%  { left: 120%; }
+      100% { left: 120%; }
     }
     .sting-word {
       position: relative; z-index: 2;
@@ -100,21 +102,30 @@
     .sting-word span { display: block; padding-left: .5em; }
     .splash-note { margin-top: 18px; font-size: 14px; color: var(--muted); }
     @media (prefers-reduced-motion: reduce) {
-      .sting-slab { animation: none; transform: translateX(30%) skewX(-18deg); }
+      .sting-slab { animation: none; left: 20%; }
       .sting-slab.thin { display: none; }
     }
 
     /* ---------- КАРКАС ---------- */
-    main { max-width: 440px; margin: 0 auto; padding: 14px 18px 32px; }
+    /* Вся страница = ровно высота окна Telegram; график забирает остаток */
+    main {
+      max-width: 440px; margin: 0 auto;
+      min-height: var(--tg-viewport-stable-height, 100dvh);
+      height: var(--tg-viewport-stable-height, 100dvh);
+      padding: 10px 18px calc(12px + env(safe-area-inset-bottom, 0px));
+      display: flex; flex-direction: column;
+    }
+    #dashboard { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    #dashboard.hidden { display: none !important; }
 
     /* Имена атлетов — как в карде боя */
     .duel {
       display: flex; align-items: baseline; justify-content: center;
-      gap: 14px; margin-bottom: 18px;
+      gap: 12px; margin-bottom: 8px;
     }
     .duel-name {
       font-family: var(--display); font-style: italic; font-weight: 800;
-      font-size: 26px; text-transform: uppercase; letter-spacing: .2px;
+      font-size: 23px; text-transform: uppercase; letter-spacing: .2px;
       color: var(--muted);
       padding: 0 2px 3px;
       position: relative;
@@ -130,7 +141,7 @@
     /* Неделя */
     .week-head {
       display: flex; align-items: center; justify-content: space-between;
-      font-size: 14px; color: var(--muted); margin-bottom: 8px;
+      font-size: 14px; color: var(--muted); margin-bottom: 4px;
     }
     .week-nav { display: flex; align-items: center; gap: 4px; }
     .week-nav button { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; }
@@ -140,11 +151,11 @@
     .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; touch-action: pan-y; }
     .day {
       display: flex; flex-direction: column; align-items: center; gap: 1px;
-      padding: 7px 0 6px; border-radius: 8px;
+      padding: 4px 0 3px; border-radius: 8px;
       border: 1.5px solid transparent;
     }
     .day .dw { font-size: 12px; color: var(--muted); }
-    .day .dn { font-family: var(--display); font-weight: 700; font-size: 21px; line-height: 1.05; }
+    .day .dn { font-family: var(--display); font-weight: 700; font-size: 19px; line-height: 1.05; }
     .day .dd { font-size: 11px; font-weight: 600; min-height: 14px; color: var(--muted); }
     .day.has { background: var(--panel); }
     .day.empty .dn { color: var(--muted); opacity: .6; }
@@ -153,20 +164,20 @@
     .day.sel { background: var(--volt); color: var(--volt-ink); }
     .day.sel .dw, .day.sel .dd { color: var(--volt-ink); }
     .dd.down { color: var(--down); } .dd.up { color: var(--up); }
-    #emptyWeekNote { text-align: center; font-size: 13px; color: var(--muted); margin-top: 8px; }
+    #emptyWeekNote { text-align: center; font-size: 13px; color: var(--muted); margin-top: 4px; }
 
     /* Табло веса */
-    .board { margin-top: 22px; }
+    .board { margin-top: 12px; }
     .board-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
     #currWeightLabel { font-size: 14px; color: var(--muted); }
     .big {
       margin-top: 4px;
       font-family: var(--display); font-style: italic; font-weight: 800;
-      font-size: clamp(64px, 23vw, 96px); line-height: .82; letter-spacing: -1.5px;
+      font-size: clamp(54px, 19vw, 80px); line-height: .82; letter-spacing: -1.5px;
       font-variant-numeric: tabular-nums;
       white-space: nowrap;
     }
-    .big small { font-size: 30px; font-weight: 700; letter-spacing: 0; margin-left: 4px; color: var(--muted); }
+    .big small { font-size: 26px; font-weight: 700; letter-spacing: 0; margin-left: 4px; color: var(--muted); }
     #currDiffBadge {
       font-family: var(--display); font-weight: 700; font-size: 19px;
       white-space: nowrap;
@@ -175,32 +186,35 @@
     #currDiffBadge.down { color: var(--down); } #currDiffBadge.up { color: var(--up); } #currDiffBadge.flat { color: var(--muted); }
     .stats {
       display: grid; grid-template-columns: repeat(3, 1fr);
-      margin-top: 16px; border-top: 1.5px solid var(--ink); padding-top: 10px;
+      margin-top: 10px; border-top: 1.5px solid var(--ink); padding-top: 7px;
     }
     .stat { padding-left: 12px; border-left: 1px solid var(--rule); }
     .stat:first-child { padding-left: 0; border-left: 0; }
     .stat p { font-size: 12.5px; color: var(--muted); }
-    .stat b { font-family: var(--display); font-weight: 700; font-size: clamp(18px, 5.6vw, 24px); white-space: nowrap; }
+    .stat b { font-family: var(--display); font-weight: 700; font-size: clamp(17px, 5vw, 21px); white-space: nowrap; }
 
     /* График */
-    .chart-panel { margin-top: 24px; background: var(--panel); border-radius: 10px; padding: 14px 14px 10px; }
-    .chart-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-    .chart-head h2 { font-family: var(--display); font-weight: 700; font-size: 20px; }
+    .chart-panel {
+      margin-top: 14px; background: var(--panel); border-radius: 10px; padding: 10px 12px 8px;
+      flex: 1; min-height: 0; display: flex; flex-direction: column;
+    }
+    .chart-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+    .chart-head h2 { font-family: var(--display); font-weight: 700; font-size: 19px; }
     .legend { display: flex; gap: 12px; font-size: 12.5px; color: var(--muted); }
     .legend span { display: inline-flex; align-items: center; gap: 5px; }
     .legend i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
-    .periods { display: grid; grid-template-columns: repeat(6, 1fr); border: 1.5px solid var(--rule); border-radius: 7px; overflow: hidden; margin-bottom: 10px; }
-    .period-btn { padding: 6px 0; font-family: var(--display); font-weight: 600; font-size: 15px; color: var(--muted); }
+    .periods { display: grid; grid-template-columns: repeat(6, 1fr); border: 1.5px solid var(--rule); border-radius: 7px; overflow: hidden; margin-bottom: 6px; flex-shrink: 0; }
+    .period-btn { padding: 4px 0; font-family: var(--display); font-weight: 600; font-size: 15px; color: var(--muted); }
     .period-btn.active { background: var(--ink); color: var(--bg); }
-    .chart-box { position: relative; height: 210px; }
+    .chart-box { position: relative; flex: 1; min-height: 120px; }
 
     /* Путь к цели — беговая дорожка */
-    .lane-block { margin-top: 24px; }
+    .lane-block { margin-top: 12px; flex-shrink: 0; }
     .lane-top { display: flex; justify-content: space-between; align-items: baseline; }
-    .lane-top h2 { font-family: var(--display); font-weight: 700; font-size: 20px; }
-    #progressText { font-family: var(--display); font-style: italic; font-weight: 800; font-size: 34px; line-height: 1; }
+    .lane-top h2 { font-family: var(--display); font-weight: 700; font-size: 19px; }
+    #progressText { font-family: var(--display); font-style: italic; font-weight: 800; font-size: 28px; line-height: 1; }
     .lane {
-      position: relative; height: 16px; margin-top: 8px; border-radius: 3px;
+      position: relative; height: 13px; margin-top: 5px; border-radius: 3px;
       background:
         repeating-linear-gradient(90deg, transparent 0 calc(10% - 1px), var(--rule) calc(10% - 1px) 10%),
         var(--panel);
@@ -215,9 +229,9 @@
       content: ""; position: absolute; right: -4px; top: -2px; bottom: -2px; width: 8px;
       background: var(--ink); transform: skewX(-18deg);
     }
-    .lane-ends { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--muted); margin-top: 5px; }
-    .forecast { margin-top: 14px; font-size: 15px; }
-    .forecast b { font-family: var(--display); font-weight: 700; font-size: 20px; }
+    .lane-ends { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+    .forecast { margin-top: 6px; font-size: 14px; }
+    .forecast b { font-family: var(--display); font-weight: 700; font-size: 18px; }
 
     /* Ошибка */
     #errorBox { margin: 40px 0; border-left: 4px solid var(--up); padding: 4px 0 4px 14px; }
@@ -244,9 +258,9 @@
     </div>
 
     <div id="dashboard" class="hidden">
-      <nav id="userTabs" class="duel hidden"></nav>
+      <nav id="userTabs" class="duel hidden" style="flex-shrink:0"></nav>
 
-      <section>
+      <section style="flex-shrink:0">
         <div class="week-head">
           <div class="week-nav">
             <button onclick="changeWeek(-1)" aria-label="Прошлая неделя">
@@ -263,7 +277,7 @@
         <p id="emptyWeekNote" class="hidden">На этой неделе замеров нет</p>
       </section>
 
-      <section class="board">
+      <section class="board" style="flex-shrink:0">
         <div class="board-top">
           <p id="currWeightLabel">Текущий вес</p>
           <div id="currDiffBadge" class="flat">—</div>
