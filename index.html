@@ -239,6 +239,55 @@
     #sheet dt { color: var(--muted); }
     #sheet dd { text-align: right; font-weight: 600; }
     #sheet dd.need { color: var(--ink); font-weight: 700; }
+    /* ===== Экран достижений ===== */
+    .ach-head { cursor: pointer; }
+    .ach-head:active { opacity: .6; }
+    .ach-head span::after { content: " ›"; color: var(--muted); }
+    .screen {
+      position: fixed; inset: 0; z-index: 30; background: var(--bg); overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      transform: translateX(100%); transition: transform .3s cubic-bezier(.2, .8, .2, 1);
+    }
+    .screen.open { transform: translateX(0); }
+    .screen-inner { max-width: 460px; margin: 0 auto; padding: 14px 16px calc(32px + env(safe-area-inset-bottom, 0px)); }
+    .screen-top { display: flex; align-items: baseline; justify-content: space-between; }
+    .screen-top h2 { font-family: var(--display); font-weight: 700; font-size: 30px; }
+    .screen-top span { color: var(--muted); font-size: 14px; }
+    .back-btn { font-size: 15px; font-weight: 600; padding: 4px 0 10px; color: var(--ink); }
+    html.in-tg .back-btn { display: none; }               /* в Telegram — системная «Назад» */
+    .m-sec h3 { font-family: var(--display); font-weight: 700; font-size: 19px; margin: 20px 0 8px; display: flex; gap: 8px; align-items: center; }
+    .m-sec h3 small { font-family: var(--text); font-weight: 500; font-size: 13px; color: var(--muted); }
+    .m-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 6px; }
+    .m-tile { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; }
+    .m-tile svg { width: 100%; max-width: 104px; aspect-ratio: 1; filter: drop-shadow(0 5px 7px rgba(23,33,43,.22)); transition: transform .15s ease; }
+    .m-tile:active svg { transform: scale(.94); }
+    .m-tile.locked svg { opacity: .8; filter: none; }
+    .m-tile b { font-size: 13.5px; line-height: 1.15; }
+    .m-tile small { font-size: 12px; color: var(--muted); }
+    .m-tile .mini { width: 74px; height: 5px; border-radius: 3px; background: var(--rule); overflow: hidden; }
+    .m-tile .mini i { display: block; height: 100%; background: var(--volt); }
+
+    /* ===== Медаль крупно (3D-монета) ===== */
+    #coinView { z-index: 35; display: flex; flex-direction: column; }
+    #coinView .screen-inner { flex: 1; display: flex; flex-direction: column; width: 100%; }
+    .stage { flex: 1; min-height: 300px; display: flex; align-items: center; justify-content: center; perspective: 900px; touch-action: none; position: relative; }
+    .coin { position: relative; width: 240px; height: 240px; transform-style: preserve-3d; will-change: transform; }
+    .coin .face, .coin .edge { position: absolute; left: 50%; top: 50%; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+    .coin .face { width: 240px; height: 240px; margin: -120px 0 0 -120px; border-radius: 50%; overflow: hidden; }
+    .coin .face svg { width: 100%; height: 100%; display: block; }
+    .coin .edge { backface-visibility: visible; -webkit-backface-visibility: visible; }
+    .sheen-mask { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; pointer-events: none; }
+    .sheen { position: absolute; top: 0; bottom: 0; left: -100%; width: 300%; will-change: transform;
+      background: linear-gradient(110deg, transparent 38%, rgba(255,255,255,.28) 48%, rgba(255,255,255,.08) 52%, transparent 60%); }
+    .coin-shadow { position: absolute; left: 50%; bottom: 4%; width: 170px; height: 22px; margin-left: -85px; border-radius: 50%;
+      background: radial-gradient(ellipse, rgba(23,33,43,.28), rgba(23,33,43,0) 70%); }
+    html.dark .coin-shadow { background: radial-gradient(ellipse, rgba(0,0,0,.65), rgba(0,0,0,0) 70%); }
+    .coin-info { text-align: center; padding-bottom: 6px; }
+    .coin-info h3 { font-family: var(--display); font-style: italic; font-weight: 800; font-size: 32px; line-height: 1.05; }
+    .coin-info p { color: var(--muted); font-size: 15px; margin-top: 6px; line-height: 1.4; }
+    .coin-info .when { color: var(--ink); font-weight: 600; }
+    .coin-info .hint { font-size: 13px; margin-top: 10px; }
+
     #sheet .s-note { font-size: 13px; color: var(--muted); margin-top: 14px; line-height: 1.35; border-top: 1px solid var(--rule); padding-top: 10px; }
 
     /* График */
@@ -375,7 +424,7 @@
         </div>
         <!-- Достижения: сколько медалей получено и ближайшая с прогрессом -->
         <div class="ach" id="achRow">
-          <div class="ach-head"><span>Достижения</span><b id="achCount">0</b></div>
+          <div class="ach-head" role="button" tabindex="0" onclick="openAchScreen()"><span>Достижения</span><b id="achCount">0</b></div>
           <div class="ach-next" id="achNext" role="button" tabindex="0" onclick="openMedalSheet()">
             <span id="achNextTitle">—</span>
             <span class="ach-lane"><i id="achNextFill"></i></span>
@@ -414,6 +463,29 @@
       </section>
     </div>
   </main>
+
+  <!-- Экран всех медалей -->
+  <div id="achScreen" class="screen" role="dialog" aria-label="Достижения">
+    <div class="screen-inner">
+      <button class="back-btn" onclick="navBack()">‹ Назад</button>
+      <div class="screen-top"><h2>Достижения</h2><span id="achScreenCount"></span></div>
+      <div id="achSections"></div>
+    </div>
+  </div>
+
+  <!-- Одна медаль крупно: 3D-монета, которую можно крутить -->
+  <div id="coinView" class="screen" role="dialog" aria-label="Медаль">
+    <div class="screen-inner">
+      <button class="back-btn" onclick="navBack()">‹ Назад</button>
+      <div class="stage" id="coinStage"><div class="coin-shadow"></div><div class="coin" id="coin"></div></div>
+      <div class="coin-info">
+        <h3 id="cTitle"></h3>
+        <p id="cDesc"></p>
+        <p class="when" id="cWhen"></p>
+        <p class="hint">Покрути пальцем, на обороте твой путь</p>
+      </div>
+    </div>
+  </div>
 
   <div id="sheetBack" onclick="closeMedalSheet()"></div>
   <div id="sheet" role="dialog" aria-modal="true" aria-labelledby="sTitle">
@@ -665,6 +737,504 @@
       return many;
     };
 
+
+    // =====================================================================
+    // МЕДАЛИ: генератор SVG (перенесён из утверждённого каталога)
+    // =====================================================================
+    const MedalArt = (function () {
+    const M = {
+      bronze: { hi: '#F6C795', mid: '#C27B45', lo: '#6E3E1C', dark: '#2E1A0B' },
+      silver: { hi: '#FFFFFF', mid: '#B9C2CB', lo: '#5F6974', dark: '#20262C' },
+      gold:   { hi: '#FFF1B0', mid: '#E2A92B', lo: '#7A5205', dark: '#2B1E03' },
+      nickel: { hi: '#8C949C', mid: '#3A4047', lo: '#14171A', dark: '#0E1012' },
+      // тёмная сталь
+      gunmetal:  { hi: '#C9D1D9', mid: '#5E6873', lo: '#262C33', dark: '#0F1215' },
+      // анодированный титан
+      ti_sky:     { hi: '#D8F1FF', mid: '#4FA8E8', lo: '#1C4F80', dark: '#0B1E33' },
+      ti_blue:    { hi: '#CFDBFF', mid: '#4166DC', lo: '#1A2C6E', dark: '#0A1230' },
+      ti_violet:  { hi: '#E8D8FF', mid: '#8457DA', lo: '#3A1F70', dark: '#170C2E' },
+      ti_magenta: { hi: '#FFD6EE', mid: '#C9498F', lo: '#5E1A45', dark: '#26091B' },
+      ti_flame:   { hi: '#FFE4C6', mid: '#E8782C', lo: '#7A3008', dark: '#2E1103' },
+      ti_green:   { hi: '#D8FFE8', mid: '#2FB36F', lo: '#0F5A33', dark: '#05220F' },
+      rosegold:   { hi: '#FFE6DD', mid: '#D99A8A', lo: '#8A4E42', dark: '#3A1E18' },
+      // закрытая медаль: тёмный матовый металл
+      locked:     { hi: '#7A838C', mid: '#3B434C', lo: '#22282E', dark: '#14181C' }
+    };
+
+    let n = 0;
+    /*
+      opts:
+        rim    — металл ободка
+        relief — металл рельефа (цифра, надпись, кривая)
+        field  — 'oxid' (чернение металла relief) | {enamel: '#hex'} | {metal: key} | {night: true}
+        shape  — 'circle' | 'hex'
+    */
+    function medal(opts) {
+      const id = 'm' + (n++);
+      const rim = M[opts.rim], rel = M[opts.relief];
+      const shape = opts.shape || 'circle';
+      const F = `font-family="Barlow Condensed, Arial Narrow, sans-serif"`;
+
+      // контуры: внешний (ободок) и внутренний (поле)
+      const hexPts = r => [...Array(6)].map((_, i) => {
+        const a = (60 * i - 90) * Math.PI / 180;
+        return `${(120 + r * Math.cos(a)).toFixed(1)},${(120 + r * Math.sin(a)).toFixed(1)}`;
+      }).join(' ');
+      const outer = shape === 'hex' ? `<polygon points="${hexPts(122)}"` : `<circle cx="120" cy="120" r="120"`;
+      const inner = (r, attrs) => shape === 'hex'
+        ? `<polygon points="${hexPts(r + 6)}" ${attrs}/>`
+        : `<circle cx="120" cy="120" r="${r}" ${attrs}/>`;
+
+      // поле
+      let fieldFill, fieldExtra = '', ringsColor, ringsOp = .16;
+      const f = opts.field;
+      if (f === 'oxid') {
+        fieldFill = `url(#${id}ox)`; ringsColor = rel.mid; ringsOp = .12;
+      } else if (f.enamel) {
+        fieldFill = `url(#${id}en)`; ringsColor = '#FFFFFF'; ringsOp = 0;
+        fieldExtra = `<ellipse cx="96" cy="78" rx="62" ry="32" fill="#fff" opacity=".18" transform="rotate(-24 96 78)" clip-path="url(#${id}cl)"/>`;
+      } else if (f.metal) {
+        fieldFill = `url(#${id}fm)`; ringsColor = M[f.metal].lo; ringsOp = .22;
+      } else if (f.night) {
+        fieldFill = `url(#${id}nt)`; ringsColor = '#AFC4FF'; ringsOp = .16;
+      }
+      const rings = ringsOp ? [...Array(26)].map((_, i) =>
+        `<circle cx="120" cy="120" r="${8 + i * 3.4}" fill="none" stroke="${ringsColor}" stroke-width=".8" opacity="${ringsOp}"/>`).join('') : '';
+
+      const fm = f.metal ? M[f.metal] : null;
+      const enamel = f.enamel || '#000';
+      const defs = `<defs>
+        <linearGradient id="${id}rim" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="${rim.hi}"/><stop offset=".3" stop-color="${rim.mid}"/>
+          <stop offset=".55" stop-color="${rim.hi}"/><stop offset=".8" stop-color="${rim.lo}"/><stop offset="1" stop-color="${rim.mid}"/>
+        </linearGradient>
+        <linearGradient id="${id}rel" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="${rel.hi}"/><stop offset=".55" stop-color="${rel.mid}"/><stop offset="1" stop-color="${rel.hi}"/>
+        </linearGradient>
+        <radialGradient id="${id}ox" cx="45%" cy="35%" r="80%">
+          <stop offset="0" stop-color="${rel.lo}"/><stop offset="1" stop-color="${rel.dark}"/>
+        </radialGradient>
+        <radialGradient id="${id}en" cx="40%" cy="30%" r="85%">
+          <stop offset="0" stop-color="${enamel}"/><stop offset="1" stop-color="${enamel}" stop-opacity=".8"/>
+        </radialGradient>
+        ${fm ? `<radialGradient id="${id}fm" cx="40%" cy="30%" r="85%"><stop offset="0" stop-color="${fm.hi}"/><stop offset=".6" stop-color="${fm.mid}"/><stop offset="1" stop-color="${fm.lo}"/></radialGradient>` : ''}
+        <radialGradient id="${id}nt" cx="40%" cy="30%" r="85%">
+          <stop offset="0" stop-color="#2E4A9A"/><stop offset=".7" stop-color="#16265A"/><stop offset="1" stop-color="#0B1433"/>
+        </radialGradient>
+        <clipPath id="${id}cl">${inner(97, '')}</clipPath>
+        <path id="${id}arc" d="M 37 120 A 83 83 0 0 1 203 120"/>
+        <path id="${id}arcB" d="M 24.5 120 A 95.5 95.5 0 0 0 215.5 120"/>
+        <path id="${id}arc2" d="M 42 120 A 78 78 0 0 1 198 120"/>
+        <path id="${id}arcB2" d="M 31 120 A 89 89 0 0 0 209 120"/>
+      </defs>`;
+
+      // выпуклый элемент: тень, блик, тело из полированного металла
+      const raised = (body) => `
+        <g transform="translate(1.4,2)" fill="${rel.dark}" stroke="${rel.dark}" opacity=".7">${body}</g>
+        <g transform="translate(-.7,-.9)" fill="${rel.hi}" stroke="${rel.hi}">${body}</g>
+        <g fill="url(#${id}rel)" stroke="url(#${id}rel)">${body}</g>`;
+
+      const big = opts.big || '';
+      const caption = opts.caption || 'ВЕС ТЕЛА';
+      const light = !!(f.metal || (f.enamel && ['#F2B705'].includes(f.enamel)));   // светлые поля
+      const noBand = opts.band === false;
+      const label = noBand ? (light ? '#14181C' : (opts.relief === 'nickel' ? '#FFFFFF' : rel.hi))
+                           : (opts.relief === 'nickel' ? '#FFFFFF' : rel.hi);
+      const outline = noBand ? `stroke="${light ? 'rgba(255,255,255,.55)' : 'rgba(0,0,0,.55)'}" stroke-width="2.4" paint-order="stroke" stroke-linejoin="round"` : '';
+      const numeral = `<text ${F} font-style="italic" font-weight="800" font-size="${noBand ? 25 : 23}" letter-spacing="1" fill="${label}" ${outline}><textPath href="#${noBand ? id + 'arcB2' : id + 'arcB'}" startOffset="50%" text-anchor="middle">${big}</textPath></text>`;
+      const _unused = !opts.art ? '' : `<text x="120" y="188" text-anchor="middle" font-size="${big.length > 4 ? 22 : 30}" ${F} font-style="italic" font-weight="800" stroke-width="0">${big}</text>`;
+      const capText = `<text ${F} font-weight="700" font-size="${noBand ? 14 : 13}" letter-spacing="2.4" fill="${label}" ${outline}><textPath href="#${noBand ? id + 'arc2' : id + 'arc'}" startOffset="50%" text-anchor="middle">${caption}</textPath></text>`;
+      // тёмный эмалевый поясок с металлическими кантами
+      const band = `
+        <circle cx="120" cy="120" r="87" fill="none" stroke="#121619" stroke-opacity=".9" stroke-width="22"/>
+        <circle cx="120" cy="120" r="76" fill="none" stroke="${rel.hi}" stroke-width="1.6" opacity=".8"/>
+        <circle cx="120" cy="120" r="75" fill="none" stroke="${rel.dark}" stroke-width="1" opacity=".8"/>
+        <circle cx="31.5" cy="120" r="2.4" fill="${label}"/><circle cx="208.5" cy="120" r="2.4" fill="${label}"/>`;
+      const curve = '';
+      const moon = opts.moon ? `
+        <path d="M 126 62 a 20 20 0 1 0 17 31 a 16 16 0 1 1 -17 -31 z" stroke-width="0"/>
+        <path d="M 88 80 l 2 4.6 4.6 2 -4.6 2 -2 4.6 -2 -4.6 -4.6 -2 4.6 -2 z" stroke-width="0"/>
+        <path d="M 160 100 l 1.5 3.4 3.4 1.5 -3.4 1.5 -1.5 3.4 -1.5 -3.4 -3.4 -1.5 3.4 -1.5 z" stroke-width="0"/>` : '';
+
+      const ticks = shape === 'circle' ? `<g stroke="${rim.lo}" stroke-width="1.4" opacity=".5">${[...Array(90)].map((_, i) => {
+        const a = i * 4 * Math.PI / 180;
+        return `<line x1="${(120 + Math.sin(a) * 117).toFixed(1)}" y1="${(120 - Math.cos(a) * 117).toFixed(1)}" x2="${(120 + Math.sin(a) * 111).toFixed(1)}" y2="${(120 - Math.cos(a) * 111).toFixed(1)}"/>`;
+      }).join('')}</g>` : '';
+
+      return `<svg viewBox="-4 -4 248 248" role="img" aria-label="${opts.label}">${defs}
+        ${outer} fill="url(#${id}rim)"/>
+        ${ticks}
+        ${inner(101, `fill="${rim.lo}"`)}
+        ${inner(99, `fill="${rim.hi}" opacity=".55"`)}
+        ${inner(97, `fill="${fieldFill}"`)}
+        <g clip-path="url(#${id}cl)">${rings}</g>
+        ${fieldExtra}
+        ${noBand ? '' : band}
+        ${capText}
+        ${numeral}
+        <g clip-path="url(#${id}cl)"><g transform="${noBand ? 'translate(120 110) scale(.74) translate(-120 -106)' : 'translate(120 116) scale(.68) translate(-120 -106)'}">${raised(opts.art || '')}</g></g>
+        <g clip-path="url(#${id}cl)">${opts.cut ? `
+          <g transform="${noBand ? 'translate(120 110) scale(.74) translate(-120 -106)' : 'translate(120 116) scale(.68) translate(-120 -106)'}"><g transform="translate(.7,1)" fill="${rel.hi}" stroke="${rel.hi}" opacity=".7">${opts.cut}</g>
+          <g fill="${rel.dark}" stroke="${rel.dark}">${opts.cut}</g></g>` : ''}</g>
+
+      </svg>`;
+    }
+
+    // ===== РИСУНКИ (координаты в поле 240×240, центр 120,120) =====
+    const runner = (x, y, k) => `<path transform="translate(${x},${y}) scale(${k})" d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3c1.3 1.5 3.3 2.5 5.5 2.5v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.2L6 8.3V13h2V9.6l1.8-.7z"/>`;
+
+    const leaves = (cx, cy, r, from, to, step) => {
+      let o = '';
+      for (let a = from; a <= to; a += step) {
+        const t = a * Math.PI / 180, x = cx + r * Math.cos(t), y = cy + r * Math.sin(t);
+        o += `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="7" ry="3.2" transform="rotate(${a + 90 + (a > 90 ? 35 : -35)} ${x.toFixed(1)} ${y.toFixed(1)})"/>`;
+      }
+      return o;
+    };
+
+    const ART = {
+      road: {   // путь к цели: дорога к горизонту, бегун на середине пути, флажок финиша
+        art: `<rect x="44" y="76" width="152" height="2.4"/>
+              <polygon points="76,160 164,160 125,77 115,77"/>
+              <rect x="121" y="46" width="2.4" height="31"/><polygon points="123.4,46 146,52 123.4,58"/>
+              ${runner(103, 92, 1.4)}`,
+        cut: `<rect x="118.6" y="150" width="2.8" height="9"/><rect x="118.9" y="130" width="2.2" height="7"/><rect x="119.2" y="114" width="1.6" height="5"/>`
+      },
+      belt: {   // вес тела: ремень, застёжка на очередной дырочке
+        art: `<rect x="20" y="96" width="200" height="34" rx="4"/>
+              <rect x="62" y="88" width="34" height="50" rx="7" fill="none" stroke-width="7"/>
+              <rect x="94" y="108" width="40" height="10" rx="3"/>`,
+        cut: `<circle cx="150" cy="113" r="4"/><circle cx="168" cy="113" r="4"/><circle cx="186" cy="113" r="4"/><circle cx="204" cy="113" r="4"/>
+              <rect x="20" y="100" width="200" height="1.6"/><rect x="20" y="125" width="200" height="1.6"/>`
+      },
+      fire: {   // серия: костёр
+        art: `<path d="M120 46 C140 72,152 90,144 114 C139 128,129 134,120 134 C107 134,96 126,95 111 C94 98,103 89,108 80 C110 93,116 98,121 98 C118 82,115 64,120 46 Z"/>
+              <rect x="74" y="132" width="92" height="13" rx="6.5" transform="rotate(-13 120 138)"/>
+              <rect x="74" y="132" width="92" height="13" rx="6.5" transform="rotate(13 120 138)"/>`,
+        cut: `<path d="M120 84 C130 98,134 108,130 118 C127 126,113 126,110 118 C107 110,114 104,116 98 C118 104,121 104,122 100 C123 94,121 90,120 84 Z"/>`
+      },
+      moon: {   // сон: месяц над облаком
+        art: `<path d="M140 52 a24 24 0 1 0 20 38 a19 19 0 1 1 -20 -38 z"/>
+              <circle cx="96" cy="128" r="17"/><circle cx="122" cy="118" r="23"/><circle cx="150" cy="130" r="15"/>
+              <rect x="80" y="128" width="84" height="18" rx="9"/>
+              <path d="M84 70 l2 4.6 4.6 2 -4.6 2 -2 4.6 -2 -4.6 -4.6 -2 4.6 -2 z"/>
+              <path d="M104 52 l1.5 3.4 3.4 1.5 -3.4 1.5 -1.5 3.4 -1.5 -3.4 -3.4 -1.5 3.4 -1.5 z"/>`
+      },
+      dumbbell: {   // тренировки: гантель
+        art: `<g transform="rotate(-22 120 112)">
+                <rect x="72" y="106" width="96" height="11" rx="3"/>
+                <rect x="78" y="84" width="15" height="55" rx="4"/><rect x="147" y="84" width="15" height="55" rx="4"/>
+                <rect x="64" y="93" width="11" height="37" rx="3"/><rect x="165" y="93" width="11" height="37" rx="3"/>
+              </g>`
+      },
+      podium: {   // цель взята: пьедестал и лавровый венок
+        art: `<rect x="96" y="118" width="48" height="40"/><rect x="50" y="132" width="46" height="26"/><rect x="144" y="140" width="46" height="18"/>
+              ${leaves(120, 84, 25, 105, 250, 18)}${leaves(120, 84, 25, -70, 75, 18)}`,
+        cut: `<text x="120" y="146" text-anchor="middle" font-size="20" font-family="Barlow Condensed, sans-serif" font-weight="800">1</text>
+              <text x="73" y="152" text-anchor="middle" font-size="14" font-family="Barlow Condensed, sans-serif" font-weight="800">2</text>
+              <text x="167" y="155" text-anchor="middle" font-size="12" font-family="Barlow Condensed, sans-serif" font-weight="800">3</text>`
+      },
+      tree: {   // пережил праздники: ёлка со звездой
+        art: `<polygon points="120,52 146,92 94,92"/><polygon points="120,72 154,118 86,118"/><polygon points="120,96 162,144 78,144"/>
+              <rect x="112" y="144" width="16" height="14"/>
+              <path d="M120 34 l3.5 7.6 8 1 -6 5.4 1.8 8 -7.3-4.2 -7.3 4.2 1.8-8 -6-5.4 8-1z"/>
+              <circle cx="66" cy="66" r="3"/><circle cx="176" cy="74" r="3"/><circle cx="170" cy="122" r="2.5"/><circle cx="70" cy="118" r="2.5"/>`
+      },
+      target: {   // точно в цель: мишень со стрелой
+        art: `<circle cx="114" cy="116" r="44"/>
+              <g transform="rotate(-42 114 116)"><rect x="112" y="40" width="4" height="74"/><polygon points="114,124 106,108 122,108"/>
+              <polygon points="114,30 104,24 104,40 114,46"/><polygon points="114,30 124,24 124,40 114,46"/></g>`,
+        cut: `<circle cx="114" cy="116" r="36" fill="none" stroke-width="5"/>
+              <circle cx="114" cy="116" r="22" fill="none" stroke-width="5"/>
+              <circle cx="114" cy="116" r="8"/>`
+      },
+      peak: {   // рубеж: вершина с флагом
+        art: `<polygon points="40,158 94,90 116,114 146,62 202,158"/>
+              <rect x="145" y="34" width="2.4" height="30"/><polygon points="147.4,34 170,40 147.4,46"/>`,
+        cut: `<polygon points="146,62 134,84 141,80 146,88 152,80 158,86"/><polygon points="94,90 86,101 94,98 100,104"/>`
+      }
+    };
+    // утопленные контурные кольца мишени — цвет тени поля
+
+
+    // ===== Дополнительные сюжеты =====
+    const rays = (cx, cy, r1, r2, n, w) => [...Array(n)].map((_, i) => {
+      const a = i * 2 * Math.PI / n, a1 = a - w, a2 = a + w;
+      return `<polygon points="${(cx + r1 * Math.cos(a1)).toFixed(1)},${(cy + r1 * Math.sin(a1)).toFixed(1)} ${(cx + r2 * Math.cos(a)).toFixed(1)},${(cy + r2 * Math.sin(a)).toFixed(1)} ${(cx + r1 * Math.cos(a2)).toFixed(1)},${(cy + r1 * Math.sin(a2)).toFixed(1)}"/>`;
+    }).join('');
+    const dumbbellAt = (rot) => `<g transform="rotate(${rot} 120 106)">
+        <rect x="72" y="100" width="96" height="11" rx="3"/>
+        <rect x="78" y="78" width="15" height="55" rx="4"/><rect x="147" y="78" width="15" height="55" rx="4"/>
+        <rect x="64" y="87" width="11" height="37" rx="3"/><rect x="165" y="87" width="11" height="37" rx="3"/></g>`;
+    Object.assign(ART, {
+      footprint: {   // первый шаг: отпечаток подошвы
+        art: `<path d="M112 46 C132 44,142 62,140 86 C138 102,130 110,130 124 C130 144,121 164,106 164 C91 164,86 148,88 132 C90 118,95 110,95 94 C95 70,97 48,112 46 Z"/>`,
+        cut: [...Array(7)].map((_, i) => `<rect x="94" y="${62 + i * 13}" width="40" height="3.5" rx="1.5" transform="rotate(-8 114 ${64 + i * 13})"/>`).join('')
+      },
+      calendar: {   // недели в минусе: листок календаря со стрелкой вниз
+        art: `<rect x="68" y="58" width="104" height="100" rx="9"/><rect x="88" y="46" width="7" height="22" rx="3"/><rect x="145" y="46" width="7" height="22" rx="3"/>`,
+        cut: `<rect x="68" y="78" width="104" height="3"/><polygon points="111,92 129,92 129,116 142,116 120,142 98,116 111,116"/>`
+      },
+      runner: {   // здоровый темп: бегун в ровном шаге и пунктир за спиной
+        art: `${runner(96, 50, 4)}<rect x="44" y="132" width="16" height="5" rx="2.5"/><rect x="66" y="132" width="16" height="5" rx="2.5"/><rect x="40" y="114" width="12" height="5" rx="2.5"/><rect x="58" y="114" width="12" height="5" rx="2.5"/>`
+      },
+      boomerang: {  // камбэк: классический V-образный бумеранг и стрелка возврата
+        art: `<polyline points="66,140 112,70 172,116" fill="none" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M150 56 a30 30 0 0 1 30 34" fill="none" stroke-width="5" stroke-linecap="round"/>
+              <polygon points="172,86 190,88 180,102"/>`
+      },
+      bird: {   // ранняя пташка: птица над восходом
+        art: `<path d="M86 158 A34 34 0 0 1 154 158 Z"/>${rays(120, 158, 40, 52, 9, .08)}
+              <rect x="50" y="158" width="140" height="4"/>
+              <path d="M74 84 q23 -24 46 0 q23 -24 46 0 q-23 -9 -46 11 q-23 -20 -46 -11z"/>`
+      },
+      steps: {   // идеальная неделя: семь ступенек
+        art: [...Array(7)].map((_, i) => `<rect x="${55 + i * 19}" y="${150 - (16 + i * 13)}" width="16" height="${16 + i * 13}" rx="2"/>`).join('')
+      },
+      sunmoon: {   // полный день: солнце и месяц
+        art: `<circle cx="92" cy="104" r="22"/>${rays(92, 104, 28, 40, 10, .12)}
+              <path d="M152 74 a28 28 0 1 0 24 44 a22 22 0 1 1 -24 -44 z"/>`
+      },
+      scale: {   // замеры: напольные весы с круглой шкалой
+        art: `<rect x="64" y="62" width="112" height="104" rx="18"/>`,
+        cut: `<circle cx="120" cy="100" r="25" fill="none" stroke-width="5"/>
+              <rect x="118" y="78" width="4" height="22" rx="2" transform="rotate(35 120 100)"/>
+              <rect x="76" y="140" width="88" height="4" rx="2"/>`
+      },
+      hourglass: {   // без долга: песочные часы со звёздами
+        art: `<rect x="78" y="48" width="84" height="10" rx="3"/><rect x="78" y="156" width="84" height="10" rx="3"/>
+              <path d="M88 58 L152 58 L152 64 C152 88,128 98,124 107 C128 116,152 126,152 150 L152 156 L88 156 L88 150 C88 126,112 116,116 107 C112 98,88 88,88 64 Z"/>`,
+        cut: `<path d="M110 72 l2 4.5 4.5 2 -4.5 2 -2 4.5 -2 -4.5 -4.5 -2 4.5 -2z"/><path d="M130 78 l1.5 3.4 3.4 1.5 -3.4 1.5 -1.5 3.4 -1.5 -3.4 -3.4 -1.5 3.4 -1.5z"/>
+              <path d="M120 134 l2.4 5.4 5.4 2.4 -5.4 2.4 -2.4 5.4 -2.4 -5.4 -5.4 -2.4 5.4 -2.4z"/>`
+      },
+      sneaker: {   // первая тренировка: кроссовок
+        art: `<path d="M50 134 C50 120,58 114,70 112 L102 106 C110 92,118 80,126 74 L142 74 C144 88,152 98,172 104 C186 108,194 118,194 130 L194 138 C194 144,190 148,184 148 L56 148 C52 148,50 144,50 140 Z"/>`,
+        cut: `<rect x="50" y="135" width="144" height="4"/><rect x="116" y="88" width="14" height="3" rx="1.5" transform="rotate(-30 123 89)"/>
+              <rect x="122" y="98" width="14" height="3" rx="1.5" transform="rotate(-30 129 99)"/><rect x="128" y="108" width="14" height="3" rx="1.5" transform="rotate(-30 135 109)"/>`
+      },
+      crossed: {   // активные недели: скрещённые гантели
+        art: dumbbellAt(-35) + dumbbellAt(35)
+      },
+      sun: {   // серия 365: солнце с 12 лучами
+        art: `<circle cx="120" cy="106" r="28"/>${rays(120, 106, 34, 60, 12, .11)}`,
+        cut: `<circle cx="120" cy="106" r="20" fill="none" stroke-width="3"/>`
+      },
+      laurel: {   // год в деле: лавровый венок
+        art: `${leaves(120, 104, 46, 100, 250, 13)}${leaves(120, 104, 46, -70, 80, 13)}
+              <rect x="88" y="154" width="64" height="6" rx="3"/>`
+      },
+      cake: {   // с днём рождения: торт со свечой
+        art: `<rect x="70" y="112" width="100" height="42" rx="6"/><rect x="84" y="86" width="72" height="30" rx="6"/>
+              <rect x="116" y="58" width="8" height="30" rx="2"/><path d="M120 34 C127 44,128 50,120 56 C112 50,113 44,120 34 Z"/>`,
+        cut: `<path d="M70 126 q8.3 8 16.6 0 t16.6 0 t16.6 0 t16.6 0 t16.6 0 t16.6 0" fill="none" stroke-width="3"/>
+              <path d="M84 98 q9 7 18 0 t18 0 t18 0 t18 0" fill="none" stroke-width="3"/>`
+      },
+      digits: {   // красивое число
+        art: `<text x="120" y="132" text-anchor="middle" font-size="64" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-style="italic" font-weight="800">88,8</text>`
+      }
+    });
+
+    const STYLE = {
+      weight:   m => ({ rim: m, relief: m, field: 'oxid' }),
+      habit:    m => ({ rim: m, relief: m, field: { enamel: '#0E8F7E' } }),
+      sleep:    m => ({ rim: m, relief: 'silver', field: { night: true } }),
+      training: m => ({ rim: m, relief: m === 'bronze' ? 'bronze' : m === 'gold' ? 'gold' : 'silver', field: { enamel: '#C8323A' } }),
+      main:     m => ({ rim: 'nickel', relief: 'gold', field: { enamel: '#16191C' } }),
+      seasonal: m => ({ rim: 'gold', relief: 'gold', field: { metal: 'silver' } }),
+      hidden:   m => ({ rim: 'gold', relief: 'nickel', field: { enamel: '#F2B705' } })
+    };
+      return { M, medal, ART, STYLE };
+    })();
+
+    // =====================================================================
+    // НАВИГАЦИЯ «НАЗАД»: стек открытых окон (окошко → медаль → экран)
+    // =====================================================================
+    const navStack = [];
+    function syncBack() {
+      try {
+        const bb = window.Telegram?.WebApp?.BackButton;
+        if (!bb) return;
+        navStack.length ? bb.show() : bb.hide();
+      } catch (e) {}
+    }
+    function navPush(closeFn) { navStack.push(closeFn); syncBack(); }
+    function navForget(closeFn) { const i = navStack.lastIndexOf(closeFn); if (i !== -1) navStack.splice(i, 1); syncBack(); }
+    function navBack() { const fn = navStack[navStack.length - 1]; if (fn) fn(); }
+
+    // =====================================================================
+    // ЭКРАН ДОСТИЖЕНИЙ
+    // =====================================================================
+    const MEDAL_SECTIONS_UI = [
+      ['weight', 'Вес'], ['habit', 'Привычка'], ['sleep', 'Сон'], ['training', 'Тренировки'],
+      ['main', 'Главные'], ['seasonal', 'Сезонные'], ['hidden', 'Скрытые']
+    ];
+    const medalCache = {};
+
+    // Параметры рисования медали по данным с сервера
+    function medalOpts(m, forCoin) {
+      const locked = m.status !== 'earned';
+      const style = locked ? { rim: 'locked', relief: 'locked', field: 'oxid' } : MedalArt.STYLE[m.section](m.metal);
+      const art = m.art && MedalArt.ART[m.art] ? MedalArt.ART[m.art] : {};
+      return { label: m.title, ...style, ...art, big: m.big || '', caption: m.caption || '', band: false };
+    }
+    function medalSVG(m) {
+      const k = m.key + ':' + m.status;
+      if (!medalCache[k]) medalCache[k] = MedalArt.medal(medalOpts(m));
+      return medalCache[k];
+    }
+
+    function openAchScreen() {
+      const u = globalData[activeUserId];
+      if (!u || !u.medals || !u.medals.catalog) return;
+      safeHaptic('light');
+      const cat = u.medals.catalog;
+      const earnedN = cat.filter(m => m.status === 'earned').length;
+      $('achScreenCount').textContent = `${earnedN} из ${cat.length}`;
+      const box = $('achSections');
+      box.innerHTML = '';
+      MEDAL_SECTIONS_UI.forEach(([key, name]) => {
+        const items = cat.filter(m => m.section === key);
+        if (!items.length) return;
+        const got = items.filter(m => m.status === 'earned').length;
+        const sec = document.createElement('section');
+        sec.className = 'm-sec';
+        sec.innerHTML = `<h3>${name} <small>${got} из ${items.length}</small></h3><div class="m-grid"></div>`;
+        const grid = sec.querySelector('.m-grid');
+        items.forEach(m => {
+          const b = document.createElement('button');
+          b.className = 'm-tile' + (m.status === 'earned' ? '' : ' locked');
+          let sub;
+          if (m.status === 'earned') sub = `<small>${dayMonth(m.date)}</small>`;
+          else if (m.status === 'next') sub = `<span class="mini"><i style="width:${Math.round(m.progress * 100)}%"></i></span><small>${m.progressText}</small>`;
+          else sub = `<small>${m.hidden ? 'секрет' : 'впереди'}</small>`;
+          b.innerHTML = medalSVG(m) + `<b>${m.title}</b>` + sub;
+          b.onclick = () => m.status === 'earned' ? openCoin(m) : openMedalSheet(m);
+          grid.appendChild(b);
+        });
+        box.appendChild(sec);
+      });
+      $('achScreen').scrollTop = 0;
+      $('achScreen').classList.add('open');
+      navPush(closeAchScreen);
+    }
+    function closeAchScreen() {
+      $('achScreen').classList.remove('open');
+      navForget(closeAchScreen);
+    }
+
+    // =====================================================================
+    // 3D-МОНЕТА: лицо, оборот с кривой веса, ребро, вращение пальцем
+    // =====================================================================
+    function coinBack(m) {
+      const u = globalData[activeUserId];
+      const until = m.date ? new Date(m.date + 'T23:59:59').getTime() : Infinity;
+      const pts = u.entries.filter(e => e.timestamp <= until).map(e => e.weight);
+      let curve = '';
+      if (pts.length > 1) {
+        const lo = Math.min(...pts), hi = Math.max(...pts), span = Math.max(0.5, hi - lo);
+        const xy = pts.map((w, i) => [52 + 136 * i / (pts.length - 1), 92 + 46 * (hi - w) / span]);
+        curve = `<path d="${xy.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ')}" fill="none" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+                 <circle cx="${xy[xy.length - 1][0]}" cy="${xy[xy.length - 1][1]}" r="6"/>`;
+      }
+      const title = `<text x="120" y="70" text-anchor="middle" font-size="17" stroke-width="0" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-weight="700">${m.title}</text>`;
+      const style = MedalArt.STYLE[m.section](m.metal);
+      return MedalArt.medal({ label: 'оборот', rim: style.rim, relief: style.rim, field: 'oxid',
+        art: title + curve, big: dayMonth(m.date), caption: (u.medals.owner || u.name || '').toUpperCase(), band: false });
+    }
+
+    const C = { angle: 0, vel: 0, tilt: 0, dragging: false, lastX: 0, startY: 0, lastT: 0, mode: 'idle', tween: null, base: 0, idleT0: 0, raf: 0, sheens: null };
+    function buildCoin(m) {
+      const coin = $('coin');
+      coin.innerHTML = '';
+      C.sheens = null;
+      const style = MedalArt.STYLE[m.section](m.metal);
+      const met = MedalArt.M[style.rim];
+      const R = 120, T = 14, N = 40, segH = 2 * Math.PI * R / N + 1.2;
+      const shade = (hex, k) => 'rgb(' + [1, 3, 5].map(i => Math.max(0, Math.min(255, Math.round(parseInt(hex.substr(i, 2), 16) * k)))).join(',') + ')';
+      for (let i = 0; i < N; i++) {
+        const a = 360 / N * i, lit = (Math.cos((a - 25) * Math.PI / 180) + 1) / 2;
+        const e = document.createElement('div');
+        e.className = 'edge';
+        e.style.cssText = `width:${segH}px;height:${T}px;margin:${-T / 2}px 0 0 ${-segH / 2}px;
+          background:linear-gradient(180deg, ${met.lo}, ${shade(lit > .5 ? met.hi : met.mid, 0.75 + lit * 0.45)} 50%, ${met.lo});
+          transform:rotateZ(${a}deg) translateY(${-R + 0.6}px) rotateX(90deg)`;
+        coin.appendChild(e);
+      }
+      const face = (svg, back) => {
+        const f = document.createElement('div');
+        f.className = 'face';
+        f.style.transform = back ? `rotateY(180deg) translateZ(${T / 2}px)` : `translateZ(${T / 2}px)`;
+        f.innerHTML = svg.replace('viewBox="-4 -4 248 248"', 'viewBox="0 0 240 240"') + '<div class="sheen-mask"><div class="sheen"></div></div>';
+        coin.appendChild(f);
+      };
+      face(MedalArt.medal(medalOpts(m)), false);
+      face(coinBack(m), true);
+    }
+    function coinApply() {
+      $('coin').style.transform = `rotateX(${C.tilt}deg) rotateY(${C.angle}deg)`;
+      const shift = (-Math.sin(C.angle * Math.PI / 180) * 30).toFixed(1) + '%';
+      if (!C.sheens) C.sheens = $('coin').querySelectorAll('.sheen');
+      C.sheens.forEach(el => { el.style.transform = `translateX(${shift})`; });
+    }
+    function coinLoop(t) {
+      if (C.mode === 'tween') {
+        const k = Math.min(1, (t - C.tween.t0) / C.tween.dur), e = 1 - Math.pow(1 - k, 3);
+        C.angle = C.tween.from + (C.tween.to - C.tween.from) * e;
+        if (k >= 1) { C.mode = 'idle'; C.idleT0 = t; C.base = C.tween.to; }
+      } else if (!C.dragging && C.mode === 'spin') {
+        C.angle += C.vel; C.vel *= 0.95; C.tilt *= 0.88;
+        if (Math.abs(C.vel) < 0.5) {
+          const target = Math.round((C.angle + C.vel * 6) / 180) * 180;
+          C.angle += (target - C.angle) * 0.14;
+          if (Math.abs(target - C.angle) < 0.3) { C.angle = target; C.base = target; C.mode = 'idle'; C.idleT0 = t; }
+        }
+      } else if (C.mode === 'idle' && !C.dragging) {
+        const k = (t - C.idleT0) / 1000, ramp = Math.min(1, k / 1.2);
+        C.angle = C.base + 9 * Math.sin(k * 1.1) * ramp;
+        C.tilt = 3 * Math.sin(k * 0.8) * ramp;
+      }
+      coinApply();
+      C.raf = requestAnimationFrame(coinLoop);
+    }
+    function openCoin(m) {
+      safeHaptic('light');
+      buildCoin(m);
+      $('cTitle').textContent = m.title;
+      $('cDesc').textContent = m.desc;
+      $('cWhen').textContent = 'Получена ' + dayMonth(m.date);
+      $('coinView').classList.add('open');
+      navPush(closeCoin);
+      C.tilt = 0; C.dragging = false; C.mode = 'tween';
+      C.tween = { from: -200, to: 0, dur: 800, t0: performance.now() };
+      cancelAnimationFrame(C.raf);
+      C.raf = requestAnimationFrame(coinLoop);
+    }
+    function closeCoin() {
+      $('coinView').classList.remove('open');
+      navForget(closeCoin);
+      setTimeout(() => cancelAnimationFrame(C.raf), 320);
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+      const st = $('coinStage');
+      st.addEventListener('pointerdown', e => {
+        if (C.mode === 'tween') return;
+        C.dragging = true; C.mode = 'spin'; C.vel = 0;
+        C.lastX = e.clientX; C.startY = e.clientY; C.lastT = performance.now();
+        st.setPointerCapture(e.pointerId);
+      });
+      st.addEventListener('pointermove', e => {
+        if (!C.dragging) return;
+        const now = performance.now(), dx = e.clientX - C.lastX, dt = Math.max(8, now - C.lastT);
+        C.angle += dx * 0.6; C.vel = dx * 0.6 * (16 / dt);
+        C.tilt = Math.max(-18, Math.min(18, -(e.clientY - C.startY) * 0.15));
+        C.lastX = e.clientX; C.lastT = now;
+      });
+      const release = () => { if (!C.dragging) return; C.dragging = false; C.vel = Math.max(-38, Math.min(38, C.vel)); safeHaptic('light'); };
+      st.addEventListener('pointerup', release);
+      st.addEventListener('pointercancel', release);
+      if (window.Telegram?.WebApp?.initData) document.documentElement.classList.add('in-tg');
+    });
+
     // Строка достижений: число полученных медалей и ближайшая с прогрессом
     // Карточка с описанием ближайшей медали
     let sheetMedal = null;
@@ -674,13 +1244,14 @@
     };
     const kg = n => `${String(Number(n).toFixed(2)).replace('.', ',')} кг`;
 
-    function openMedalSheet() {
-      const nx = sheetMedal;
+    function openMedalSheet(item) {
+      const nx = item || sheetMedal;
       if (!nx) return;
       safeHaptic('light');
       $('sTitle').textContent = nx.title;
       $('sDesc').textContent = 'За что дают: ' + nx.desc.charAt(0).toLowerCase() + nx.desc.slice(1);
-      $('sLane').style.width = Math.round(nx.progress * 100) + '%';
+      $('sLane').parentElement.classList.toggle('hidden', nx.progress == null);
+      $('sLane').style.width = Math.round((nx.progress || 0) * 100) + '%';
       const d = nx.detail || {};
       const rows = [];
       let note = '';
@@ -696,15 +1267,17 @@
         const u = d.units || ['', '', ''];
         rows.push(['Сейчас', `${d.have} ${plural(Math.round(d.have), ...u)}`]);
         rows.push(['Нужно', `${d.need} ${plural(d.need, ...u)}`, 'need']);
-      } else {
+      } else if (nx.progressText) {
         rows.push(['Прогресс', nx.progressText]);
+      } else {
+        rows.push(['Статус', 'ещё не получена']);
       }
       $('sList').innerHTML = rows.map(([k, v, c]) => `<dt>${k}</dt><dd class="${c || ''}">${v}</dd>`).join('');
       $('sNote').textContent = note;
       $('sNote').classList.toggle('hidden', !note);
       $('sheetBack').classList.add('open');
       $('sheet').classList.add('open');
-      try { window.Telegram?.WebApp?.BackButton?.show(); } catch (e) {}
+      navPush(closeMedalSheet);
     }
 
     function closeMedalSheet() {
@@ -712,7 +1285,7 @@
       const sh = $('sheet');
       sh.classList.remove('open');
       sh.style.transform = '';
-      try { window.Telegram?.WebApp?.BackButton?.hide(); } catch (e) {}
+      navForget(closeMedalSheet);
     }
 
     // Свайп вниз закрывает карточку
@@ -731,7 +1304,7 @@
           if (dy > 80) closeMedalSheet(); else sh.style.transform = '';
           y0 = null;
         });
-        try { window.Telegram?.WebApp?.BackButton?.onClick(closeMedalSheet); } catch (e) {}
+        try { window.Telegram?.WebApp?.BackButton?.onClick(navBack); } catch (e) {}
       });
     })();
 
