@@ -137,7 +137,7 @@
     /* Имена атлетов — как в карде боя */
     .duel {
       display: flex; align-items: baseline; justify-content: center;
-      gap: 12px; margin-bottom: 8px;
+      gap: 22px; margin-bottom: 8px;
     }
     .duel-name {
       font-family: var(--display); font-style: italic; font-weight: 800;
@@ -152,7 +152,6 @@
       content: ""; position: absolute; left: -2px; right: -2px; bottom: 0;
       height: 5px; background: var(--volt); transform: skewX(-18deg);
     }
-    .duel-vs { font-family: var(--display); font-weight: 600; font-size: 15px; color: var(--muted); }
 
     /* Неделя */
     .week-head {
@@ -189,7 +188,7 @@
     .big {
       margin-top: 4px;
       font-family: var(--display); font-style: italic; font-weight: 800;
-      font-size: clamp(54px, 19vw, 80px); line-height: .82; letter-spacing: -1.5px;
+      font-size: clamp(52px, 16.5vw, 76px); line-height: .82; letter-spacing: -1.5px;
       font-variant-numeric: tabular-nums;
       white-space: nowrap;
     }
@@ -198,21 +197,21 @@
       font-family: var(--display); font-weight: 700; font-size: 19px;
       white-space: nowrap;
     }
-    #currDiffBadge i { font-style: normal; font-family: var(--text); font-weight: 500; font-size: 13px; color: var(--muted); margin-left: 4px; }
+    #currDiffBadge i { display: block; font-style: normal; font-family: var(--text); font-weight: 500; font-size: 12.5px; color: var(--muted); line-height: 1.1; }
     #currDiffBadge.down { color: var(--down); } #currDiffBadge.up { color: var(--up); } #currDiffBadge.flat { color: var(--muted); }
-    .stats {
-      display: grid; grid-template-columns: 1.2fr .85fr 1fr;
-      margin-top: 10px; border-top: 1.5px solid var(--ink); padding-top: 7px;
-    }
-    .stat { padding-left: 12px; border-left: 1px solid var(--rule); }
-    .stat:first-child { padding-left: 0; border-left: 0; }
-    .stat p { font-size: 12.5px; color: var(--muted); }
-    .stat b { font-family: var(--display); font-weight: 700; font-size: clamp(17px, 5vw, 21px); white-space: nowrap; }
-    .stat { min-width: 0; }
-    .stat p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .stat b.down { color: var(--down); } .stat b.up { color: var(--up); }
-    .stat b i { font-style: normal; font-family: var(--text); font-weight: 500; font-size: 13px; color: var(--muted); }
-    .stat b.lead { background: var(--volt); color: var(--volt-ink); padding: 0 6px; display: inline-block; transform: skewX(-8deg); }
+    .big-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
+    .side { text-align: right; padding-bottom: 2px; flex-shrink: 0; }
+    #trendLine { font-size: 12.5px; color: var(--muted); margin-top: 5px; white-space: nowrap; }
+    #trendLine b { font-family: var(--display); font-weight: 700; font-size: 17px; color: var(--ink); }
+    .ach { margin-top: 10px; border-top: 1.5px solid var(--ink); padding-top: 7px; }
+    .ach-head { display: flex; justify-content: space-between; align-items: baseline; }
+    .ach-head span { font-family: var(--display); font-weight: 700; font-size: 18px; }
+    .ach-head b { font-family: var(--display); font-style: italic; font-weight: 800; font-size: 22px; }
+    .ach-next { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; margin-top: 3px; font-size: 13px; color: var(--muted); }
+    #achNextTitle { color: var(--ink); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 46vw; }
+    .ach-lane { height: 6px; border-radius: 3px; background: var(--rule); overflow: hidden; }
+    .ach-lane i { display: block; height: 100%; width: 0; background: var(--volt); transition: width .6s ease; }
+    #achNextText { white-space: nowrap; }
 
     /* График */
     .chart-panel {
@@ -267,9 +266,7 @@
       .board { margin-top: 8px; }
       .big { font-size: clamp(46px, 15vw, 60px); }
       .big small { font-size: 21px; }
-      .stats { margin-top: 7px; padding-top: 5px; }
-      .stat p { font-size: 11.5px; }
-      .stat b { font-size: 17px; }
+      .ach { margin-top: 7px; padding-top: 5px; }
       .chart-panel { margin-top: 10px; padding: 8px 10px 6px; }
       .chart-head h2, .lane-top h2 { font-size: 17px; }
       .chart-box { min-height: 100px; }
@@ -280,7 +277,6 @@
     }
     @media (max-height: 540px) {
       .legend { display: none; }
-      .stat p { display: none; }
       .chart-box { min-height: 80px; }
     }
 
@@ -290,7 +286,7 @@
       .duel-name { font-size: 20px; }
       .board { margin-top: 8px; }
       .big { font-size: clamp(48px, 16vw, 64px); }
-      .stats { margin-top: 6px; padding-top: 5px; }
+      .ach { margin-top: 7px; padding-top: 5px; }
       .chart-panel { margin-top: 10px; }
       .lane-block { margin-top: 8px; }
       .forecast { margin-top: 4px; }
@@ -341,15 +337,22 @@
       </section>
 
       <section class="board" style="flex-shrink:0">
-        <div class="board-top">
-          <p id="currWeightLabel">Текущий вес</p>
-          <div id="currDiffBadge" class="flat">—</div>
+        <p id="currWeightLabel">Текущий вес</p>
+        <div class="big-row">
+          <div class="big"><span id="currWeight">—</span><small>кг</small></div>
+          <div class="side">
+            <div id="currDiffBadge" class="flat">—</div>
+            <div id="trendLine">тренд <b id="trendWeight">—</b></div>
+          </div>
         </div>
-        <div class="big"><span id="currWeight">—</span><small>кг</small></div>
-        <div class="stats">
-          <div class="stat"><p>Темп</p><b id="paceStat">—</b></div>
-          <div class="stat"><p>Серия</p><b id="streakStat">—</b></div>
-          <div class="stat"><p id="duelLabel">Дуэль недели</p><b id="duelStat">—</b></div>
+        <!-- Достижения: сколько медалей получено и ближайшая с прогрессом -->
+        <div class="ach" id="achRow">
+          <div class="ach-head"><span>Достижения</span><b id="achCount">0</b></div>
+          <div class="ach-next" id="achNext">
+            <span id="achNextTitle">—</span>
+            <span class="ach-lane"><i id="achNextFill"></i></span>
+            <span id="achNextText"></span>
+          </div>
         </div>
       </section>
 
@@ -512,12 +515,6 @@
       nav.classList.remove('hidden');
       nav.innerHTML = '';
       ids.forEach((uid, i) => {
-        if (i > 0) {
-          const vs = document.createElement('span');
-          vs.className = 'duel-vs';
-          vs.textContent = 'vs';
-          nav.appendChild(vs);
-        }
         const b = document.createElement('button');
         b.className = 'duel-name' + (String(uid) === activeUserId ? ' active' : '');
         b.textContent = globalData[uid].name || uid;
@@ -623,34 +620,6 @@
     const DAY_MS = 86400000;
     const dayKey = ts => { const d = new Date(ts); return d.getFullYear() * 10000 + d.getMonth() * 100 + d.getDate(); };
 
-    // Темп: наклон регрессии за последние 14 дней до выбранного замера, в кг/нед.
-    // По тренду, а не по двум точкам, чтобы скачки воды не искажали картину.
-    function weeklyPace(all, ti) {
-      const end = all[ti].timestamp;
-      const win = all.slice(0, ti + 1).filter(e => e.timestamp >= end - 14 * DAY_MS);
-      if (win.length < 4 || (end - win[0].timestamp) / DAY_MS < 5) return null;
-      const t0 = win[0].timestamp;
-      let n = win.length, sx = 0, sy = 0, sxy = 0, sxx = 0;
-      win.forEach(e => { const x = (e.timestamp - t0) / DAY_MS; sx += x; sy += e.weight; sxy += x * e.weight; sxx += x * x; });
-      const den = n * sxx - sx * sx;
-      return den ? (n * sxy - sx * sy) / den * 7 : null;
-    }
-
-    // Серия: сколько календарных дней подряд есть замер, заканчивая выбранным днём
-    function weighStreak(all, ti) {
-      const days = new Set(all.map(e => dayKey(e.timestamp)));
-      let d = new Date(all[ti].timestamp), n = 0;
-      while (days.has(dayKey(d.getTime()))) { n++; d.setDate(d.getDate() - 1); }
-      return n;
-    }
-
-    // Изменение веса в % за 7 дней до даты: от первого замера окна к последнему
-    function weekPercent(entries, endTs) {
-      const win = entries.filter(e => e.timestamp <= endTs + DAY_MS - 1 && e.timestamp >= endTs - 7 * DAY_MS);
-      if (win.length < 2) return null;
-      return (win[win.length - 1].weight - win[0].weight) / win[0].weight * 100;
-    }
-
     const plural = (n, one, few, many) => {
       const m10 = n % 10, m100 = n % 100;
       if (m10 === 1 && m100 !== 11) return one;
@@ -658,40 +627,23 @@
       return many;
     };
 
-    function renderStats(all, ti) {
-      // Темп
-      const pace = weeklyPace(all, ti);
-      const paceEl = $('paceStat');
-      if (pace === null) { paceEl.className = ''; paceEl.textContent = 'мало данных'; }
-      else {
-        const v = parseFloat(pace.toFixed(1));
-        paceEl.className = v < 0 ? 'down' : v > 0 ? 'up' : '';
-        paceEl.textContent = `${v > 0 ? '+' : v < 0 ? '−' : ''}${fmt(Math.abs(v))} кг/нед`;
+    // Строка достижений: число полученных медалей и ближайшая с прогрессом
+    function renderAchievements(u) {
+      const row = $('achRow');
+      const m = u.medals;
+      if (!m) { row.classList.add('hidden'); return; }       // сервер ещё без медалей
+      row.classList.remove('hidden');
+      $('achCount').textContent = m.earned.length;
+      const nx = m.next && m.next[0];
+      if (nx) {
+        $('achNextTitle').textContent = nx.title;
+        $('achNextFill').style.width = Math.round(nx.progress * 100) + '%';
+        $('achNextText').textContent = nx.progressText;
+      } else {
+        $('achNextTitle').textContent = 'Все доступные медали получены';
+        $('achNextFill').style.width = '100%';
+        $('achNextText').textContent = '';
       }
-
-      // Серия
-      const streak = weighStreak(all, ti);
-      $('streakStat').textContent = `${streak} ${plural(streak, 'день', 'дня', 'дней')}`;
-
-      // Дуэль недели: сравнение % изменения веса с соперником за те же 7 дней
-      const duelEl = $('duelStat');
-      const rivalId = Object.keys(globalData).find(id => id !== activeUserId);
-      const rival = rivalId && globalData[rivalId];
-      if (!rival || !rival.entries || !rival.entries.length) {
-        $('duelLabel').textContent = 'Лучший вес';
-        const best = Math.min(...all.slice(0, ti + 1).map(e => e.weight));
-        duelEl.className = '';
-        duelEl.textContent = `${fmt(best)} кг`;
-        return;
-      }
-      $('duelLabel').textContent = 'Дуэль недели';
-      const endTs = all[ti].timestamp;
-      const mine = weekPercent(all, endTs), theirs = weekPercent(rival.entries, endTs);
-      if (mine === null || theirs === null) { duelEl.className = ''; duelEl.textContent = 'нет данных'; return; }
-      const gap = parseFloat((mine - theirs).toFixed(1));   // меньше = больше сбросил
-      if (gap < 0) { duelEl.className = 'lead'; duelEl.textContent = 'Лидер'; }
-      else if (gap > 0) { $('duelLabel').textContent = 'Отставание'; duelEl.className = 'up'; duelEl.textContent = `${fmt(gap)}%`; }
-      else { duelEl.className = ''; duelEl.textContent = 'Ничья'; }
     }
 
     function renderDashboard() {
@@ -717,7 +669,8 @@
 
       $('currWeightLabel').textContent = past ? `Замер за ${target.dateStr}` : 'Текущий вес';
       $('currWeight').textContent = fmt(target.weight);
-      renderStats(all, ti);
+      renderAchievements(u);
+      $('trendWeight').textContent = `${fmt(calculateSMA(all)[ti])} кг`;
 
       const diff = parseFloat((target.weight - prev.weight).toFixed(1));
       const badge = $('currDiffBadge');
