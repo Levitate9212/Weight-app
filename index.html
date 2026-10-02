@@ -202,7 +202,7 @@
     .big-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
     .side { text-align: right; padding-bottom: 2px; flex-shrink: 0; }
     #trendLine { font-size: 12.5px; color: var(--muted); margin-top: 5px; white-space: nowrap; }
-    #trendLine b { font-family: var(--display); font-weight: 700; font-size: 17px; color: var(--ink); }
+    #trendLine b { font-weight: 700; color: var(--ink); }
     .ach { margin-top: 10px; border-top: 1.5px solid var(--ink); padding-top: 7px; }
     .ach-head { display: flex; justify-content: space-between; align-items: baseline; }
     .ach-head span { font-family: var(--display); font-weight: 700; font-size: 18px; }
@@ -212,6 +212,34 @@
     .ach-lane { height: 6px; border-radius: 3px; background: var(--rule); overflow: hidden; }
     .ach-lane i { display: block; height: 100%; width: 0; background: var(--volt); transition: width .6s ease; }
     #achNextText { white-space: nowrap; }
+    .ach-next { cursor: pointer; border-radius: 6px; }
+    .ach-next:active { opacity: .6; }
+
+    /* Нижняя карточка с описанием медали */
+    #sheetBack {
+      position: fixed; inset: 0; z-index: 40; background: rgba(10, 14, 18, .45);
+      opacity: 0; visibility: hidden; transition: opacity .25s ease, visibility .25s ease;
+    }
+    #sheetBack.open { opacity: 1; visibility: visible; }
+    #sheet {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 41;
+      max-width: 460px; margin: 0 auto;
+      background: var(--bg); border-radius: 16px 16px 0 0;
+      padding: 8px 20px calc(22px + env(safe-area-inset-bottom, 0px));
+      transform: translateY(105%); transition: transform .3s cubic-bezier(.2, .8, .2, 1);
+      touch-action: none;
+    }
+    #sheet.open { transform: translateY(0); }
+    #sheet .grip { width: 40px; height: 5px; border-radius: 3px; background: var(--rule); margin: 0 auto 14px; }
+    #sheet h3 { font-family: var(--display); font-weight: 700; font-size: 26px; line-height: 1.05; }
+    #sheet .s-desc { font-size: 15px; color: var(--muted); margin-top: 4px; line-height: 1.35; }
+    #sheet .s-lane { height: 8px; border-radius: 4px; background: var(--rule); overflow: hidden; margin: 14px 0 4px; }
+    #sheet .s-lane i { display: block; height: 100%; background: var(--volt); }
+    #sheet dl { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; margin-top: 12px; font-size: 15px; }
+    #sheet dt { color: var(--muted); }
+    #sheet dd { text-align: right; font-weight: 600; }
+    #sheet dd.need { color: var(--ink); font-weight: 700; }
+    #sheet .s-note { font-size: 13px; color: var(--muted); margin-top: 14px; line-height: 1.35; border-top: 1px solid var(--rule); padding-top: 10px; }
 
     /* График */
     .chart-panel {
@@ -250,9 +278,9 @@
       background: var(--ink); transform: skewX(-18deg);
     }
     .lane-ends { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin-top: 3px; }
-    .lane-ends span:first-child { color: var(--ink); font-weight: 600; }
+
     .forecast { margin-top: 6px; font-size: 14px; }
-    .forecast b { font-family: var(--display); font-weight: 700; font-size: 18px; }
+    .forecast b { font-weight: 700; color: var(--ink); }
 
     /* Невысокие экраны: ужимаем крупные элементы, чтобы график сохранил место */
     @media (max-height: 640px) {
@@ -273,7 +301,7 @@
       .lane-block { margin-top: 8px; }
       #progressText { font-size: 23px; }
       .forecast { margin-top: 4px; font-size: 13px; }
-      .forecast b { font-size: 16px; }
+
     }
     @media (max-height: 540px) {
       .legend { display: none; }
@@ -348,7 +376,7 @@
         <!-- Достижения: сколько медалей получено и ближайшая с прогрессом -->
         <div class="ach" id="achRow">
           <div class="ach-head"><span>Достижения</span><b id="achCount">0</b></div>
-          <div class="ach-next" id="achNext">
+          <div class="ach-next" id="achNext" role="button" tabindex="0" onclick="openMedalSheet()">
             <span id="achNextTitle">—</span>
             <span class="ach-lane"><i id="achNextFill"></i></span>
             <span id="achNextText"></span>
@@ -386,6 +414,16 @@
       </section>
     </div>
   </main>
+
+  <div id="sheetBack" onclick="closeMedalSheet()"></div>
+  <div id="sheet" role="dialog" aria-modal="true" aria-labelledby="sTitle">
+    <div class="grip"></div>
+    <h3 id="sTitle"></h3>
+    <p class="s-desc" id="sDesc"></p>
+    <div class="s-lane"><i id="sLane"></i></div>
+    <dl id="sList"></dl>
+    <p class="s-note" id="sNote"></p>
+  </div>
 
   <script>
     const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx3eYPedBPTxSl83O8NuajX-h0sopO4MV3S30nQfyvfXbSnPd3vKsckGl2ibuggxrFDaQ/exec";
@@ -628,6 +666,75 @@
     };
 
     // Строка достижений: число полученных медалей и ближайшая с прогрессом
+    // Карточка с описанием ближайшей медали
+    let sheetMedal = null;
+    const dayMonth = iso => {
+      const [y, m, d] = iso.split('-').map(Number);
+      return new Date(y, m - 1, d).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+    };
+    const kg = n => `${String(Number(n).toFixed(2)).replace('.', ',')} кг`;
+
+    function openMedalSheet() {
+      const nx = sheetMedal;
+      if (!nx) return;
+      safeHaptic('light');
+      $('sTitle').textContent = nx.title;
+      $('sDesc').textContent = 'За что дают: ' + nx.desc.charAt(0).toLowerCase() + nx.desc.slice(1);
+      $('sLane').style.width = Math.round(nx.progress * 100) + '%';
+      const d = nx.detail || {};
+      const rows = [];
+      let note = '';
+      if (d.kind === 'weight') {
+        const series = nx.key.split('_')[0];
+        const pctText = d.bestPct == null ? '' :
+          (series === 'body' ? ` — это −${fmt(d.bestPct)}% от старта` : ` — это ${fmt(d.bestPct)}% пути`);
+        rows.push(['Лучший результат', `${kg(d.best)}, ${dayMonth(d.bestDate)}${pctText}`]);
+        rows.push(['Сейчас', kg(d.current)]);
+        rows.push(['Нужно дойти до', kg(d.target), 'need']);
+        note = 'Медаль засчитывается по лучшему результату: если вес хоть раз дойдёт до нужной отметки, медаль останется, даже если потом вес немного вернётся.';
+      } else if (d.kind === 'count') {
+        const u = d.units || ['', '', ''];
+        rows.push(['Сейчас', `${d.have} ${plural(Math.round(d.have), ...u)}`]);
+        rows.push(['Нужно', `${d.need} ${plural(d.need, ...u)}`, 'need']);
+      } else {
+        rows.push(['Прогресс', nx.progressText]);
+      }
+      $('sList').innerHTML = rows.map(([k, v, c]) => `<dt>${k}</dt><dd class="${c || ''}">${v}</dd>`).join('');
+      $('sNote').textContent = note;
+      $('sNote').classList.toggle('hidden', !note);
+      $('sheetBack').classList.add('open');
+      $('sheet').classList.add('open');
+      try { window.Telegram?.WebApp?.BackButton?.show(); } catch (e) {}
+    }
+
+    function closeMedalSheet() {
+      $('sheetBack').classList.remove('open');
+      const sh = $('sheet');
+      sh.classList.remove('open');
+      sh.style.transform = '';
+      try { window.Telegram?.WebApp?.BackButton?.hide(); } catch (e) {}
+    }
+
+    // Свайп вниз закрывает карточку
+    (function () {
+      let y0 = null, dy = 0;
+      document.addEventListener('DOMContentLoaded', () => {
+        const sh = $('sheet');
+        sh.addEventListener('touchstart', e => { y0 = e.touches[0].clientY; dy = 0; sh.style.transition = 'none'; }, { passive: true });
+        sh.addEventListener('touchmove', e => {
+          if (y0 === null) return;
+          dy = Math.max(0, e.touches[0].clientY - y0);
+          sh.style.transform = `translateY(${dy}px)`;
+        }, { passive: true });
+        sh.addEventListener('touchend', () => {
+          sh.style.transition = '';
+          if (dy > 80) closeMedalSheet(); else sh.style.transform = '';
+          y0 = null;
+        });
+        try { window.Telegram?.WebApp?.BackButton?.onClick(closeMedalSheet); } catch (e) {}
+      });
+    })();
+
     function renderAchievements(u) {
       const row = $('achRow');
       const m = u.medals;
@@ -637,10 +744,12 @@
       $('achCount').textContent = `${n} ${plural(n, 'медаль', 'медали', 'медалей')}`;
       const nx = m.next && m.next[0];
       if (nx) {
+        sheetMedal = nx;
         $('achNextTitle').textContent = nx.title;
         $('achNextFill').style.width = Math.round(nx.progress * 100) + '%';
         $('achNextText').textContent = nx.progressText;
       } else {
+        sheetMedal = null;
         $('achNextTitle').textContent = 'Все доступные медали получены';
         $('achNextFill').style.width = '100%';
         $('achNextText').textContent = '';
