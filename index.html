@@ -116,6 +116,22 @@
       display: flex; flex-direction: column;
     }
     #dashboard { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    /* Низкие экраны (iPhone SE, mini): ужимаем ещё, а если всё равно
+       не помещается — график получает фиксированную высоту и страница
+       прокручивается, вместо того чтобы сплющить график */
+    @media (max-height: 700px) {
+      .duel-name { font-size: 20px; }
+      .big { font-size: clamp(50px, 16vw, 64px); }
+      .day .dw { font-size: 11px; }
+      .day .dn { font-size: 17px; }
+      .board { margin-top: 8px; }
+      .chart-panel { margin-top: 10px; }
+      .lane-block { margin-top: 8px; }
+    }
+    @media (max-height: 600px) {
+      main { height: auto; }
+      .chart-box { flex: none; height: 170px; }
+    }
     #dashboard.hidden { display: none !important; }
 
     /* Имена атлетов — как в карде боя */
@@ -185,13 +201,18 @@
     #currDiffBadge i { font-style: normal; font-family: var(--text); font-weight: 500; font-size: 13px; color: var(--muted); margin-left: 4px; }
     #currDiffBadge.down { color: var(--down); } #currDiffBadge.up { color: var(--up); } #currDiffBadge.flat { color: var(--muted); }
     .stats {
-      display: grid; grid-template-columns: repeat(3, 1fr);
+      display: grid; grid-template-columns: 1.2fr .85fr 1fr;
       margin-top: 10px; border-top: 1.5px solid var(--ink); padding-top: 7px;
     }
     .stat { padding-left: 12px; border-left: 1px solid var(--rule); }
     .stat:first-child { padding-left: 0; border-left: 0; }
     .stat p { font-size: 12.5px; color: var(--muted); }
     .stat b { font-family: var(--display); font-weight: 700; font-size: clamp(17px, 5vw, 21px); white-space: nowrap; }
+    .stat { min-width: 0; }
+    .stat p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .stat b.down { color: var(--down); } .stat b.up { color: var(--up); }
+    .stat b i { font-style: normal; font-family: var(--text); font-weight: 500; font-size: 13px; color: var(--muted); }
+    .stat b.lead { background: var(--volt); color: var(--volt-ink); padding: 0 6px; display: inline-block; transform: skewX(-8deg); }
 
     /* График */
     .chart-panel {
@@ -229,9 +250,51 @@
       content: ""; position: absolute; right: -4px; top: -2px; bottom: -2px; width: 8px;
       background: var(--ink); transform: skewX(-18deg);
     }
-    .lane-ends { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+    .lane-ends { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin-top: 3px; }
+    .lane-ends span:first-child { color: var(--ink); font-weight: 600; }
     .forecast { margin-top: 6px; font-size: 14px; }
     .forecast b { font-family: var(--display); font-weight: 700; font-size: 18px; }
+
+    /* Невысокие экраны: ужимаем крупные элементы, чтобы график сохранил место */
+    @media (max-height: 640px) {
+      main { padding-top: 6px; }
+      .duel { margin-bottom: 4px; }
+      .duel-name { font-size: 20px; }
+      .week-head { margin-bottom: 2px; }
+      .day { padding: 3px 0 2px; }
+      .day .dw { font-size: 11px; }
+      .day .dn { font-size: 17px; }
+      .board { margin-top: 8px; }
+      .big { font-size: clamp(46px, 15vw, 60px); }
+      .big small { font-size: 21px; }
+      .stats { margin-top: 7px; padding-top: 5px; }
+      .stat p { font-size: 11.5px; }
+      .stat b { font-size: 17px; }
+      .chart-panel { margin-top: 10px; padding: 8px 10px 6px; }
+      .chart-head h2, .lane-top h2 { font-size: 17px; }
+      .chart-box { min-height: 100px; }
+      .lane-block { margin-top: 8px; }
+      #progressText { font-size: 23px; }
+      .forecast { margin-top: 4px; font-size: 13px; }
+      .forecast b { font-size: 16px; }
+    }
+    @media (max-height: 540px) {
+      .legend { display: none; }
+      .stat p { display: none; }
+      .chart-box { min-height: 80px; }
+    }
+
+    /* Маленькие экраны (iPhone SE, mini): ужимаем вертикальные отступы */
+    @media (max-height: 640px) {
+      .duel { margin-bottom: 4px; }
+      .duel-name { font-size: 20px; }
+      .board { margin-top: 8px; }
+      .big { font-size: clamp(48px, 16vw, 64px); }
+      .stats { margin-top: 6px; padding-top: 5px; }
+      .chart-panel { margin-top: 10px; }
+      .lane-block { margin-top: 8px; }
+      .forecast { margin-top: 4px; }
+    }
 
     /* Ошибка */
     #errorBox { margin: 40px 0; border-left: 4px solid var(--up); padding: 4px 0 4px 14px; }
@@ -284,9 +347,9 @@
         </div>
         <div class="big"><span id="currWeight">—</span><small>кг</small></div>
         <div class="stats">
-          <div class="stat"><p>Тренд за 7 дней</p><b id="trendWeight">—</b></div>
-          <div class="stat"><p>Старт</p><b id="startWeight">—</b></div>
-          <div class="stat"><p>Цель</p><b id="targetWeight">—</b></div>
+          <div class="stat"><p>Темп</p><b id="paceStat">—</b></div>
+          <div class="stat"><p>Серия</p><b id="streakStat">—</b></div>
+          <div class="stat"><p id="duelLabel">Дуэль недели</p><b id="duelStat">—</b></div>
         </div>
       </section>
 
@@ -315,7 +378,7 @@
           <span id="progressText">—</span>
         </div>
         <div class="lane"><div id="laneFill"></div></div>
-        <div class="lane-ends"><span id="laneStart">Старт</span><span id="laneGoal">Цель</span></div>
+        <div class="lane-ends"><span id="laneStart"></span><span id="laneGoal"></span></div>
         <p class="forecast">Цель будет взята: <b id="goalEtaText">—</b></p>
       </section>
     </div>
@@ -428,9 +491,13 @@
       const ids = Object.keys(globalData);
       if (ids.length === 0) { showError("Замеров пока нет. Отправьте вес боту, и он появится здесь."); return; }
 
-      let def = ids[0];
-      const tgId = String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id || '');
-      if (tgId && globalData[tgId]) def = tgId;
+      // Сервер по проверенной подписи Telegram помечает, кто открыл приложение (isMe).
+      // Запасной вариант — ID из Telegram на телефоне, затем первый в списке.
+      let def = ids.find(id => globalData[id].isMe);
+      if (!def) {
+        const tgId = String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id || '').trim();
+        def = ids.find(id => String(id).trim() === tgId) || ids[0];
+      }
       activeUserId = String(def);
 
       renderUserTabs();
@@ -553,6 +620,80 @@
       });
     }
 
+    const DAY_MS = 86400000;
+    const dayKey = ts => { const d = new Date(ts); return d.getFullYear() * 10000 + d.getMonth() * 100 + d.getDate(); };
+
+    // Темп: наклон регрессии за последние 14 дней до выбранного замера, в кг/нед.
+    // По тренду, а не по двум точкам, чтобы скачки воды не искажали картину.
+    function weeklyPace(all, ti) {
+      const end = all[ti].timestamp;
+      const win = all.slice(0, ti + 1).filter(e => e.timestamp >= end - 14 * DAY_MS);
+      if (win.length < 4 || (end - win[0].timestamp) / DAY_MS < 5) return null;
+      const t0 = win[0].timestamp;
+      let n = win.length, sx = 0, sy = 0, sxy = 0, sxx = 0;
+      win.forEach(e => { const x = (e.timestamp - t0) / DAY_MS; sx += x; sy += e.weight; sxy += x * e.weight; sxx += x * x; });
+      const den = n * sxx - sx * sx;
+      return den ? (n * sxy - sx * sy) / den * 7 : null;
+    }
+
+    // Серия: сколько календарных дней подряд есть замер, заканчивая выбранным днём
+    function weighStreak(all, ti) {
+      const days = new Set(all.map(e => dayKey(e.timestamp)));
+      let d = new Date(all[ti].timestamp), n = 0;
+      while (days.has(dayKey(d.getTime()))) { n++; d.setDate(d.getDate() - 1); }
+      return n;
+    }
+
+    // Изменение веса в % за 7 дней до даты: от первого замера окна к последнему
+    function weekPercent(entries, endTs) {
+      const win = entries.filter(e => e.timestamp <= endTs + DAY_MS - 1 && e.timestamp >= endTs - 7 * DAY_MS);
+      if (win.length < 2) return null;
+      return (win[win.length - 1].weight - win[0].weight) / win[0].weight * 100;
+    }
+
+    const plural = (n, one, few, many) => {
+      const m10 = n % 10, m100 = n % 100;
+      if (m10 === 1 && m100 !== 11) return one;
+      if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return few;
+      return many;
+    };
+
+    function renderStats(all, ti) {
+      // Темп
+      const pace = weeklyPace(all, ti);
+      const paceEl = $('paceStat');
+      if (pace === null) { paceEl.className = ''; paceEl.textContent = 'мало данных'; }
+      else {
+        const v = parseFloat(pace.toFixed(1));
+        paceEl.className = v < 0 ? 'down' : v > 0 ? 'up' : '';
+        paceEl.textContent = `${v > 0 ? '+' : v < 0 ? '−' : ''}${fmt(Math.abs(v))} кг/нед`;
+      }
+
+      // Серия
+      const streak = weighStreak(all, ti);
+      $('streakStat').textContent = `${streak} ${plural(streak, 'день', 'дня', 'дней')}`;
+
+      // Дуэль недели: сравнение % изменения веса с соперником за те же 7 дней
+      const duelEl = $('duelStat');
+      const rivalId = Object.keys(globalData).find(id => id !== activeUserId);
+      const rival = rivalId && globalData[rivalId];
+      if (!rival || !rival.entries || !rival.entries.length) {
+        $('duelLabel').textContent = 'Лучший вес';
+        const best = Math.min(...all.slice(0, ti + 1).map(e => e.weight));
+        duelEl.className = '';
+        duelEl.textContent = `${fmt(best)} кг`;
+        return;
+      }
+      $('duelLabel').textContent = 'Дуэль недели';
+      const endTs = all[ti].timestamp;
+      const mine = weekPercent(all, endTs), theirs = weekPercent(rival.entries, endTs);
+      if (mine === null || theirs === null) { duelEl.className = ''; duelEl.textContent = 'нет данных'; return; }
+      const gap = parseFloat((mine - theirs).toFixed(1));   // меньше = больше сбросил
+      if (gap < 0) { duelEl.className = 'lead'; duelEl.textContent = 'Лидер'; }
+      else if (gap > 0) { $('duelLabel').textContent = 'Отставание'; duelEl.className = 'up'; duelEl.textContent = `${fmt(gap)}%`; }
+      else { duelEl.className = ''; duelEl.textContent = 'Ничья'; }
+    }
+
     function renderDashboard() {
       $('errorBox').classList.add('hidden');
       const u = globalData[activeUserId];
@@ -576,8 +717,7 @@
 
       $('currWeightLabel').textContent = past ? `Замер за ${target.dateStr}` : 'Текущий вес';
       $('currWeight').textContent = fmt(target.weight);
-      $('startWeight').textContent = `${fmt(start)} кг`;
-      $('targetWeight').textContent = goal ? `${fmt(goal)} кг` : '—';
+      renderStats(all, ti);
 
       const diff = parseFloat((target.weight - prev.weight).toFixed(1));
       const badge = $('currDiffBadge');
@@ -586,8 +726,6 @@
       else if (diff > 0) { badge.className = 'up'; badge.innerHTML = `+${fmt(diff)} кг<i>за сутки</i>`; }
       else { badge.className = 'flat'; badge.innerHTML = `0 кг<i>за сутки</i>`; }
 
-      const smaAll = calculateSMA(all);
-      $('trendWeight').textContent = `${fmt(smaAll[ti])} кг`;
 
       if (goal) {
         const total = Math.abs(goal - start);
@@ -595,14 +733,16 @@
         const pct = Math.max(0, Math.min(100, total > 0 ? Math.round(done / total * 100) : 100));
         $('progressText').textContent = `${pct}%`;
         $('laneFill').style.width = pct + '%';
+        const leftKg = parseFloat(Math.abs(target.weight - goal).toFixed(1));
+        // Края дорожки — только старт и цель; сброшено/осталось уже есть строкой выше
         $('laneStart').textContent = `Старт ${fmt(start)} кг`;
         $('laneGoal').textContent = `Цель ${fmt(goal)} кг`;
-        $('goalEtaText').textContent = calculateGoalETA(all, goal, target.weight);
+        $('goalEtaText').textContent = leftKg > 0 ? calculateGoalETA(all, goal, target.weight) : 'уже взята';
       } else {
         $('progressText').textContent = '—';
         $('laneFill').style.width = '0%';
         $('laneStart').textContent = `Старт ${fmt(start)} кг`;
-        $('laneGoal').textContent = 'Цель: /цель 80';
+        $('laneGoal').textContent = 'Цель: команда /цель 80';
         $('goalEtaText').textContent = 'цель не задана';
       }
 
