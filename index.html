@@ -206,7 +206,7 @@
     .ach { margin-top: 10px; border-top: 1.5px solid var(--ink); padding-top: 7px; }
     .ach-head { display: flex; justify-content: space-between; align-items: baseline; }
     .ach-head span { font-family: var(--display); font-weight: 700; font-size: 18px; }
-    .ach-head b { font-family: var(--display); font-style: italic; font-weight: 800; font-size: 22px; }
+    .ach-head b { font-family: var(--display); font-style: italic; font-weight: 800; font-size: 20px; }
     .ach-next { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; margin-top: 3px; font-size: 13px; color: var(--muted); }
     #achNextTitle { color: var(--ink); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 46vw; }
     .ach-lane { height: 6px; border-radius: 3px; background: var(--rule); overflow: hidden; }
@@ -633,7 +633,8 @@
       const m = u.medals;
       if (!m) { row.classList.add('hidden'); return; }       // сервер ещё без медалей
       row.classList.remove('hidden');
-      $('achCount').textContent = m.earned.length;
+      const n = m.earned.length;
+      $('achCount').textContent = `${n} ${plural(n, 'медаль', 'медали', 'медалей')}`;
       const nx = m.next && m.next[0];
       if (nx) {
         $('achNextTitle').textContent = nx.title;
