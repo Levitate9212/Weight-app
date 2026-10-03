@@ -813,6 +813,7 @@
       ti_magenta: { hi: '#FFD6EE', mid: '#C9498F', lo: '#5E1A45', dark: '#26091B' },
       ti_flame:   { hi: '#FFE4C6', mid: '#E8782C', lo: '#7A3008', dark: '#2E1103' },
       ti_green:   { hi: '#D8FFE8', mid: '#2FB36F', lo: '#0F5A33', dark: '#05220F' },
+      ti_lime:    { hi: '#F1FFC9', mid: '#9DC63B', lo: '#4A6512', dark: '#1B2604' },
       rosegold:   { hi: '#FFE6DD', mid: '#D99A8A', lo: '#8A4E42', dark: '#3A1E18' },
       // закрытая медаль: тёмный матовый металл
       locked:     { hi: '#7A838C', mid: '#3B434C', lo: '#22282E', dark: '#14181C' }
@@ -828,7 +829,7 @@
     */
     function medal(opts) {
       const id = 'm' + (n++);
-      const rim = M[opts.rim], rel = M[opts.relief];
+      const rim = M[opts.rim] || M.gunmetal, rel = M[opts.relief] || M.gunmetal;
       const shape = opts.shape || 'circle';
       const F = `font-family="Barlow Condensed, Arial Narrow, sans-serif"`;
 
@@ -849,7 +850,7 @@
         fieldFill = `url(#${id}ox)`; ringsColor = rel.mid; ringsOp = .12;
       } else if (f.enamel) {
         fieldFill = `url(#${id}en)`; ringsColor = '#FFFFFF'; ringsOp = 0;
-        fieldExtra = `<ellipse cx="96" cy="78" rx="62" ry="32" fill="#fff" opacity=".18" transform="rotate(-24 96 78)" clip-path="url(#${id}cl)"/>`;
+        fieldExtra = `<ellipse cx="100" cy="104" rx="50" ry="24" fill="#fff" opacity=".12" transform="rotate(-24 100 104)" clip-path="url(#${id}cl)"/>`;
       } else if (f.metal) {
         fieldFill = `url(#${id}fm)`; ringsColor = M[f.metal].lo; ringsOp = .22;
       } else if (f.night) {
@@ -895,12 +896,12 @@
       const caption = opts.caption || 'ВЕС ТЕЛА';
       const light = !!(f.metal || (f.enamel && ['#F2B705'].includes(f.enamel)));   // светлые поля
       const noBand = opts.band === false;
-      const label = noBand ? (light ? '#14181C' : (opts.relief === 'nickel' ? '#FFFFFF' : rel.hi))
+      const label = noBand ? (light ? '#14181C' : (opts.relief === 'nickel' || f.enamel ? '#FFFFFF' : rel.hi))
                            : (opts.relief === 'nickel' ? '#FFFFFF' : rel.hi);
-      const outline = noBand ? `stroke="${light ? 'rgba(255,255,255,.55)' : 'rgba(0,0,0,.55)'}" stroke-width="2.4" paint-order="stroke" stroke-linejoin="round"` : '';
+      const outline = noBand ? `stroke="${light ? 'rgba(255,255,255,.75)' : 'rgba(0,0,0,.8)'}" stroke-width="3.2" paint-order="stroke" stroke-linejoin="round"` : '';
       const numeral = `<text ${F} font-style="italic" font-weight="800" font-size="${noBand ? 25 : 23}" letter-spacing="1" fill="${label}" ${outline}><textPath href="#${noBand ? id + 'arcB2' : id + 'arcB'}" startOffset="50%" text-anchor="middle">${big}</textPath></text>`;
       const _unused = !opts.art ? '' : `<text x="120" y="188" text-anchor="middle" font-size="${big.length > 4 ? 22 : 30}" ${F} font-style="italic" font-weight="800" stroke-width="0">${big}</text>`;
-      const capText = `<text ${F} font-weight="700" font-size="${noBand ? 14 : 13}" letter-spacing="2.4" fill="${label}" ${outline}><textPath href="#${noBand ? id + 'arc2' : id + 'arc'}" startOffset="50%" text-anchor="middle">${caption}</textPath></text>`;
+      const capText = `<text ${F} font-weight="700" font-size="${noBand ? 14 : 13}" letter-spacing="${caption.length > 12 ? 1.2 : 2.4}" fill="${label}" ${outline}><textPath href="#${noBand ? id + 'arc2' : id + 'arc'}" startOffset="50%" text-anchor="middle">${caption}</textPath></text>`;
       // тёмный эмалевый поясок с металлическими кантами
       const band = `
         <circle cx="120" cy="120" r="87" fill="none" stroke="#121619" stroke-opacity=".9" stroke-width="22"/>
@@ -1143,6 +1144,7 @@
 
     const STYLE = {
       weight:   m => ({ rim: m, relief: m, field: 'oxid' }),
+      body:     m => ({ rim: m, relief: 'silver', field: { enamel: { ti_sky: '#1E6FB0', ti_blue: '#2A45A8', ti_violet: '#5B36A8', ti_magenta: '#9A2F6E', ti_flame: '#B5521A' }[m] || '#2A45A8' } }),
       habit:    m => ({ rim: m, relief: m, field: { enamel: '#0E8F7E' } }),
       sleep:    m => ({ rim: m, relief: 'silver', field: { night: true } }),
       training: m => ({ rim: m, relief: m === 'bronze' ? 'bronze' : m === 'gold' ? 'gold' : 'silver', field: { enamel: '#C8323A' } }),
@@ -1180,7 +1182,7 @@
     // Параметры рисования медали по данным с сервера
     function medalOpts(m, forCoin) {
       const locked = m.status !== 'earned';
-      const style = locked ? { rim: 'locked', relief: 'locked', field: 'oxid' } : MedalArt.STYLE[m.section](m.metal);
+      const style = locked ? { rim: 'locked', relief: 'locked', field: 'oxid' } : MedalArt.STYLE[m.art === 'belt' ? 'body' : m.section](m.metal);
       const art = m.art && MedalArt.ART[m.art] ? MedalArt.ART[m.art] : {};
       return { label: m.title, ...style, ...art, big: m.big || '', caption: m.caption || '', band: false };
     }
