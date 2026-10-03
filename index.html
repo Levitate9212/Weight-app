@@ -830,7 +830,7 @@
     function medal(opts) {
       const id = 'm' + (n++);
       const grand = !!opts.grand && opts.rim !== 'locked';   // особая медаль: золотой лучистый ободок и искры
-      const rim = grand ? M.gold : (M[opts.rim] || M.gunmetal), rel = M[opts.relief] || M.gunmetal;
+      const rim = grand ? M.gold : (M[opts.rim] || M.gunmetal), rel = M[(grand && opts.grandRelief) || opts.relief] || M.gunmetal;
       const shape = opts.shape || 'circle';
       const F = `font-family="Barlow Condensed, Arial Narrow, sans-serif"`;
 
@@ -850,7 +850,7 @@
 
       // поле
       let fieldFill, fieldExtra = '', ringsColor, ringsOp = .16;
-      const f = opts.field;
+      const f = (grand && opts.grandField) || opts.field;   // у особой медали может быть своё яркое поле
       if (f === 'oxid') {
         fieldFill = `url(#${id}ox)`; ringsColor = rel.mid; ringsOp = .12;
       } else if (f.enamel) {
@@ -992,6 +992,7 @@
       },
       podium: {   // цель взята: лавровый венок с галочкой внутри
         grand: true,
+        grandField: { enamel: '#2453C9' },
         art: `${leaves(120, 100, 44, 100, 250, 15)}${leaves(120, 100, 44, -70, 80, 15)}
               <polyline points="98,102 114,118 144,84" fill="none" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>`
       },
@@ -1075,7 +1076,7 @@
           return `<polygon points="${pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ')}"/>`;
         };
         const rows = [57, 66.5, 76, 85.5, 95, 135, 144.5, 154];
-        return { grand: true, art: `<polygon points="${left.concat(right).join(' ')}"/>`, cut: rows.map(bar).join('') };
+        return { grand: true, grandField: { enamel: '#E8892B' }, grandRelief: 'silver', art: `<polygon points="${left.concat(right).join(' ')}"/>`, cut: rows.map(bar).join('') };
       })(),
       calendar: {   // недели в минусе: листок календаря со стрелкой вниз
         art: `<rect x="68" y="58" width="104" height="100" rx="9"/><rect x="88" y="46" width="7" height="22" rx="3"/><rect x="145" y="46" width="7" height="22" rx="3"/>`,
