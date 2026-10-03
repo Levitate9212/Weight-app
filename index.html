@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Weight Tracker</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:ital,wght@0,600;0,700;1,700;1,800&display=swap" rel="stylesheet">
@@ -130,7 +130,7 @@
     }
     @media (max-height: 600px) {
       main { height: auto; }
-      .chart-box { flex: none; height: 170px; }
+      .chart-box { flex: none; height: 145px; }
     }
     #dashboard.hidden { display: none !important; }
 
@@ -328,6 +328,7 @@
     .period-btn { padding: 4px 0; font-family: var(--display); font-weight: 600; font-size: 15px; color: var(--muted); }
     .period-btn.active { background: var(--ink); color: var(--bg); }
     .chart-box { position: relative; flex: 1; min-height: 120px; }
+    #chartNote { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; font-size: 14px; color: var(--muted); padding: 0 12px; }
 
     /* Путь к цели — беговая дорожка */
     .lane-block { margin-top: 12px; flex-shrink: 0; }
@@ -379,6 +380,12 @@
     @media (max-height: 540px) {
       .legend { display: none; }
       .chart-box { min-height: 80px; }
+    }
+    /* Очень низкие экраны: график фиксированной высоты, страница прокручивается.
+       Правило стоит после основного .chart-box, иначе оно перебивалось (flex: 1). */
+    @media (max-height: 600px) {
+      main { height: auto; }
+      .chart-box { flex: none; height: 145px; min-height: 0; }
     }
 
     /* Маленькие экраны (iPhone SE, mini): ужимаем вертикальные отступы */
@@ -473,7 +480,7 @@
           <button class="period-btn" data-p="365" onclick="setPeriod('365')">Год</button>
           <button class="period-btn active" data-p="all" onclick="setPeriod('all')">Все</button>
         </div>
-        <div class="chart-box"><canvas id="weightChart"></canvas></div>
+        <div class="chart-box"><canvas id="weightChart"></canvas><p id="chartNote" class="hidden">График не загрузился. Закройте и откройте приложение ещё раз.</p></div>
       </section>
 
       <section class="lane-block">
@@ -483,7 +490,7 @@
         </div>
         <div class="lane"><div id="laneFill"></div></div>
         <div class="lane-ends"><span id="laneStart"></span><span id="laneGoal"></span></div>
-        <p class="forecast">Цель будет взята: <b id="goalEtaText">—</b></p>
+        <p class="forecast"><span id="goalEtaLabel">Цель будет взята:</span> <b id="goalEtaText">—</b></p>
       </section>
     </div>
   </main>
@@ -560,6 +567,8 @@
       if (tg) {
         tg.ready();
         tg.expand();
+        // Свайп вниз по карточке медали или экрану достижений не должен сворачивать приложение
+        try { if (tg.isVersionAtLeast && tg.isVersionAtLeast('7.7')) tg.disableVerticalSwipes(); } catch (e) {}
         try { tg.onEvent('themeChanged', applyTelegramTheme); } catch (e) {}
       }
       applyTelegramTheme();
@@ -603,7 +612,9 @@
         catch (e) { throw new Error("Сервер Google ещё просыпается. Нажмите «Повторить попытку» через несколько секунд."); }
         handleData(data);
       } catch (err) {
-        showError(err.message || "Не удалось подключиться к серверу. Проверьте интернет и повторите попытку.");
+        // Сбой сети приходит как TypeError с английским текстом — показываем по-русски
+        const netFail = err instanceof TypeError || !err.message;
+        showError(netFail ? "Не удалось подключиться к серверу. Проверьте интернет и повторите попытку." : err.message);
       }
     }
 
@@ -684,11 +695,11 @@
       });
     }
 
-    // Прогноз через линейную регрессию по последним 30 замерам.
+    // Прогноз через линейную регрессию по всем замерам.
     // Нужно минимум 5 записей и 7 дней разброса, иначе прогноз не строится.
     function calculateGoalETA(entries, target, current) {
       if (!target) return "цель не задана";
-      const win = entries.slice(-30);
+      const win = entries;
       if (win.length < 5) return "нужно больше замеров";
       const t0 = win[0].timestamp, DAY = 86400000;
       if ((win[win.length - 1].timestamp - t0) / DAY < 7) return "нужна неделя замеров";
@@ -704,6 +715,25 @@
       const days = Math.abs(left / slope);
       if (!isFinite(days)) return "недоступно";
       return new Date(Date.now() + days * DAY).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+    }
+
+    // Точки графика по календарным дням от первого до последнего замера периода
+    function buildDailySeries(entries, smaByTs) {
+      const dayStart = ts => new Date(ts).setHours(0, 0, 0, 0);
+      const byDay = new Map(entries.map(e => [dayStart(e.timestamp), e]));
+      const out = [];
+      if (!entries.length) return out;
+      const last = dayStart(entries[entries.length - 1].timestamp);
+      for (let d = new Date(dayStart(entries[0].timestamp)); d.getTime() <= last; d.setDate(d.getDate() + 1)) {
+        const e = byDay.get(d.getTime());
+        out.push({
+          label: `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`,
+          weight: e ? e.weight : null,
+          sma: e ? smaByTs.get(e.timestamp) : null,
+          ts: e ? e.timestamp : null
+        });
+      }
+      return out;
     }
 
     function renderWeek(all) {
@@ -1277,11 +1307,14 @@
     function loadSeen() {
       return new Promise(resolve => {
         const local = () => { try { resolve(localStorage.getItem(SEEN_KEY)); } catch (e) { resolve(null); } };
+        // Облако не ответило: если и в браузере пусто, это «неизвестно» (undefined),
+        // а не первое открытие — иначе новые медали молча помечались показанными
+        const fallback = () => { let v = null; try { v = localStorage.getItem(SEEN_KEY); } catch (e) {} resolve(v || undefined); };
         const cs = cloud();
         if (!cs) return local();
-        const timer = setTimeout(local, 2500);
-        try { cs.getItem(SEEN_KEY, (err, val) => { clearTimeout(timer); if (err) local(); else resolve(val || null); }); }
-        catch (e) { clearTimeout(timer); local(); }
+        const timer = setTimeout(fallback, 2500);
+        try { cs.getItem(SEEN_KEY, (err, val) => { clearTimeout(timer); if (err) fallback(); else resolve(val || null); }); }
+        catch (e) { clearTimeout(timer); fallback(); }
       });
     }
     function saveSeen(keys) {
@@ -1297,6 +1330,7 @@
       if (!u || !u.medals || !u.medals.earned) return;      // свои медали показываем только себе
       const earned = u.medals.earned.map(m => m.key);
       const raw = await loadSeen();
+      if (raw === undefined) { awardChecked = false; return; }   // не знаем, что уже показано — попробуем в другой раз
       let seen = null;
       try { seen = raw ? JSON.parse(raw) : null; } catch (e) {}
       if (!Array.isArray(seen)) { saveSeen(earned); return; }   // первое открытие: всё старое уже вручено ботом
@@ -1439,7 +1473,7 @@
       $('errorBox').classList.add('hidden');
       const u = globalData[activeUserId];
       if (!u || !u.entries || !u.entries.length) {
-        showError(`У ${u ? u.name : 'атлета'} пока нет замеров. Отправьте вес боту, и он появится здесь.`);
+        showError(`Пока нет замеров${u && u.name ? ': ' + u.name : ''}. Отправьте вес боту, и он появится здесь.`);
         return;
       }
 
@@ -1462,11 +1496,14 @@
       $('trendWeight').textContent = `${fmt(calculateSMA(all)[ti])} кг`;
 
       const diff = parseFloat((target.weight - prev.weight).toFixed(1));
+      // «За сутки» — только если прошлый замер был накануне, иначе «за N дн.»
+      const gapDays = Math.max(1, Math.round((new Date(target.timestamp).setHours(0, 0, 0, 0) - new Date(prev.timestamp).setHours(0, 0, 0, 0)) / DAY_MS));
+      const gapText = gapDays === 1 ? 'за сутки' : `за ${gapDays} ${plural(gapDays, 'день', 'дня', 'дней')}`;
       const badge = $('currDiffBadge');
       if (ti === 0) { badge.className = 'flat'; badge.innerHTML = '—<i>первый замер</i>'; }
-      else if (diff < 0) { badge.className = 'down'; badge.innerHTML = `−${fmt(Math.abs(diff))} кг<i>за сутки</i>`; }
-      else if (diff > 0) { badge.className = 'up'; badge.innerHTML = `+${fmt(diff)} кг<i>за сутки</i>`; }
-      else { badge.className = 'flat'; badge.innerHTML = `0 кг<i>за сутки</i>`; }
+      else if (diff < 0) { badge.className = 'down'; badge.innerHTML = `−${fmt(Math.abs(diff))} кг<i>${gapText}</i>`; }
+      else if (diff > 0) { badge.className = 'up'; badge.innerHTML = `+${fmt(diff)} кг<i>${gapText}</i>`; }
+      else { badge.className = 'flat'; badge.innerHTML = `0 кг<i>${gapText}</i>`; }
 
 
       if (goal) {
@@ -1479,12 +1516,18 @@
         // Края дорожки — только старт и цель; сброшено/осталось уже есть строкой выше
         $('laneStart').textContent = `Старт ${fmt(start)} кг`;
         $('laneGoal').textContent = `Цель ${fmt(goal)} кг`;
-        $('goalEtaText').textContent = leftKg > 0 ? calculateGoalETA(all, goal, target.weight) : 'уже взята';
+        // Цель взята, если вес дошёл до неё или прошёл дальше (раньше при весе ниже
+        // цели писалось «нужен профицит калорий»)
+        const reached = start >= goal ? target.weight <= goal : target.weight >= goal;
+        const goalDone = reached || leftKg === 0;
+        $('goalEtaLabel').textContent = goalDone ? 'Цель взята' : 'Цель будет взята:';
+        $('goalEtaText').textContent = goalDone ? '🎯' : calculateGoalETA(all, goal, target.weight);
       } else {
         $('progressText').textContent = '—';
         $('laneFill').style.width = '0%';
         $('laneStart').textContent = `Старт ${fmt(start)} кг`;
         $('laneGoal').textContent = 'Цель: команда /цель 80';
+        $('goalEtaLabel').textContent = 'Цель будет взята:';
         $('goalEtaText').textContent = 'цель не задана';
       }
 
@@ -1493,8 +1536,15 @@
         const cut = all[all.length - 1].timestamp - parseInt(currentPeriod) * 86400000;
         chartEntries = all.filter(e => e.timestamp >= cut);
       }
+      // Ось по дням: пропущенные дни остаются пустыми, а не схлопываются,
+      // иначе график выглядит так, будто взвешивания были каждый день.
+      // Тренд считается по всей истории, чтобы в начале периода не «прыгал».
+      const smaAll = calculateSMA(all);
+      const smaByTs = new Map(all.map((e, i) => [e.timestamp, smaAll[i]]));
+      const series = buildDailySeries(chartEntries, smaByTs);
 
-      if (chartInstance) chartInstance.destroy();
+      if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+      $('chartNote').classList.toggle('hidden', typeof Chart !== 'undefined');
       if (typeof Chart === 'undefined') return;
 
       const ink = cssVar('--ink'), volt = cssVar('--volt'), muted = cssVar('--muted'), rule = cssVar('--rule'), panel = cssVar('--panel');
@@ -1502,11 +1552,12 @@
       chartInstance = new Chart($('weightChart').getContext('2d'), {
         type: 'line',
         data: {
-          labels: chartEntries.map(e => e.dateStr),
+          labels: series.map(p => p.label),
           datasets: [
             {
               label: 'Тренд',
-              data: calculateSMA(chartEntries),
+              data: series.map(p => p.sma),
+              spanGaps: true,
               borderColor: volt,
               borderWidth: 5,
               pointRadius: 0,
@@ -1515,13 +1566,14 @@
             },
             {
               label: 'Факт',
-              data: chartEntries.map(e => e.weight),
+              data: series.map(p => p.weight),
+              spanGaps: true,
               borderColor: ink,
               borderWidth: 2,
-              pointRadius: chartEntries.map(e => e.timestamp === target.timestamp ? 5 : 2),
-              pointBackgroundColor: chartEntries.map(e => e.timestamp === target.timestamp ? volt : ink),
+              pointRadius: series.map(p => p.ts === target.timestamp ? 5 : 2),
+              pointBackgroundColor: series.map(p => p.ts === target.timestamp ? volt : ink),
               pointBorderColor: ink,
-              pointBorderWidth: chartEntries.map(e => e.timestamp === target.timestamp ? 2 : 0),
+              pointBorderWidth: series.map(p => p.ts === target.timestamp ? 2 : 0),
               tension: 0.25,
               order: 1
             }
