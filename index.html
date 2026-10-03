@@ -104,6 +104,57 @@
 
     /* Переключатель людей: по центру, две «таблетки» */
     .who { display: flex; justify-content: center; gap: 8px; margin-bottom: 4px; }
+    #dashboard { position: relative; }
+
+    /* ===== Итоги месяца: кружок и «сторис» по неделям ===== */
+    #storyRing { position: absolute; left: 0; top: -2px; width: 38px; height: 38px; border-radius: 50%; padding: 2px; z-index: 2;
+      background: conic-gradient(var(--volt), #6FE0B8, var(--volt)); }
+    #storyRing.seen { background: var(--rule); }
+    #storyRing span { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; background: var(--bg); border: 2px solid var(--bg);
+      font-family: var(--text); font-size: 10.5px; font-weight: 700; text-transform: uppercase; color: var(--ink); letter-spacing: .02em; }
+    #story { position: fixed; inset: 0; z-index: 45; background: #0D0E10; color: var(--ink); display: flex; flex-direction: column;
+      padding: calc(10px + env(safe-area-inset-top, 0px)) 16px calc(16px + env(safe-area-inset-bottom, 0px));
+      opacity: 0; pointer-events: none; transform: scale(.96); transition: opacity .25s ease, transform .3s cubic-bezier(.3,.8,.3,1); touch-action: none; user-select: none; -webkit-user-select: none; }
+    #story.open { opacity: 1; pointer-events: auto; transform: none; }
+    .st-bars { display: flex; gap: 4px; }
+    .st-bars i { flex: 1; height: 3px; border-radius: 2px; background: rgba(242,243,240,.22); overflow: hidden; }
+    .st-bars i b { display: block; height: 100%; width: 0; background: var(--ink); }
+    .st-bars i.done b { width: 100%; }
+    .st-head { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+    .st-head .t { font-size: 13px; font-weight: 600; color: var(--muted); }
+    .st-head .t b { color: var(--ink); }
+    .st-x { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: var(--ink); font-size: 22px; line-height: 1; }
+    .st-page { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; gap: 18px; padding: 10px 4px; }
+    .st-page.in > * { animation: stIn .5s cubic-bezier(.3,.8,.3,1) both; }
+    .st-page.in > *:nth-child(2) { animation-delay: .07s; } .st-page.in > *:nth-child(3) { animation-delay: .14s; }
+    .st-page.in > *:nth-child(4) { animation-delay: .21s; } .st-page.in > *:nth-child(5) { animation-delay: .28s; }
+    @keyframes stIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+    .st-k { font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--volt); }
+    .st-month { font-family: var(--display); font-weight: 700; font-size: clamp(38px, 12vw, 54px); line-height: .95; text-transform: uppercase; letter-spacing: -.01em; }
+    .st-big { font-family: var(--num); font-weight: 800; font-size: 84px; line-height: .9; font-variant-numeric: tabular-nums; }
+    .st-big small { font-size: 26px; color: var(--muted); font-weight: 600; }
+    .st-big.down { color: var(--down); } .st-big.up { color: var(--up); }
+    .st-sub { color: var(--muted); font-size: 14px; margin-top: 6px; }
+    .st-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .st-chip { background: var(--panel); border-radius: 12px; padding: 9px 12px; font-size: 13px; color: var(--muted); }
+    .st-chip b { display: block; font-family: var(--num); font-size: 24px; color: var(--ink); font-weight: 700; line-height: 1.05; }
+    .st-chart { background: var(--panel); border-radius: 18px; padding: 12px; }
+    .st-chart svg { display: block; width: 100%; height: 120px; overflow: visible; }
+    .st-chart .ln { fill: none; stroke: var(--volt); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+    .st-page.in .st-chart .ln { animation: stDraw 1.1s .25s ease-out both; }
+    @keyframes stDraw { from { stroke-dashoffset: var(--len); } to { stroke-dashoffset: 0; } }
+    .st-chart text { fill: var(--muted); font-size: 11px; font-family: var(--text); }
+    .st-medals { display: flex; gap: 10px; flex-wrap: wrap; }
+    .st-medals .md { width: 76px; text-align: center; font-size: 11.5px; color: var(--muted); line-height: 1.2; }
+    .st-medals svg { width: 76px; height: 76px; display: block; margin-bottom: 4px; }
+    .st-coach { position: relative; background: var(--panel); border-radius: 16px; padding: 14px 16px 14px 46px; font-size: 16px; line-height: 1.4; min-height: 52px; }
+    .st-coach::before { content: ""; position: absolute; left: 14px; top: 15px; width: 20px; height: 20px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #E9FF9E, var(--volt) 60%, #8FBF1A); }
+    .st-coach.wait { color: transparent; }
+    .st-coach.wait::after { content: ""; position: absolute; left: 46px; right: 16px; top: 18px; height: 12px; border-radius: 6px;
+      background: linear-gradient(90deg, var(--panel2), #34373D, var(--panel2)); background-size: 200% 100%; animation: stShim 1.2s linear infinite; }
+    @keyframes stShim { to { background-position: -200% 0; } }
+    .st-close { align-self: stretch; height: 52px; border-radius: 16px; background: var(--volt); color: #121315; font-weight: 700; font-size: 16px; }
+    @media (prefers-reduced-motion: reduce) { .st-page.in > *, .st-page.in .st-chart .ln { animation: none; } }
     .who-name {
       font-size: 14px; font-weight: 600; padding: 7px 18px; border-radius: 999px;
       color: var(--muted); box-shadow: inset 0 0 0 1px var(--rule);
@@ -425,6 +476,11 @@
   <div id="ptr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg></div>
   <div id="toast" role="status"></div>
   <div id="confetti" aria-hidden="true"></div>
+  <div id="story" role="dialog" aria-label="Итоги месяца" aria-hidden="true">
+    <div class="st-bars" id="stBars"></div>
+    <div class="st-head"><span class="t" id="stTitle"></span><button class="st-x" onclick="closeStory()" aria-label="Закрыть">×</button></div>
+    <div class="st-page" id="stPage"></div>
+  </div>
 
   <main>
     <div id="errorBox" class="hidden">
@@ -433,6 +489,7 @@
     </div>
 
     <div id="dashboard" class="hidden">
+      <button id="storyRing" class="hidden" onclick="openStory()" aria-label="Итоги месяца"><span id="storyRingTxt">сен</span></button>
       <nav id="userTabs" class="who hidden"></nav>
 
       <section class="hero">
@@ -1539,6 +1596,186 @@
     }
 
     // =====================================================================
+    // ИТОГИ МЕСЯЦА: «сторис» за прошлый месяц, по страничке на неделю.
+    // Вес и медали берём из уже загруженных данных, тренировки и фразы тренера
+    // приходят с сервера (фразы каждый раз новые).
+    // =====================================================================
+    const ST_MONTHS = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
+    const ST_GEN = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+    const ST = { u: null, pages: [], i: 0, timer: 0, t0: 0, left: 0, paused: false, srv: null, req: 0 };
+    const ST_DUR = 8000;
+    function storyMonth() { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return { y: d.getFullYear(), m: d.getMonth() }; }
+    const stYm = ({ y, m }) => `${y}-${String(m + 1).padStart(2, '0')}`;
+    const stSeenKey = u => `story_seen_${u.id || activeUserId}_${stYm(storyMonth())}`;
+    function stDay(ts) { const d = new Date(ts); if (d.getHours() < 4) d.setDate(d.getDate() - 1); d.setHours(0, 0, 0, 0); return d; }
+    function stWeeks(y, m) {
+      const last = new Date(y, m + 1, 0), out = [];
+      let from = new Date(y, m, 1);
+      while (from <= last) {
+        const to = new Date(from); to.setDate(to.getDate() + ((7 - to.getDay()) % 7));
+        if (to > last) to.setTime(last.getTime());
+        out.push({ from: new Date(from), to: new Date(to) });
+        from = new Date(to); from.setDate(from.getDate() + 1);
+      }
+      return out;
+    }
+    function renderStoryRing(u) {
+      const mo = storyMonth(), ring = $('storyRing');
+      const has = (u.entries || []).some(e => { const d = stDay(e.timestamp); return d.getFullYear() === mo.y && d.getMonth() === mo.m; });
+      ring.classList.toggle('hidden', !has);
+      if (!has) return;
+      $('storyRingTxt').textContent = ST_MONTHS[mo.m].slice(0, 3);
+      let seen = false; try { seen = localStorage.getItem(stSeenKey(u)) === '1'; } catch (e) {}
+      ring.classList.toggle('seen', seen);
+    }
+    function stBuild(u) {
+      const { y, m } = storyMonth(), losing = !u.target || u.target < (u.start || u.entries[0].weight);
+      const E = u.entries.map(e => ({ d: stDay(e.timestamp), w: e.weight }));
+      const inR = (d, a, b) => d >= a && d <= b;
+      const cat = (u.medals && u.medals.catalog) || [];
+      const before = d => E.filter(e => e.d < d);
+      const weeks = stWeeks(y, m).map((wk, i) => {
+        const ws = E.filter(e => inR(e.d, wk.from, wk.to)), b = before(wk.from);
+        const base = b.length ? b[b.length - 1].w : (ws[0] ? ws[0].w : null), end = ws.length ? ws[ws.length - 1].w : null;
+        return { i, ...wk, ws, days: Math.round((wk.to - wk.from) / DAY_MS) + 1,
+          change: base != null && end != null ? +(end - base).toFixed(1) : null,
+          medals: cat.filter(md => md.status === 'earned' && md.date && inR(stDay(new Date(md.date).getTime()), wk.from, wk.to)) };
+      });
+      const mFirst = new Date(y, m, 1), mLast = new Date(y, m + 1, 0);
+      const mw = E.filter(e => inR(e.d, mFirst, mLast)), bm = before(mFirst);
+      const startW = bm.length ? bm[bm.length - 1].w : (mw[0] ? mw[0].w : null), endW = mw.length ? mw[mw.length - 1].w : null;
+      const good = c => c != null && (losing ? c < 0 : c > 0);
+      const best = weeks.filter(w => good(w.change)).sort((a, b) => losing ? a.change - b.change : b.change - a.change)[0];
+      // путь к цели: где был в начале месяца и где в конце
+      let path = null;
+      if (u.target && u.start && startW != null && endW != null && u.start !== u.target) {
+        const pc = w => Math.max(0, Math.min(100, Math.round((u.start - w) / (u.start - u.target) * 100)));
+        path = [pc(startW), pc(endW)];
+      }
+      return { y, m, losing, weeks, change: startW != null && endW != null ? +(endW - startW).toFixed(1) : null,
+               weighIns: mw.length, medals: weeks.reduce((s, w) => s + w.medals.length, 0), best, path, good };
+    }
+    const stKg = c => c == null ? '—' : (c > 0 ? '+' : c < 0 ? '−' : '') + fmt(Math.abs(c).toFixed(1));
+    const stRange = (a, b) => a.getMonth() === b.getMonth() ? `${a.getDate()}–${b.getDate()} ${ST_GEN[b.getMonth()]}` : `${a.getDate()} ${ST_GEN[a.getMonth()]} – ${b.getDate()} ${ST_GEN[b.getMonth()]}`;
+    function stCoach(text) { return text ? `<div class="st-coach">${esc(text)}</div>` : `<div class="st-coach wait">…</div>`; }
+    function esc(t) { return String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+    function stChart(w) {
+      if (w.ws.length < 2) return w.ws.length ? `<div class="st-chart"><svg viewBox="0 0 300 120"><circle cx="150" cy="60" r="6" fill="var(--volt)"/><text x="150" y="92" text-anchor="middle">${fmt(w.ws[0].w)} кг</text></svg></div>` : '';
+      const n = w.days, ws = w.ws, lo = Math.min(...ws.map(e => e.w)), hi = Math.max(...ws.map(e => e.w)), pad = Math.max(.3, (hi - lo) * .15);
+      const X = e => 16 + (e.d - w.from) / DAY_MS / Math.max(1, n - 1) * 268, Y = v => 14 + (hi + pad - v) / (hi - lo + 2 * pad) * 84;
+      const pts = ws.map(e => [X(e), Y(e.w)]);
+      let len = 0; pts.forEach((p, i) => { if (i) len += Math.hypot(p[0] - pts[i - 1][0], p[1] - pts[i - 1][1]); });
+      const days = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
+      const labels = [...Array(n)].map((_, k) => { const d = new Date(w.from); d.setDate(d.getDate() + k); return `<text x="${(16 + k / Math.max(1, n - 1) * 268).toFixed(1)}" y="118" text-anchor="middle">${days[d.getDay()]}</text>`; }).join('');
+      const lastP = pts[pts.length - 1];
+      return `<div class="st-chart"><svg viewBox="0 0 300 120">${labels}
+        <polyline class="ln" points="${pts.map(p => p.map(v => v.toFixed(1)).join(',')).join(' ')}" style="--len:${len.toFixed(0)};stroke-dasharray:${len.toFixed(0)}"/>
+        <circle cx="${lastP[0].toFixed(1)}" cy="${lastP[1].toFixed(1)}" r="5" fill="var(--volt)"/>
+        <text x="${pts[0][0].toFixed(1)}" y="${(pts[0][1] - 9).toFixed(1)}" text-anchor="start">${fmt(ws[0].w)}</text>
+        <text x="${lastP[0].toFixed(1)}" y="${(lastP[1] - 10).toFixed(1)}" text-anchor="end" style="fill:var(--ink);font-weight:600">${fmt(ws[ws.length - 1].w)}</text></svg></div>`;
+    }
+    function stPages(u, b) {
+      const srv = ST.srv, ph = srv && srv.phrases, wo = i => srv && srv.weeks && srv.weeks[i] ? srv.weeks[i].workouts : null;
+      const cls = c => c == null ? '' : b.good(c) ? 'down' : c === 0 ? '' : 'up';
+      const totalWo = srv && srv.summary ? srv.summary.workouts : null, dots = srv && srv.failed ? '—' : '…';
+      const pages = [() => `
+        <p class="st-k">Итоги месяца · ${esc(u.name || '')}</p>
+        <div class="st-month">${ST_MONTHS[b.m]}</div>
+        <div><div class="st-big ${cls(b.change)}">${stKg(b.change)} <small>кг</small></div><p class="st-sub">за месяц</p></div>
+        <div class="st-chips"><span class="st-chip"><b>${b.weighIns}</b>замеров</span><span class="st-chip"><b>${totalWo == null ? dots : totalWo}</b>тренировок</span><span class="st-chip"><b>${b.medals}</b>медалей</span></div>
+        ${stCoach(ph && ph.cover)}`];
+      b.weeks.forEach(w => pages.push(() => `
+        <p class="st-k">Неделя ${w.i + 1} · ${stRange(w.from, w.to)}</p>
+        <div><div class="st-big ${cls(w.change)}">${stKg(w.change)} <small>кг</small></div><p class="st-sub">${w.ws.length ? 'за неделю' : 'на этой неделе замеров не было'}</p></div>
+        ${stChart(w)}
+        <div class="st-chips"><span class="st-chip"><b>${w.ws.length}/${w.days}</b>замеров</span><span class="st-chip"><b>${wo(w.i) == null ? dots : wo(w.i)}</b>тренировок</span>${w.medals.length ? '' : '<span class="st-chip"><b>0</b>медалей</span>'}</div>
+        ${w.medals.length ? `<div class="st-medals">${w.medals.slice(0, 4).map(md => `<div class="md">${medalSVG(md)}${esc(md.title)}</div>`).join('')}</div>` : ''}
+        ${stCoach(ph && ph.weeks && ph.weeks[w.i])}`));
+      pages.push(() => `
+        <p class="st-k">Итог ${ST_GEN[b.m].replace(/я$/, 'я')}</p>
+        <div><div class="st-big ${cls(b.change)}">${stKg(b.change)} <small>кг</small></div><p class="st-sub">за ${ST_MONTHS[b.m]}${b.best ? ` · лучшая неделя ${b.best.i + 1}-я (${stKg(b.best.change)} кг)` : ''}</p></div>
+        ${b.path ? `<div class="st-chips"><span class="st-chip"><b>${b.path[0]}% → ${b.path[1]}%</b>путь к цели за месяц</span></div>` : ''}
+        ${stCoach(ph && ph.final)}
+        <button class="st-close" onclick="closeStory()">Вперёд, в ${ST_MONTHS[(b.m + 1) % 12].replace(/ь$/, 'ь')}</button>`);
+      return pages;
+    }
+    function stShow(i, anim) {
+      ST.i = Math.max(0, Math.min(ST.pages.length - 1, i));
+      const pg = $('stPage');
+      pg.classList.remove('in'); void pg.offsetWidth;
+      pg.innerHTML = ST.pages[ST.i]();
+      if (anim !== false) pg.classList.add('in');
+      [...$('stBars').children].forEach((el, k) => { el.classList.toggle('done', k < ST.i); el.firstElementChild.style.width = k < ST.i ? '100%' : '0'; });
+      ST.left = ST_DUR; ST.t0 = performance.now();
+    }
+    function stTick(now) {
+      if (!$('story').classList.contains('open')) return;
+      if (!ST.paused) {
+        const k = Math.min(1, 1 - (ST.left - (now - ST.t0)) / ST_DUR);
+        const bar = $('stBars').children[ST.i];
+        if (bar) bar.firstElementChild.style.width = (k * 100).toFixed(1) + '%';
+        if (k >= 1) { if (ST.i < ST.pages.length - 1) stShow(ST.i + 1); else { ST.paused = true; } }
+      }
+      ST.timer = requestAnimationFrame(stTick);
+    }
+    function openStory() {
+      const u = globalData[activeUserId];
+      if (!u) return;
+      safeHaptic('light');
+      ST.u = u; ST.srv = null;
+      const b = stBuild(u);
+      ST.pages = stPages(u, b);
+      $('stBars').innerHTML = ST.pages.map(() => '<i><b></b></i>').join('');
+      $('stTitle').innerHTML = `Итоги <b>${ST_GEN[b.m]}</b>`;
+      $('story').classList.add('open'); $('story').setAttribute('aria-hidden', 'false');
+      ST.paused = false; stShow(0);
+      cancelAnimationFrame(ST.timer); ST.timer = requestAnimationFrame(stTick);
+      navPush(closeStory);
+      try { localStorage.setItem(stSeenKey(u), '1'); } catch (e) {}
+      $('storyRing').classList.add('seen');
+      // тренировки и свежие фразы тренера
+      const req = ++ST.req;
+      fetch(`${dataUrl()}&action=story&uid=${encodeURIComponent(u.id || activeUserId)}&month=${stYm(storyMonth())}`)
+        .then(r => r.json()).then(j => {
+          if (req !== ST.req || !j || j.error) throw 0;
+          ST.srv = j; ST.pages = stPages(u, b);
+          const keep = ST.left - (performance.now() - ST.t0), at = ST.i;
+          $('stPage').innerHTML = ST.pages[at]();
+          ST.left = keep; ST.t0 = performance.now();
+        }).catch(() => {
+          if (req !== ST.req) return;
+          ST.srv = { phrases: null, failed: true }; ST.pages = stPages(u, b);
+          $('stPage').innerHTML = ST.pages[ST.i]().replace(/<div class="st-coach wait">…<\/div>/g, '');
+        });
+    }
+    function closeStory() {
+      ST.req++;
+      $('story').classList.remove('open'); $('story').setAttribute('aria-hidden', 'true');
+      cancelAnimationFrame(ST.timer);
+      navForget(closeStory);
+    }
+    // тап справа — дальше, слева — назад, удержание — пауза, свайп вниз — закрыть
+    (() => {
+      const el = $('story');
+      let x0 = 0, y0 = 0, t0 = 0, holdStart = 0;
+      el.addEventListener('pointerdown', e => {
+        if (e.target.closest('button')) return;
+        x0 = e.clientX; y0 = e.clientY; t0 = performance.now();
+        ST.paused = true; holdStart = performance.now();
+      });
+      el.addEventListener('pointerup', e => {
+        if (e.target.closest('button')) return;
+        const held = performance.now() - holdStart, dy = e.clientY - y0, dx = e.clientX - x0;
+        ST.paused = false; ST.t0 += held;
+        if (dy > 90 && Math.abs(dy) > Math.abs(dx)) { closeStory(); return; }
+        if (performance.now() - t0 > 350) return;                 // это было удержание
+        if (Math.abs(dx) > 50) { stShow(ST.i + (dx < 0 ? 1 : -1)); return; }
+        if (x0 < window.innerWidth * .3) stShow(ST.i - 1); else if (ST.i < ST.pages.length - 1) stShow(ST.i + 1);
+      });
+      el.addEventListener('pointercancel', () => { ST.paused = false; });
+    })();
+
+    // =====================================================================
     // ВОСХОЖДЕНИЕ: подножие — стартовый вес, вершина — цель. Лагеря на тропе —
     // медали «Путь к цели» (10, 25, 50, 75, 90%). Открывается кнопкой «Гора».
     // =====================================================================
@@ -2099,6 +2336,7 @@
       renderStats(u);
       countTo($('currWeight'), target.weight, intro ? start : null);
       renderAchievements(u);
+      renderStoryRing(u);
       $('trendWeight').textContent = fmt(calculateSMA(all)[ti]);
 
       const diff = parseFloat((target.weight - prev.weight).toFixed(1));
