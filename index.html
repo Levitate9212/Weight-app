@@ -136,7 +136,7 @@
 
     /* Неделя */
     .week-block { margin-top: 12px; overflow: hidden; }
-    #todayBtn { display: block; margin: 6px 0 0 auto; font-size: 12.5px; font-weight: 600; color: var(--volt); }
+    #todayBtn { display: block; margin: 0 0 6px auto; font-size: 12.5px; font-weight: 600; color: var(--volt); }
     .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; touch-action: pan-y; }
     .day {
       display: flex; flex-direction: column; align-items: center; gap: 1px;
@@ -434,9 +434,9 @@
       </section>
 
       <section class="week-block">
+        <button id="todayBtn" class="hidden" onclick="resetToToday()">К этой неделе ›</button>
         <div id="days" class="days"></div>
         <p id="emptyWeekNote" class="hidden">На этой неделе замеров нет</p>
-        <button id="todayBtn" class="hidden" onclick="resetToToday()">К этой неделе ›</button>
       </section>
 
       <section class="stats" id="statsRow">
