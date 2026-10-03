@@ -990,12 +990,13 @@
         fieldFill = `url(#${id}ox)`; ringsColor = rel.mid; ringsOp = .12;
       } else if (f.enamel) {
         fieldFill = `url(#${id}en)`; ringsColor = '#FFFFFF'; ringsOp = 0;
-        fieldExtra = `<ellipse cx="100" cy="104" rx="50" ry="24" fill="#fff" opacity=".12" transform="rotate(-24 100 104)" clip-path="url(#${id}cl)"/>`;
+        fieldExtra = `<ellipse cx="96" cy="92" rx="66" ry="34" fill="url(#${id}gl)" transform="rotate(-28 96 92)" clip-path="url(#${id}cl)"/>`;
       } else if (f.metal) {
         fieldFill = `url(#${id}fm)`; ringsColor = M[f.metal].lo; ringsOp = .22;
       } else if (f.night) {
         fieldFill = `url(#${id}nt)`; ringsColor = '#AFC4FF'; ringsOp = .16;
       }
+      const sun = f.enamel ? `<path d="${[...Array(144)].map((_, i) => { const a = i * 2.5 * Math.PI / 180; return `M120 120L${(120 + Math.sin(a) * 100).toFixed(1)} ${(120 - Math.cos(a) * 100).toFixed(1)}`; }).join('')}" stroke="#fff" stroke-width=".7" opacity=".07"/>` : '';
       const rings = ringsOp ? [...Array(26)].map((_, i) =>
         `<circle cx="120" cy="120" r="${8 + i * 3.4}" fill="none" stroke="${ringsColor}" stroke-width=".8" opacity="${ringsOp}"/>`).join('') : '';
 
@@ -1020,6 +1021,19 @@
           <stop offset="0" stop-color="#2E4A9A"/><stop offset=".7" stop-color="#16265A"/><stop offset="1" stop-color="#0B1433"/>
         </radialGradient>
         <clipPath id="${id}cl">${inner(97, '')}</clipPath>
+        <linearGradient id="${id}bev" x1=".15" y1=".05" x2=".85" y2=".95">
+          <stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".38" stop-color="#fff" stop-opacity="0"/>
+          <stop offset=".62" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".45"/>
+        </linearGradient>
+        <radialGradient id="${id}rec" cx="50%" cy="50%" r="50%">
+          <stop offset=".78" stop-color="#000" stop-opacity="0"/><stop offset=".95" stop-color="#000" stop-opacity=".28"/><stop offset="1" stop-color="#000" stop-opacity=".5"/>
+        </radialGradient>
+        <radialGradient id="${id}gl" cx="50%" cy="50%" r="50%">
+          <stop offset="0" stop-color="#fff" stop-opacity=".26"/><stop offset=".6" stop-color="#fff" stop-opacity=".08"/><stop offset="1" stop-color="#fff" stop-opacity="0"/>
+        </radialGradient>
+        <filter id="${id}sh" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="1.2" dy="2.4" stdDeviation="1.8" flood-color="#000" flood-opacity=".55"/>
+        </filter>
         <path id="${id}arc" d="M 37 120 A 83 83 0 0 1 203 120"/>
         <path id="${id}arcB" d="M 24.5 120 A 95.5 95.5 0 0 0 215.5 120"/>
         <path id="${id}arc2" d="M 42 120 A 78 78 0 0 1 198 120"/>
@@ -1028,9 +1042,9 @@
 
       // выпуклый элемент: тень, блик, тело из полированного металла
       const raised = (body) => `
-        <g transform="translate(1.4,2)" fill="${rel.dark}" stroke="${rel.dark}" opacity=".7">${body}</g>
+        <g filter="url(#${id}sh)"><g transform="translate(.9,1.3)" fill="${rel.dark}" stroke="${rel.dark}" opacity=".6">${body}</g>
         <g transform="translate(-.7,-.9)" fill="${rel.hi}" stroke="${rel.hi}">${body}</g>
-        <g fill="url(#${id}rel)" stroke="url(#${id}rel)">${body}</g>`;
+        <g fill="url(#${id}rel)" stroke="url(#${id}rel)">${body}</g></g>`;
 
       const big = opts.big || '';
       const caption = opts.caption || 'ВЕС ТЕЛА';
@@ -1061,11 +1075,15 @@
 
       return `<svg viewBox="-4 -4 248 248" role="img" aria-label="${opts.label}">${defs}
         ${outer} fill="url(#${id}rim)"/>
+        ${outer} fill="url(#${id}bev)" stroke="none" opacity=".75"/>
+        ${shape === 'circle' && !grand ? `<circle cx="120" cy="120" r="119.2" fill="none" stroke="${rim.hi}" stroke-width="1" opacity=".7"/>` : ''}
         ${ticks}
-        ${inner(101, `fill="${rim.lo}"`)}
-        ${inner(99, `fill="${rim.hi}" opacity=".55"`)}
+        ${inner(102.5, `fill="${rim.hi}" opacity=".8"`)}
+        ${inner(101, `fill="${rim.dark}"`)}
+        ${inner(99, `fill="${rim.lo}"`)}
         ${inner(97, `fill="${fieldFill}"`)}
-        <g clip-path="url(#${id}cl)">${rings}</g>
+        <g clip-path="url(#${id}cl)">${sun}${rings}</g>
+        ${inner(97, `fill="url(#${id}rec)"`)}
         ${fieldExtra}
         ${noBand ? '' : band}
         ${capText}
