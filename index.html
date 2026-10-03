@@ -957,12 +957,12 @@
               ${runner(103, 92, 1.4)}`,
         cut: `<rect x="118.6" y="150" width="2.8" height="9"/><rect x="118.9" y="130" width="2.2" height="7"/><rect x="119.2" y="114" width="1.6" height="5"/>`
       },
-      belt: {   // вес тела: ремень, застёжка на очередной дырочке
-        art: `<rect x="20" y="96" width="200" height="34" rx="4"/>
-              <rect x="62" y="88" width="34" height="50" rx="7" fill="none" stroke-width="7"/>
-              <rect x="94" y="108" width="40" height="10" rx="3"/>`,
-        cut: `<circle cx="150" cy="113" r="4"/><circle cx="168" cy="113" r="4"/><circle cx="186" cy="113" r="4"/><circle cx="204" cy="113" r="4"/>
-              <rect x="20" y="100" width="200" height="1.6"/><rect x="20" y="125" width="200" height="1.6"/>`
+      belt: {   // вес тела: напольные весы и стрелка вниз рядом
+        art: `<rect x="46" y="80" width="96" height="84" rx="16"/>
+              <polygon points="160,56 182,56 182,112 198,112 171,148 144,112 160,112"/>`,
+        cut: `<path d="M74 112 A20 20 0 0 1 114 112" fill="none" stroke-width="5"/>
+              <rect x="92" y="94" width="4" height="20" rx="2" transform="rotate(-40 94 112)"/>
+              <rect x="64" y="146" width="60" height="4" rx="2"/>`
       },
       fire: {   // серия: костёр
         art: `<path d="M120 46 C140 72,152 90,144 114 C139 128,129 134,120 134 C107 134,96 126,95 111 C94 98,103 89,108 80 C110 93,116 98,121 98 C118 82,115 64,120 46 Z"/>
@@ -984,12 +984,9 @@
                 <rect x="64" y="93" width="11" height="37" rx="3"/><rect x="165" y="93" width="11" height="37" rx="3"/>
               </g>`
       },
-      podium: {   // цель взята: пьедестал и лавровый венок
-        art: `<rect x="96" y="118" width="48" height="40"/><rect x="50" y="132" width="46" height="26"/><rect x="144" y="140" width="46" height="18"/>
-              ${leaves(120, 84, 25, 105, 250, 18)}${leaves(120, 84, 25, -70, 75, 18)}`,
-        cut: `<text x="120" y="146" text-anchor="middle" font-size="20" font-family="Barlow Condensed, sans-serif" font-weight="800">1</text>
-              <text x="73" y="152" text-anchor="middle" font-size="14" font-family="Barlow Condensed, sans-serif" font-weight="800">2</text>
-              <text x="167" y="155" text-anchor="middle" font-size="12" font-family="Barlow Condensed, sans-serif" font-weight="800">3</text>`
+      podium: {   // цель взята: лавровый венок с галочкой внутри
+        art: `${leaves(120, 100, 44, 100, 250, 15)}${leaves(120, 100, 44, -70, 80, 15)}
+              <polyline points="98,102 114,118 144,84" fill="none" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>`
       },
       tree: {   // пережил праздники: ёлка со звездой
         art: `<polygon points="120,52 146,92 94,92"/><polygon points="120,72 154,118 86,118"/><polygon points="120,96 162,144 78,144"/>
@@ -1074,13 +1071,14 @@
         art: `<rect x="68" y="58" width="104" height="100" rx="9"/><rect x="88" y="46" width="7" height="22" rx="3"/><rect x="145" y="46" width="7" height="22" rx="3"/>`,
         cut: `<rect x="68" y="78" width="104" height="3"/><polygon points="111,92 129,92 129,116 142,116 120,142 98,116 111,116"/>`
       },
-      runner: {   // здоровый темп: бегун в ровном шаге и пунктир за спиной
-        art: `${runner(96, 50, 4)}<rect x="44" y="132" width="16" height="5" rx="2.5"/><rect x="66" y="132" width="16" height="5" rx="2.5"/><rect x="40" y="114" width="12" height="5" rx="2.5"/><rect x="58" y="114" width="12" height="5" rx="2.5"/>`
+      runner: {   // здоровый темп: сердце с ровным пульсом
+        art: `<path d="M120 158 C76 128,58 104,66 82 C74 60,104 56,120 78 C136 56,166 60,174 82 C182 104,164 128,120 158 Z"/>`,
+        cut: `<polyline points="70,106 96,106 104,92 114,124 126,84 136,112 142,106 170,106" fill="none" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`
       },
-      boomerang: {  // камбэк: классический V-образный бумеранг и стрелка возврата
-        art: `<polyline points="66,140 112,70 172,116" fill="none" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M150 56 a30 30 0 0 1 30 34" fill="none" stroke-width="5" stroke-linecap="round"/>
-              <polygon points="172,86 190,88 180,102"/>`
+      boomerang: {  // камбэк: график поднялся и вернулся к прежнему минимуму
+        art: `<polyline points="50,64 86,128 122,84 160,128" fill="none" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="160" cy="128" r="12"/>
+              ${[0, 1, 2, 3, 4, 5, 6].map(i => `<rect x="${52 + i * 20}" y="150" width="11" height="3.5" rx="1.75"/>`).join('')}`
       },
       bird: {   // ранняя пташка: птица над восходом
         art: `<path d="M86 158 A34 34 0 0 1 154 158 Z"/>${rays(120, 158, 40, 52, 9, .08)}
@@ -1111,8 +1109,12 @@
         cut: `<rect x="50" y="135" width="144" height="4"/><rect x="116" y="88" width="14" height="3" rx="1.5" transform="rotate(-30 123 89)"/>
               <rect x="122" y="98" width="14" height="3" rx="1.5" transform="rotate(-30 129 99)"/><rect x="128" y="108" width="14" height="3" rx="1.5" transform="rotate(-30 135 109)"/>`
       },
-      crossed: {   // активные недели: скрещённые гантели
-        art: dumbbellAt(-35) + dumbbellAt(35)
+      crossed: {   // активные недели: листок недели, отмечены три дня
+        art: `<rect x="58" y="58" width="124" height="104" rx="10"/><rect x="82" y="48" width="7" height="20" rx="3"/><rect x="151" y="48" width="7" height="20" rx="3"/>`,
+        cut: `<rect x="58" y="76" width="124" height="3"/>
+              ${[[80, 102, 1], [107, 102, 0], [134, 102, 1], [161, 102, 0], [93, 136, 1], [120, 136, 0], [147, 136, 0]].map(([x, y, on]) => on
+                ? `<polyline points="${x - 9},${y} ${x - 3},${y + 7} ${x + 9},${y - 7}" fill="none" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`
+                : `<circle cx="${x}" cy="${y}" r="3.5"/>`).join('')}`
       },
       sun: {   // серия 365: солнце с 12 лучами
         art: `<circle cx="120" cy="106" r="28"/>${rays(120, 106, 34, 60, 12, .11)}`,
