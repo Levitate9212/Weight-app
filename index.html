@@ -1370,10 +1370,55 @@
       },
       digits: {   // красивое число
         art: `<text x="120" y="132" text-anchor="middle" font-size="64" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-style="italic" font-weight="800">88,8</text>`
+      },
+      decade: {   // новая десятка: табло, где 10 уезжает вверх, а снизу встаёт 9
+        art: `<rect x="72" y="58" width="96" height="112" rx="14"/>
+              <polygon points="120,30 134,46 106,46"/>`,
+        cut: `<rect x="72" y="112" width="96" height="3"/>
+              <text x="120" y="102" text-anchor="middle" font-size="40" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-weight="800" opacity=".55">10</text>
+              <text x="120" y="162" text-anchor="middle" font-size="46" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-weight="800">9</text>`
+      },
+      ladder: {   // лесенка: пять ступенек вниз и стрелка вдоль них
+        art: `<polygon points="44,96 76,96 76,112 108,112 108,128 140,128 140,144 172,144 172,160 204,160 204,176 44,176"/>
+              <g transform="rotate(26.6 115 93.5)"><rect x="56" y="89" width="106" height="9" rx="4.5"/><polygon points="158,78 190,93.5 158,109"/></g>`
+      },
+      steady: {   // стабильность: три одинаковых столбика под ровной линией
+        art: `<rect x="62" y="92" width="30" height="74" rx="6"/><rect x="105" y="92" width="30" height="74" rx="6"/><rect x="148" y="92" width="30" height="74" rx="6"/>
+              <rect x="48" y="74" width="144" height="6" rx="3"/>`,
+        cut: `<rect x="70" y="104" width="14" height="4" rx="2"/><rect x="113" y="104" width="14" height="4" rx="2"/><rect x="156" y="104" width="14" height="4" rx="2"/>`
+      },
+      dawn: {   // рассвет: гантель над встающим солнцем
+        art: `<path d="M84 160 A36 36 0 0 1 156 160 Z"/>${rays(120, 160, 44, 58, 7, .09)}
+              <rect x="44" y="160" width="152" height="5" rx="2"/>
+              <rect x="76" y="66" width="88" height="8" rx="4"/>
+              <rect x="62" y="50" width="14" height="40" rx="4"/><rect x="164" y="50" width="14" height="40" rx="4"/>
+              <rect x="50" y="58" width="10" height="24" rx="3"/><rect x="180" y="58" width="10" height="24" rx="3"/>`
+      },
+      newyear: {   // с чистого листа: листок календаря «1» и снежинка
+        art: `<rect x="62" y="56" width="104" height="112" rx="10"/><rect x="82" y="44" width="8" height="22" rx="3"/><rect x="138" y="44" width="8" height="22" rx="3"/>
+              <g transform="translate(190 112)">${[0, 60, 120].map(a => `<rect x="-2.5" y="-17" width="5" height="34" rx="2.5" transform="rotate(${a})"/>`).join('')}</g>`,
+        cut: `<rect x="62" y="78" width="104" height="3"/>
+              <text x="114" y="152" text-anchor="middle" font-size="62" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-weight="800">1</text>`
+      },
+      friday13: {   // не суеверный: подкова на удачу и 13 внутри
+        art: `<path d="M56 50 L56 98 A64 64 0 0 0 184 98 L184 50 L162 50 L162 98 A42 42 0 0 1 78 98 L78 50 Z"/>
+              <rect x="50" y="42" width="34" height="14" rx="4"/><rect x="156" y="42" width="34" height="14" rx="4"/>`,
+        cut: `${[[67, 74], [67, 102], [76, 128], [96, 148], [173, 74], [173, 102], [164, 128], [144, 148]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="3.4"/>`).join('')}
+              <text x="120" y="118" text-anchor="middle" font-size="46" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-weight="800">13</text>`,
+      },
+      back: {   // вернулся: петля-стрелка обратно к началу
+        art: `<path d="M143 72.2 A46 46 0 1 1 112 66.7" fill="none" stroke-width="17" stroke-linecap="round"/>
+              <polygon points="138,64 108,44 110,86"/>`,
+        cut: `<circle cx="120" cy="112" r="10"/>`
+      },
+      records: {   // новый рекорд ×10: звезда с десяткой
+        art: `<polygon points="${[...Array(10)].map((_, i) => { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 36 : 82; return `${(120 + r * Math.cos(a)).toFixed(1)},${(116 + r * Math.sin(a)).toFixed(1)}`; }).join(' ')}"/>`,
+        cut: `<text x="120" y="134" text-anchor="middle" font-size="44" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-weight="800">×10</text>`
       }
     });
 
     const HABIT_ENAMEL = { fire: '#167C8C', steps: '#5E43A8', sunmoon: '#245F9E', scale: '#7B5E3B', bird: '#C9577E' };
+    const HIDDEN_ENAMEL = { target: '#F2B705', digits: '#F2B705', decade: '#D8432F', ladder: '#0E8F9E', steady: '#3C6FD1', dawn: '#EF7F1A', newyear: '#6F3FC2', friday13: '#2F9E44', back: '#C2407A', records: '#9A5B2E' };
     const STYLE = {
       weight:   m => ({ rim: m, relief: m, field: 'oxid' }),
       body:     m => ({ rim: m, relief: 'silver', field: { enamel: { ti_sky: '#1E6FB0', ti_blue: '#2A45A8', ti_violet: '#5B36A8', ti_magenta: '#9A2F6E', ti_flame: '#B5521A' }[m] || '#2A45A8' } }),
@@ -1384,7 +1429,8 @@
       // главные: золотой лучистый ободок (grand), поле своё у каждой
       main:     (m, art) => ({ grand: true, rim: 'nickel', relief: 'gold', field: { enamel: { podium: '#16191C', fire: '#0E8F7E', sun: '#0E8F7E', scale: '#3F5870', dumbbell: '#C8323A', laurel: '#3B2466' }[art] || '#16191C' } }),
       seasonal: m => ({ rim: 'gold', relief: 'gold', field: { metal: 'silver' } }),
-      hidden:   m => ({ rim: 'gold', relief: 'nickel', field: { enamel: '#F2B705' } })
+      // скрытые: у каждой своя эмаль
+      hidden:   (m, art) => ({ rim: 'gold', relief: 'nickel', field: { enamel: HIDDEN_ENAMEL[art] || '#F2B705' } })
     };
       return { M, medal, ART, STYLE };
     })();
