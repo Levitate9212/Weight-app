@@ -1167,7 +1167,7 @@
       }
     });
 
-    const HABIT_ENAMEL = { fire: '#0E8F7E', steps: '#5E43A8', sunmoon: '#245F9E', scale: '#3F5870', bird: '#C46A35' };
+    const HABIT_ENAMEL = { fire: '#167C8C', steps: '#5E43A8', sunmoon: '#245F9E', scale: '#7B5E3B', bird: '#C9577E' };
     const STYLE = {
       weight:   m => ({ rim: m, relief: m, field: 'oxid' }),
       body:     m => ({ rim: m, relief: 'silver', field: { enamel: { ti_sky: '#1E6FB0', ti_blue: '#2A45A8', ti_violet: '#5B36A8', ti_magenta: '#9A2F6E', ti_flame: '#B5521A' }[m] || '#2A45A8' } }),
@@ -1175,8 +1175,8 @@
       habit:    (m, art) => ({ rim: m, relief: m, field: { enamel: HABIT_ENAMEL[art] || '#0E8F7E' } }),
       sleep:    m => ({ rim: m, relief: 'silver', field: { night: true } }),
       training: m => ({ rim: m, relief: m === 'bronze' ? 'bronze' : m === 'gold' ? 'gold' : 'silver', field: { enamel: '#C8323A' } }),
-      // главные: чёрный никель и золото, поле — цвет своей семьи (вес, привычка, тренировки)
-      main:     (m, art) => ({ rim: 'nickel', relief: 'gold', field: { enamel: { podium: '#16191C', fire: HABIT_ENAMEL.fire, sun: HABIT_ENAMEL.fire, scale: HABIT_ENAMEL.scale, dumbbell: '#C8323A', laurel: '#3B2466' }[art] || '#16191C' } }),
+      // главные: золотой лучистый ободок (grand), поле своё у каждой
+      main:     (m, art) => ({ grand: true, rim: 'nickel', relief: 'gold', field: { enamel: { podium: '#16191C', fire: '#0E8F7E', sun: '#0E8F7E', scale: '#3F5870', dumbbell: '#C8323A', laurel: '#3B2466' }[art] || '#16191C' } }),
       seasonal: m => ({ rim: 'gold', relief: 'gold', field: { metal: 'silver' } }),
       hidden:   m => ({ rim: 'gold', relief: 'nickel', field: { enamel: '#F2B705' } })
     };
