@@ -136,7 +136,31 @@
 
     /* Неделя */
     .week-block { margin-top: 12px; overflow: hidden; }
-    #todayBtn { display: block; margin: 0 0 6px auto; font-size: 12.5px; font-weight: 600; color: var(--volt); }
+    .week-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; min-height: 22px; }
+    #todayBtn { font-size: 12.5px; font-weight: 600; color: var(--volt); }
+    #todayBtn.hidden { display: block; visibility: hidden; }
+    #mtBtn { display: flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 600; color: var(--muted); padding: 2px 8px 2px 6px; border-radius: 8px; transition: color .2s ease, background .2s ease; }
+    #mtBtn svg { width: 15px; height: 15px; }
+    #mtBtn.on { color: var(--volt); background: var(--volt-dim); }
+
+    /* Восхождение: гора под графиком */
+    .mt-panel { margin-top: 10px; background: var(--panel); border-radius: 20px; overflow: hidden; position: relative; height: 172px; transition: height .35s cubic-bezier(.3,.8,.3,1), margin .35s ease, opacity .25s ease; }
+    .mt-panel.closed { height: 0; margin-top: 0; opacity: 0; }
+    .mt-panel svg { display: block; width: 100%; height: 100%; }
+    .mt-info { position: absolute; left: 14px; top: 10px; pointer-events: none; }
+    .mt-info.r { left: auto; top: auto; right: 14px; bottom: 9px; text-align: right; }
+    .mt-info .k { font-size: 10.5px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .mt-info .v { font-family: var(--num); font-size: 24px; font-weight: 700; line-height: 1.05; color: var(--ink); }
+    .mt-info .v small { font-size: 14px; color: var(--muted); font-weight: 600; }
+    .mt-next { font-size: 12px; color: var(--muted); margin-top: 3px; }
+    .mt-next b { color: var(--ink); font-weight: 600; }
+    .mt-open .chart-box { min-height: 96px; }
+    /* на невысоких экранах гора встаёт на место графика, чтобы оба не сплющились */
+    @media (max-height: 780px) {
+      .mt-open #dashboard > .chart-panel { display: none; }
+      .mt-open .mt-panel { flex: 1 1 auto; height: auto; min-height: 140px; }
+      .mt-panel.closed { flex: 0 0 0; min-height: 0; }
+    }
     .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; touch-action: pan-y; }
     .day {
       display: flex; flex-direction: column; align-items: center; gap: 1px;
@@ -443,8 +467,17 @@
         <div class="chart-box"><canvas id="weightChart"></canvas><p id="chartNote" class="hidden">График не загрузился. Закройте и откройте приложение ещё раз.</p></div>
       </section>
 
+      <section class="mt-panel closed" id="mtPanel" aria-label="Восхождение к цели">
+        <svg id="mtSvg" viewBox="0 -14 360 186" preserveAspectRatio="xMidYMax slice" role="img" aria-label="Гора: тропа от стартового веса к цели"></svg>
+        <div class="mt-info"><div class="k">Поднялся</div><div class="v" id="mtUp">—</div><p class="mt-next" id="mtNext"></p></div>
+        <div class="mt-info r"><div class="k">До вершины</div><div class="v" id="mtLeft">—</div></div>
+      </section>
+
       <section class="week-block">
-        <button id="todayBtn" class="hidden" onclick="resetToToday()">К этой неделе ›</button>
+        <div class="week-head">
+          <button id="mtBtn" onclick="toggleMountain()" aria-controls="mtPanel" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20l6.5-11 4 6.5 2.5-4L21 20z"/><path d="M9.5 9l1.8 3"/></svg>Гора</button>
+          <button id="todayBtn" class="hidden" onclick="resetToToday()">К этой неделе ›</button>
+        </div>
         <div id="days" class="days"></div>
         <p id="emptyWeekNote" class="hidden">На этой неделе замеров нет</p>
       </section>
@@ -1460,6 +1493,110 @@
     }
 
     // =====================================================================
+    // ВОСХОЖДЕНИЕ: подножие — стартовый вес, вершина — цель. Лагеря на тропе —
+    // медали «Путь к цели» (10, 25, 50, 75, 90%). Открывается кнопкой «Гора».
+    // =====================================================================
+    const MT_CAMPS = [10, 25, 50, 75, 90];
+    const MT_TRAIL = [[30, 160], [92, 150], [66, 132], [140, 120], [114, 102], [186, 90], [160, 72], [222, 62], [204, 46], [246, 36], [236, 24], [258, 16]];
+    const MT = { t: null, user: null, raf: 0, open: false };
+    (() => { try { MT.open = localStorage.getItem('mt_open') === '1'; } catch (e) {} })();
+    const mtSeg = MT_TRAIL.slice(1).map((p, i) => Math.hypot(p[0] - MT_TRAIL[i][0], p[1] - MT_TRAIL[i][1]));
+    const mtLen = mtSeg.reduce((a, b) => a + b, 0);
+    function mtAt(t) {
+      let d = Math.max(0, Math.min(1, t)) * mtLen;
+      for (let i = 0; i < mtSeg.length; i++) {
+        if (d <= mtSeg[i]) { const k = d / mtSeg[i], a = MT_TRAIL[i], b = MT_TRAIL[i + 1]; return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k]; }
+        d -= mtSeg[i];
+      }
+      return MT_TRAIL[MT_TRAIL.length - 1];
+    }
+    function mtBuild() {
+      const svg = $('mtSvg');
+      if (svg.dataset.built) return;
+      svg.dataset.built = '1';
+      let stars = '';
+      for (let i = 0; i < 22; i++) stars += `<circle cx="${(i * 67 + 13) % 360}" cy="${(i * 29 + 7) % 70}" r="${i % 5 ? .6 : 1}" fill="#F2F3F0" opacity=".3"/>`;
+      const camps = MT_CAMPS.map(c => { const [x, y] = mtAt(c / 100);
+        return `<g class="mt-camp" data-c="${c}"><path d="M${x - 6} ${y + 2}L${x} ${y - 8}L${x + 6} ${y + 2}Z" stroke-width="1.2"/><text x="${x + 9}" y="${y + 1}" font-size="11" font-weight="700" font-family="Barlow Condensed, Arial Narrow, sans-serif">${c}%</text></g>`; }).join('');
+      const [fx, fy] = MT_TRAIL[MT_TRAIL.length - 1];
+      svg.innerHTML = `<defs>
+          <linearGradient id="mtSky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1A2030"/><stop offset="1" stop-color="#1B1C1F"/></linearGradient>
+          <linearGradient id="mtRock" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3A3E46"/><stop offset="1" stop-color="#202226"/></linearGradient>
+          <linearGradient id="mtRock2" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2C2F35"/><stop offset="1" stop-color="#18191C"/></linearGradient>
+        </defs>
+        <rect y="-14" width="360" height="186" fill="url(#mtSky)"/>${stars}
+        <path d="M-10 172L60 96L104 122L168 60L206 92L262 10L318 84L370 70V172Z" fill="url(#mtRock2)"/>
+        <path d="M-10 172L28 150L96 112L132 126L186 78L214 92L258 12L292 70L330 104L370 128V172Z" fill="url(#mtRock)"/>
+        <path d="M258 12L272 40L262 35L252 46L246 32Z" fill="#E9ECEF" opacity=".9"/>
+        <path d="M${MT_TRAIL.map(p => p.join(' ')).join('L')}" fill="none" stroke="#4A4E56" stroke-width="2.6" stroke-dasharray="1 6" stroke-linecap="round"/>
+        <path id="mtDone" d="" fill="none" stroke="#C6FF3D" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+        ${camps}
+        <line x1="${fx}" y1="${fy}" x2="${fx}" y2="${fy - 14}" stroke="#F2F3F0" stroke-width="1.4"/>
+        <path id="mtFlag" d="M${fx} ${fy - 14}L${fx + 13} ${fy - 10}L${fx} ${fy - 6}Z" fill="#F2B53A"/>
+        <g id="mtMe"><circle r="9" fill="#C6FF3D" opacity=".18"/><circle r="4.8" fill="#C6FF3D" stroke="#1B1C1F" stroke-width="2"/></g>`;
+    }
+    function mtDraw(t, reached) {
+      const pts = [];
+      for (let k = 0; k <= 50; k++) pts.push(mtAt(t * k / 50).map(v => v.toFixed(1)).join(' '));
+      $('mtDone').setAttribute('d', 'M' + pts.join('L'));
+      const [x, y] = mtAt(t);
+      $('mtMe').setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)})`);
+      document.querySelectorAll('.mt-camp').forEach(g => {
+        const on = reached(+g.dataset.c, t), tri = g.firstElementChild, txt = g.lastElementChild;
+        tri.setAttribute('fill', on ? '#C6FF3D' : '#24262A'); tri.setAttribute('stroke', on ? '#C6FF3D' : '#4A4E56');
+        txt.setAttribute('fill', on ? '#F2F3F0' : '#83868D');
+      });
+    }
+    const fmt1 = v => fmt(parseFloat((+v).toFixed(1)));
+    function renderMountain(u, start, goal, current) {
+      MT.last = [u, start, goal, current];
+      document.body.classList.toggle('mt-open', MT.open);
+      $('mtPanel').classList.toggle('closed', !MT.open);
+      $('mtBtn').classList.toggle('on', MT.open);
+      $('mtBtn').setAttribute('aria-expanded', MT.open);
+      if (!MT.open) return;
+      mtBuild();
+      if (!goal || start === goal) {
+        $('mtUp').innerHTML = '—'; $('mtLeft').innerHTML = '—';
+        $('mtNext').textContent = 'Задай цель в боте, и тропа появится';
+        cancelAnimationFrame(MT.raf); mtDraw(0, () => false); MT.t = 0;
+        return;
+      }
+      const down = start > goal, total = Math.abs(start - goal);
+      const done = down ? start - current : current - start;
+      const t = Math.max(0, Math.min(1, done / total));
+      // лагерь горит, если медаль «Путь к цели» уже получена, или тропа до него дошла
+      const earned = new Set(((u.medals && u.medals.catalog) || []).filter(m => m.status === 'earned').map(m => m.key));
+      const reached = (c, tt) => earned.has('path_' + c) || tt * 100 >= c - 1e-6;
+      $('mtUp').innerHTML = (done > 0 ? (down ? '−' : '+') : '') + fmt1(Math.max(0, done)) + ' <small>кг</small>';
+      $('mtLeft').innerHTML = t >= 1 ? 'Цель!' : fmt1(Math.max(0, total - Math.max(0, done))) + ' <small>кг</small>';
+      const next = MT_CAMPS.find(c => c > t * 100);
+      $('mtNext').innerHTML = t >= 1 ? 'Ты на вершине' : next
+        ? `До лагеря ${next}%: <b>${fmt1((next / 100 - t) * total)} кг</b>`
+        : `До вершины: <b>${fmt1((1 - t) * total)} кг</b>`;
+      // человечек идёт по тропе: при открытии и смене человека — от подножия
+      const from = (MT.user !== u || MT.t == null) ? 0 : MT.t;
+      MT.user = u; MT.t = t;
+      cancelAnimationFrame(MT.raf);
+      if (calm() || Math.abs(t - from) < 0.002) { mtDraw(t, reached); return; }
+      const t0 = performance.now(), dur = 900 + 700 * Math.abs(t - from);
+      const step = now => {
+        const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+        mtDraw(from + (t - from) * e, reached);
+        if (k < 1) MT.raf = requestAnimationFrame(step);
+      };
+      MT.raf = requestAnimationFrame(step);
+    }
+    function toggleMountain() {
+      MT.open = !MT.open;
+      try { localStorage.setItem('mt_open', MT.open ? '1' : '0'); } catch (e) {}
+      safeHaptic('light');
+      MT.t = null;
+      if (MT.last) renderMountain(...MT.last);
+      if (chartInstance) setTimeout(() => chartInstance.resize(), 380);
+    }
+
+    // =====================================================================
     // НАКЛОН ТЕЛЕФОНА: блики на медалях следуют за наклоном.
     // Датчик работает, только пока открыты медали. Без датчика блик ходит сам, как раньше.
     // =====================================================================
@@ -1945,7 +2082,9 @@
         $('goalEtaLabel').textContent = goalDone ? 'Цель взята' : 'Цель будет взята:';
         if (goalDone) $('goalEtaText').innerHTML = GOAL_ICON;
         else $('goalEtaText').textContent = calculateGoalETA(all, goal, target.weight);
+        renderMountain(u, start, goal, target.weight);
       } else {
+        renderMountain(u, start, null, target.weight);
         $('progressText').textContent = '—';
         fillTicks(0);
         $('laneGoal').textContent = 'не задана';
