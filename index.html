@@ -288,6 +288,30 @@
     .coin-info .when { color: var(--ink); font-weight: 600; }
     .coin-info .hint { font-size: 13px; margin-top: 10px; }
 
+    /* ===== Вручение новой медали ===== */
+    #coinView.award-mode { transform: none; opacity: 0; pointer-events: none; transition: opacity .35s ease; }
+    #coinView.award-mode.open { opacity: 1; pointer-events: auto; }
+    .coin-info .award-tag { display: none; font-family: var(--display); font-weight: 700; font-size: 15px; letter-spacing: .14em;
+      text-transform: uppercase; color: var(--volt-ink); background: var(--volt); padding: 3px 10px 2px; border-radius: 4px;
+      margin: 0 auto 10px; width: max-content; }
+    .award-btn { display: none; margin: 18px auto 0; min-width: 200px; padding: 13px 22px; border-radius: 10px; border: 0;
+      background: var(--ink); color: var(--bg); font: 600 16px var(--text); }
+    .award-btn:active { opacity: .8; }
+    #coinView.award-mode .coin-info .award-tag, #coinView.award-mode .award-btn { display: block; }
+    #coinView.award-mode .back-btn { visibility: hidden; }
+    .award-info { opacity: 1; transition: opacity .4s ease, transform .4s ease; }
+    #coinView.award-mode .award-info.wait { opacity: 0; transform: translateY(10px); }
+    .burst { position: absolute; left: 50%; top: 50%; width: 0; height: 0; pointer-events: none; }
+    .burst .glow { position: absolute; left: -170px; top: -170px; width: 340px; height: 340px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(255,194,26,.55), rgba(255,194,26,0) 65%); opacity: 0; }
+    .burst .ray { position: absolute; left: -2px; top: -150px; width: 4px; height: 44px; border-radius: 2px; background: var(--volt);
+      transform-origin: 2px 150px; opacity: 0; }
+    .burst.go .glow { animation: awGlow 1.1s ease-out forwards; }
+    .burst.go .ray { animation: awRay .8s cubic-bezier(.2,.8,.2,1) forwards; animation-delay: var(--d); }
+    @keyframes awGlow { 0% { opacity: 0; transform: scale(.4); } 25% { opacity: 1; } 100% { opacity: 0; transform: scale(1.25); } }
+    @keyframes awRay { 0% { opacity: 0; transform: rotate(var(--a)) translateY(60px) scaleY(.3); }
+                       30% { opacity: 1; } 100% { opacity: 0; transform: rotate(var(--a)) translateY(-26px) scaleY(1); } }
+
     #sheet .s-note { font-size: 13px; color: var(--muted); margin-top: 14px; line-height: 1.35; border-top: 1px solid var(--rule); padding-top: 10px; }
 
     /* График */
@@ -477,12 +501,14 @@
   <div id="coinView" class="screen" role="dialog" aria-label="Медаль">
     <div class="screen-inner">
       <button class="back-btn" onclick="navBack()">‹ Назад</button>
-      <div class="stage" id="coinStage"><div class="coin-shadow"></div><div class="coin" id="coin"></div></div>
-      <div class="coin-info">
+      <div class="stage" id="coinStage"><div class="burst" id="coinBurst"></div><div class="coin-shadow"></div><div class="coin" id="coin"></div></div>
+      <div class="coin-info award-info" id="cInfo">
+        <p class="award-tag" id="cTag">Новая медаль</p>
         <h3 id="cTitle"></h3>
         <p id="cDesc"></p>
         <p class="when" id="cWhen"></p>
         <p class="hint">Покрути пальцем, на обороте твой путь</p>
+        <button class="award-btn" id="cNext" onclick="navBack()">Забрать</button>
       </div>
     </div>
   </div>
@@ -616,6 +642,7 @@
       renderUserTabs();
       $('dashboard').classList.remove('hidden');
       renderDashboard();
+      checkNewMedals();
     }
 
     function renderUserTabs() {
@@ -1142,7 +1169,7 @@
         art: title + curve, big: dayMonth(m.date), caption: (u.medals.owner || u.name || '').toUpperCase(), band: false });
     }
 
-    const C = { angle: 0, vel: 0, tilt: 0, dragging: false, lastX: 0, startY: 0, lastT: 0, mode: 'idle', tween: null, base: 0, idleT0: 0, raf: 0, sheens: null };
+    const C = { scale: 1, landed: null, angle: 0, vel: 0, tilt: 0, dragging: false, lastX: 0, startY: 0, lastT: 0, mode: 'idle', tween: null, base: 0, idleT0: 0, raf: 0, sheens: null };
     function buildCoin(m) {
       const coin = $('coin');
       coin.innerHTML = '';
@@ -1171,16 +1198,20 @@
       face(coinBack(m), true);
     }
     function coinApply() {
-      $('coin').style.transform = `rotateX(${C.tilt}deg) rotateY(${C.angle}deg)`;
+      $('coin').style.transform = `scale(${C.scale}) rotateX(${C.tilt}deg) rotateY(${C.angle}deg)`;
       const shift = (-Math.sin(C.angle * Math.PI / 180) * 30).toFixed(1) + '%';
       if (!C.sheens) C.sheens = $('coin').querySelectorAll('.sheen');
       C.sheens.forEach(el => { el.style.transform = `translateX(${shift})`; });
     }
     function coinLoop(t) {
       if (C.mode === 'tween') {
-        const k = Math.min(1, (t - C.tween.t0) / C.tween.dur), e = 1 - Math.pow(1 - k, 3);
+        const k = Math.max(0, Math.min(1, (t - C.tween.t0) / C.tween.dur)), e = 1 - Math.pow(1 - k, 3);
         C.angle = C.tween.from + (C.tween.to - C.tween.from) * e;
-        if (k >= 1) { C.mode = 'idle'; C.idleT0 = t; C.base = C.tween.to; }
+        if (C.tween.scaleFrom != null) {                    // вручение: вылетает из глубины с лёгким перелётом
+          const b = 1 + 2.2 * Math.pow(k - 1, 3) + 1.2 * Math.pow(k - 1, 2);
+          C.scale = C.tween.scaleFrom + (1 - C.tween.scaleFrom) * b;
+        }
+        if (k >= 1) { C.mode = 'idle'; C.idleT0 = t; C.base = C.tween.to; C.scale = 1; if (C.landed) { const f = C.landed; C.landed = null; f(); } }
       } else if (!C.dragging && C.mode === 'spin') {
         C.angle += C.vel; C.vel *= 0.95; C.tilt *= 0.88;
         if (Math.abs(C.vel) < 0.5) {
@@ -1196,23 +1227,98 @@
       coinApply();
       C.raf = requestAnimationFrame(coinLoop);
     }
-    function openCoin(m) {
-      safeHaptic('light');
+    function openCoin(m, award) {
+      const view = $('coinView');
+      view.classList.toggle('award-mode', !!award);
+      $('cInfo').classList.toggle('wait', !!award);
+      $('coinBurst').classList.remove('go');
+      if (!award) safeHaptic('light');
       buildCoin(m);
       $('cTitle').textContent = m.title;
       $('cDesc').textContent = m.desc;
       $('cWhen').textContent = 'Получена ' + dayMonth(m.date);
       $('coinView').classList.add('open');
       navPush(closeCoin);
-      C.tilt = 0; C.dragging = false; C.mode = 'tween';
+      C.tilt = 0; C.dragging = false; C.mode = 'tween'; C.scale = 1; C.landed = null;
       C.tween = { from: -200, to: 0, dur: 800, t0: performance.now() };
+      if (award) {
+        $('cNext').textContent = award.more ? `Дальше · ещё ${award.more}` : 'Забрать';
+        C.scale = .12;
+        C.tween = { from: -1080, to: 0, dur: 1700, t0: performance.now() + 250, scaleFrom: .12 };
+        setTimeout(() => safeHaptic('medium'), 250);
+        C.landed = () => {
+          safeHaptic('success');
+          $('coinBurst').classList.add('go');
+          $('cInfo').classList.remove('wait');
+        };
+      }
       cancelAnimationFrame(C.raf);
       C.raf = requestAnimationFrame(coinLoop);
     }
     function closeCoin() {
       $('coinView').classList.remove('open');
       navForget(closeCoin);
+      C.landed = null;
       setTimeout(() => cancelAnimationFrame(C.raf), 320);
+      if (awardQueue.length || $('coinView').classList.contains('award-mode')) setTimeout(showNextAward, 380);
+    }
+
+    // =====================================================================
+    // ВРУЧЕНИЕ: новые медали с прошлого открытия «прилетают» по одной.
+    // Какие уже показаны — помним в облаке Telegram (на всех устройствах),
+    // запасной вариант — память браузера.
+    // =====================================================================
+    const SEEN_KEY = 'medals_seen_v1';
+    let awardQueue = [], awardChecked = false;
+    const cloud = () => {
+      const tg = window.Telegram?.WebApp;
+      return tg?.CloudStorage && tg.isVersionAtLeast && tg.isVersionAtLeast('6.9') ? tg.CloudStorage : null;
+    };
+    function loadSeen() {
+      return new Promise(resolve => {
+        const local = () => { try { resolve(localStorage.getItem(SEEN_KEY)); } catch (e) { resolve(null); } };
+        const cs = cloud();
+        if (!cs) return local();
+        const timer = setTimeout(local, 2500);
+        try { cs.getItem(SEEN_KEY, (err, val) => { clearTimeout(timer); if (err) local(); else resolve(val || null); }); }
+        catch (e) { clearTimeout(timer); local(); }
+      });
+    }
+    function saveSeen(keys) {
+      const v = JSON.stringify(keys);
+      try { localStorage.setItem(SEEN_KEY, v); } catch (e) {}
+      try { const cs = cloud(); if (cs) cs.setItem(SEEN_KEY, v, () => {}); } catch (e) {}
+    }
+    async function checkNewMedals() {
+      if (awardChecked) return;
+      awardChecked = true;
+      const me = Object.keys(globalData).find(id => globalData[id].isMe);
+      const u = me && globalData[me];
+      if (!u || !u.medals || !u.medals.earned) return;      // свои медали показываем только себе
+      const earned = u.medals.earned.map(m => m.key);
+      const raw = await loadSeen();
+      let seen = null;
+      try { seen = raw ? JSON.parse(raw) : null; } catch (e) {}
+      if (!Array.isArray(seen)) { saveSeen(earned); return; }   // первое открытие: всё старое уже вручено ботом
+      const fresh = u.medals.earned.filter(m => seen.indexOf(m.key) === -1)
+        .sort((a, b) => a.date < b.date ? -1 : 1);
+      saveSeen(seen.concat(fresh.map(m => m.key)));
+      if (!fresh.length) return;
+      awardQueue = fresh.map(m => Object.assign({}, m, { status: 'earned' }));
+      setTimeout(showNextAward, 600);
+    }
+    function showNextAward() {
+      const burst = $('coinBurst');
+      if (!burst.childElementCount) {                      // вспышка и лучи — создаём один раз
+        let h = '<i class="glow"></i>';
+        for (let i = 0; i < 16; i++) h += `<i class="ray" style="--a:${i * 22.5 + (i % 2 ? 6 : 0)}deg;--d:${(i % 4) * 40}ms"></i>`;
+        burst.innerHTML = h;
+      }
+      const m = awardQueue.shift();
+      if (!m) { $('coinView').classList.remove('award-mode'); return; }
+      const me = Object.keys(globalData).find(id => globalData[id].isMe);
+      if (me && activeUserId !== String(me)) { activeUserId = String(me); renderUserTabs(); renderDashboard(); }
+      openCoin(m, { more: awardQueue.length });
     }
     document.addEventListener('DOMContentLoaded', () => {
       const st = $('coinStage');
