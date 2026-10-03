@@ -1477,19 +1477,31 @@
       // у особых медалей ободок — золотая звезда: ребро монеты золотое и прячется под впадинами лучей
       const grand = !!(style.grand || (MedalArt.ART[m.art] || {}).grand);
       const met = grand ? MedalArt.M.gold : (MedalArt.M[style.rim] || MedalArt.M.gunmetal);
-      // ребро — 72 узких сегмента внахлёст; свет меняется плавно по кругу, без резкой смены тона
-      const R = grand ? 108 : 120, T = 14, N = 72, segH = 2 * Math.PI * R / N + 1.5;
+      // ребро: у обычных — круг из 72 узких граней, у лучистых — повторяет каждый луч звезды (24 луча, как на лице)
+      const T = 14;
       const rgb = hex => [1, 3, 5].map(i => parseInt(hex.substr(i, 2), 16));
       const lo = rgb(met.lo), mid = rgb(met.mid), hi = rgb(met.hi);
       const tone = (lit, k) => 'rgb(' + mid.map((c, j) => Math.max(0, Math.min(255, Math.round((c + (hi[j] - c) * lit) * k)))).join(',') + ')';
       const dark = k => 'rgb(' + lo.map(c => Math.round(c * k)).join(',') + ')';
-      for (let i = 0; i < N; i++) {
-        const a = 360 / N * i, lit = (Math.cos((a - 25) * Math.PI / 180) + 1) / 2, sm = lit * lit * (3 - 2 * lit);
+      const facets = [];   // центр грани, длина, поворот и куда смотрит (для света)
+      if (grand) {
+        const n = 24, pt = i => { const a = i * Math.PI / n, r = (i % 2 ? 110 : 122) - 0.5; return [r * Math.sin(a), -r * Math.cos(a)]; };
+        for (let i = 0; i < n * 2; i++) {
+          const [x1, y1] = pt(i), [x2, y2] = pt(i + 1), dx = x2 - x1, dy = y2 - y1;
+          facets.push({ x: (x1 + x2) / 2, y: (y1 + y2) / 2, len: Math.hypot(dx, dy) + 0.8,
+            rot: Math.atan2(dy, dx) * 180 / Math.PI, face: Math.atan2(dy, dx) * 180 / Math.PI });
+        }
+      } else {
+        const R = 119.4, N = 72, len = 2 * Math.PI * R / N + 1.5;
+        for (let i = 0; i < N; i++) { const a = 360 / N * i, r = a * Math.PI / 180; facets.push({ x: R * Math.sin(r), y: -R * Math.cos(r), len, rot: a, face: a }); }
+      }
+      for (const f of facets) {
+        const lit = (Math.cos((f.face - 25) * Math.PI / 180) + 1) / 2, sm = lit * lit * (3 - 2 * lit);
         const e = document.createElement('div');
         e.className = 'edge';
-        e.style.cssText = `width:${segH}px;height:${T}px;margin:${-T / 2}px 0 0 ${-segH / 2}px;
-          background:linear-gradient(180deg, ${dark(0.8 + sm * 0.3)}, ${tone(sm, 0.78 + sm * 0.32)} 50%, ${dark(0.8 + sm * 0.3)});
-          transform:rotateZ(${a}deg) translateY(${-R + 0.6}px) rotateX(90deg)`;
+        e.style.cssText = `width:${f.len}px;height:${T}px;margin:${-T / 2}px 0 0 ${-f.len / 2}px;
+          background:linear-gradient(180deg, ${dark(0.8 + sm * 0.3)}, ${tone(sm, 0.72 + sm * 0.4)} 50%, ${dark(0.8 + sm * 0.3)});
+          transform:translate(${f.x.toFixed(2)}px,${f.y.toFixed(2)}px) rotateZ(${f.rot.toFixed(2)}deg) rotateX(90deg)`;
         coin.appendChild(e);
       }
       const face = (svg, back) => {
