@@ -47,6 +47,7 @@
       -webkit-tap-highlight-color: transparent;
       overflow-x: hidden;
       touch-action: pan-y;
+      overscroll-behavior: none;
     }
     button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
     button:focus-visible { outline: 2px solid var(--volt); outline-offset: 2px; }
@@ -57,9 +58,12 @@
       position: fixed; inset: 0; z-index: 50;
       background: var(--bg);
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      transition: opacity .45s ease, visibility .45s ease;
+      transition: opacity .4s ease, visibility .4s ease;
     }
     #splash.gone { opacity: 0; visibility: hidden; }
+    .sting-word, .splash-note { transition: transform .4s cubic-bezier(.2, .8, .2, 1), opacity .3s ease; }
+    #splash.gone .sting-word { transform: scale(1.08); }
+    #splash.gone .splash-note { opacity: 0; transform: translateY(6px); }
     .sting {
       position: relative;
       width: 100%;
@@ -120,7 +124,6 @@
        не помещается — график получает фиксированную высоту и страница
        прокручивается, вместо того чтобы сплющить график */
     @media (max-height: 700px) {
-      .duel-name { font-size: 20px; }
       .big { font-size: clamp(50px, 16vw, 64px); }
       .day .dw { font-size: 11px; }
       .day .dn { font-size: 17px; }
@@ -134,24 +137,27 @@
     }
     #dashboard.hidden { display: none !important; }
 
-    /* Имена атлетов — как в карде боя */
-    .duel {
-      display: flex; align-items: baseline; justify-content: center;
-      gap: 22px; margin-bottom: 8px;
+    /* Переключатель людей: спокойная «таблетка» с ползунком */
+    .who {
+      position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr;
+      width: min(100%, 280px); margin: 0 auto 10px; padding: 3px;
+      background: var(--panel); border-radius: 999px;
+      box-shadow: inset 0 0 0 1px var(--rule);
     }
-    .duel-name {
-      font-family: var(--display); font-style: italic; font-weight: 800;
-      font-size: 23px; text-transform: uppercase; letter-spacing: .2px;
-      color: var(--muted);
-      padding: 0 2px 3px;
-      position: relative;
-      transition: color .2s ease;
+    .who::before {
+      content: ""; position: absolute; top: 3px; bottom: 3px; left: 3px;
+      width: calc((100% - 6px) / var(--n, 2));
+      border-radius: 999px; background: var(--ink);
+      transform: translateX(calc(100% * var(--i, 0)));
+      transition: transform .32s cubic-bezier(.3, .9, .3, 1);
     }
-    .duel-name.active { color: var(--ink); }
-    .duel-name.active::after {
-      content: ""; position: absolute; left: -2px; right: -2px; bottom: 0;
-      height: 5px; background: var(--volt); transform: skewX(-18deg);
+    .who-name {
+      position: relative; z-index: 1; padding: 6px 10px;
+      font-weight: 600; font-size: 15px; color: var(--muted);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      transition: color .25s ease;
     }
+    .who-name.active { color: var(--bg); }
 
     /* Неделя */
     .week-head {
@@ -174,7 +180,9 @@
     .day .dd { font-size: 11px; font-weight: 600; min-height: 14px; color: var(--muted); }
     .day.has { background: var(--panel); }
     .day.empty .dn { color: var(--muted); opacity: .6; }
-    .day.today { border-color: var(--ink); }
+    .day.today .dw { color: var(--ink); font-weight: 700; }
+    .day.today .dw::after { content: ""; display: inline-block; width: 5px; height: 5px; margin-left: 3px; border-radius: 50%; background: var(--ink); vertical-align: 2px; }
+    .day.sel.today .dw::after { background: var(--volt-ink); }
     .day.future { opacity: .35; }
     .day.sel { background: var(--volt); color: var(--volt-ink); }
     .day.sel .dw, .day.sel .dd { color: var(--volt-ink); }
@@ -279,6 +287,7 @@
     .sheen-mask { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; pointer-events: none; }
     /* лучистый ободок: лучи не обрезаем кругом, блик — только внутри */
     .coin .face.grand { border-radius: 0; overflow: visible; }
+    .coin .face.grand svg { overflow: visible; }
     .coin .face.grand .sheen-mask { inset: 12px; }
     .sheen { position: absolute; top: 0; bottom: 0; left: -100%; width: 300%; will-change: transform;
       background: linear-gradient(110deg, transparent 38%, rgba(255,255,255,.28) 48%, rgba(255,255,255,.08) 52%, transparent 60%); }
@@ -362,8 +371,7 @@
     /* Невысокие экраны: ужимаем крупные элементы, чтобы график сохранил место */
     @media (max-height: 640px) {
       main { padding-top: 6px; }
-      .duel { margin-bottom: 4px; }
-      .duel-name { font-size: 20px; }
+      .who { margin-bottom: 6px; }
       .week-head { margin-bottom: 2px; }
       .day { padding: 3px 0 2px; }
       .day .dw { font-size: 11px; }
@@ -393,14 +401,72 @@
 
     /* Маленькие экраны (iPhone SE, mini): ужимаем вертикальные отступы */
     @media (max-height: 640px) {
-      .duel { margin-bottom: 4px; }
-      .duel-name { font-size: 20px; }
+      .who { margin-bottom: 6px; }
       .board { margin-top: 8px; }
       .big { font-size: clamp(48px, 16vw, 64px); }
       .ach { margin-top: 7px; padding-top: 5px; }
       .chart-panel { margin-top: 10px; }
       .lane-block { margin-top: 8px; }
       .forecast { margin-top: 4px; }
+    }
+
+    /* Появление экрана после заставки: блоки поднимаются по очереди */
+    #dashboard.enter > * { animation: rise .55s cubic-bezier(.2, .8, .2, 1) both; }
+    #dashboard.enter > *:nth-child(2) { animation-delay: .05s; }
+    #dashboard.enter > *:nth-child(3) { animation-delay: .1s; }
+    #dashboard.enter > *:nth-child(4) { animation-delay: .15s; }
+    #dashboard.enter > *:nth-child(5) { animation-delay: .2s; }
+    @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+    /* Обновление потягиванием вниз */
+    #ptr {
+      position: fixed; left: 50%; top: 0; z-index: 20; width: 36px; height: 36px; margin-left: -18px;
+      border-radius: 50%; background: var(--panel); color: var(--ink);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, .16), inset 0 0 0 1px var(--rule);
+      display: grid; place-items: center;
+      transform: translateY(-48px); opacity: 0; pointer-events: none;
+    }
+    #ptr svg { width: 18px; height: 18px; }
+    #ptr.back { transition: transform .3s cubic-bezier(.2, .8, .2, 1), opacity .3s ease; }
+    #ptr.spin svg { animation: ptrSpin .8s linear infinite; }
+    @keyframes ptrSpin { to { transform: rotate(360deg); } }
+    main.pulling { transition: none; }
+    main.settle { transition: transform .3s cubic-bezier(.2, .8, .2, 1); }
+    #toast {
+      position: fixed; left: 50%; top: 12px; z-index: 60; transform: translate(-50%, -70px);
+      max-width: calc(100% - 32px); padding: 9px 14px; border-radius: 10px;
+      background: var(--ink); color: var(--bg); font-size: 14px; text-align: center;
+      transition: transform .3s cubic-bezier(.2, .8, .2, 1);
+    }
+    #toast.show { transform: translate(-50%, 0); }
+
+    /* Сцена медали: свечение цвета медали за монетой и конфетти у особых */
+    .stage .coin-shadow { bottom: auto; top: calc(50% + 150px); }
+    .coin-zoom { position: relative; transform-style: preserve-3d; transform: scale(1.18); }
+    @media (max-width: 370px) { .coin-zoom { transform: scale(1.06); } }
+    @media (max-height: 640px) { .coin-zoom { transform: scale(1); } }
+    .halo {
+      position: absolute; left: 50%; top: 50%; width: 400px; height: 400px; margin: -200px 0 0 -200px;
+      border-radius: 50%; pointer-events: none;
+      background: radial-gradient(circle, var(--halo, rgba(255, 194, 26, .4)) 0%, transparent 62%);
+      animation: haloBreath 4s ease-in-out infinite;
+    }
+    @keyframes haloBreath { 0%, 100% { opacity: .75; transform: scale(.96); } 50% { opacity: 1; transform: scale(1.04); } }
+    #confetti { position: fixed; inset: 0; z-index: 36; pointer-events: none; overflow: hidden; }
+    #confetti i {
+      position: absolute; top: -16px; width: 8px; height: 13px; border-radius: 2px;
+      animation: fall var(--t) cubic-bezier(.25, .4, .5, 1) var(--d) forwards;
+      opacity: 0;
+    }
+    @keyframes fall {
+      0% { opacity: 1; transform: translate(0, 0) rotate(0); }
+      85% { opacity: 1; }
+      100% { opacity: 0; transform: translate(var(--x), 105vh) rotate(var(--r)); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #dashboard.enter > * { animation: none; }
+      .halo { animation: none; }
+      #confetti { display: none; }
     }
 
     /* Ошибка */
@@ -421,6 +487,10 @@
     <p class="splash-note">Загружаем ваш прогресс</p>
   </div>
 
+  <div id="ptr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg></div>
+  <div id="toast" role="status"></div>
+  <div id="confetti" aria-hidden="true"></div>
+
   <main>
     <div id="errorBox" class="hidden">
       <p id="errorText"></p>
@@ -428,7 +498,7 @@
     </div>
 
     <div id="dashboard" class="hidden">
-      <nav id="userTabs" class="duel hidden" style="flex-shrink:0"></nav>
+      <nav id="userTabs" class="who hidden" style="flex-shrink:0"></nav>
 
       <section style="flex-shrink:0">
         <div class="week-head">
@@ -511,7 +581,7 @@
   <div id="coinView" class="screen" role="dialog" aria-label="Медаль">
     <div class="screen-inner">
       <button class="back-btn" onclick="navBack()">‹ Назад</button>
-      <div class="stage" id="coinStage"><div class="burst" id="coinBurst"></div><div class="coin-shadow"></div><div class="coin" id="coin"></div></div>
+      <div class="stage" id="coinStage"><div class="halo" id="coinHalo"></div><div class="burst" id="coinBurst"></div><div class="coin-shadow"></div><div class="coin-zoom"><div class="coin" id="coin"></div></div></div>
       <div class="coin-info award-info" id="cInfo">
         <p class="award-tag" id="cTag">Новая медаль</p>
         <h3 id="cTitle"></h3>
@@ -542,6 +612,9 @@
     let currentPeriod = 'all';
     let selectedDateTimestamp = null;
     let currentWeekOffset = 0;
+    let intro = false;          // первая отрисовка после заставки: вес и дорожка набегают с нуля
+    let chartReveal = false;    // график рисуется слева направо (открытие, смена периода, человека)
+    const calm = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
 
     const $ = id => document.getElementById(id);
     const cssVar = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -562,6 +635,12 @@
       let isDark = false;
       try { isDark = window.Telegram?.WebApp?.colorScheme === 'dark'; } catch (e) {}
       document.documentElement.classList.toggle('dark', isDark);
+      // шапка и фон Telegram в цвет приложения, без белой полосы сверху
+      try {
+        const tg = window.Telegram?.WebApp, bg = cssVar('--bg');
+        if (tg && tg.isVersionAtLeast && tg.isVersionAtLeast('6.1')) { tg.setHeaderColor(bg); tg.setBackgroundColor(bg); }
+        if (tg && tg.isVersionAtLeast && tg.isVersionAtLeast('7.10')) tg.setBottomBarColor(bg);
+      } catch (e) {}
       if (chartInstance) renderDashboard();
     }
 
@@ -576,6 +655,7 @@
       }
       applyTelegramTheme();
       initSwipe();
+      initPullToRefresh();
       fetchData();
     });
 
@@ -588,6 +668,57 @@
         if (dx > 40) changeWeek(-1);
         else if (dx < -40) changeWeek(1);
       }, { passive: true });
+    }
+
+    // Потянуть вниз — обновить. Закрытие свайпом выключено через disableVerticalSwipes.
+    function initPullToRefresh() {
+      const main = document.querySelector('main'), ptr = $('ptr'), LIMIT = 70;
+      let y0 = null, x0 = 0, dy = 0, mode = null, busy = false;
+      const blocked = () => busy || $('dashboard').classList.contains('hidden') ||
+        document.querySelector('.screen.open, #sheet.open') || window.scrollY > 0;
+      const place = (d) => {
+        const k = Math.min(1, d / LIMIT);
+        main.style.transform = d ? `translateY(${d * .5}px)` : '';
+        ptr.style.opacity = k;
+        ptr.style.transform = `translateY(${Math.min(d, LIMIT * 1.3) - 40}px) rotate(${d * 3}deg)`;
+      };
+      main.addEventListener('touchstart', e => {
+        if (blocked()) { y0 = null; return; }
+        y0 = e.touches[0].clientY; x0 = e.touches[0].clientX; dy = 0; mode = null;
+      }, { passive: true });
+      main.addEventListener('touchmove', e => {
+        if (y0 === null) return;
+        const ddy = e.touches[0].clientY - y0, ddx = e.touches[0].clientX - x0;
+        if (!mode) {
+          if (Math.abs(ddy) < 8 && Math.abs(ddx) < 8) return;
+          mode = ddy > 0 && Math.abs(ddy) > Math.abs(ddx) * 1.2 ? 'pull' : 'skip';
+          if (mode === 'pull') { main.classList.remove('settle'); ptr.classList.remove('back'); main.classList.add('pulling'); }
+        }
+        if (mode !== 'pull') return;
+        const was = dy >= LIMIT;
+        dy = Math.max(0, ddy) * .9;
+        if (!was && dy >= LIMIT) safeHaptic('light');
+        place(dy);
+      }, { passive: true });
+      const end = () => {
+        if (y0 === null || mode !== 'pull') { y0 = null; return; }
+        y0 = null;
+        main.classList.remove('pulling'); main.classList.add('settle'); ptr.classList.add('back');
+        if (dy < LIMIT) { place(0); return; }
+        busy = true;
+        safeHaptic('medium');
+        main.style.transform = '';
+        ptr.style.opacity = 1; ptr.style.transform = 'translateY(14px)';
+        ptr.classList.add('spin');
+        const t0 = performance.now();
+        fetchData(true).finally(() => {
+          setTimeout(() => {                                   // крутилка видна хотя бы полсекунды
+            ptr.classList.remove('spin'); place(0); busy = false;
+          }, Math.max(0, 500 - (performance.now() - t0)));
+        });
+      };
+      main.addEventListener('touchend', end, { passive: true });
+      main.addEventListener('touchcancel', end, { passive: true });
     }
 
     function changeWeek(dir) {
@@ -605,7 +736,7 @@
       renderDashboard();
     }
 
-    async function fetchData() {
+    async function fetchData(refresh) {
       const initData = window.Telegram?.WebApp?.initData || "";
       try {
         const res = await fetch(`${APPS_SCRIPT_URL}?initData=${encodeURIComponent(initData)}`);
@@ -613,11 +744,14 @@
         let data;
         try { data = JSON.parse(text); }
         catch (e) { throw new Error("Сервер Google ещё просыпается. Нажмите «Повторить попытку» через несколько секунд."); }
-        handleData(data);
+        if (refresh) { refreshData(data); return; }
+        hideSplash(() => handleData(data));
       } catch (err) {
         // Сбой сети приходит как TypeError с английским текстом — показываем по-русски
         const netFail = err instanceof TypeError || !err.message;
-        showError(netFail ? "Не удалось подключиться к серверу. Проверьте интернет и повторите попытку." : err.message);
+        if (refresh) { toast(netFail ? "Нет связи, данные не обновились" : "Не удалось обновить, попробуйте ещё раз"); return; }
+        const msg = netFail ? "Не удалось подключиться к серверу. Проверьте интернет и повторите попытку." : err.message;
+        hideSplash(() => showError(msg));
       }
     }
 
@@ -628,7 +762,28 @@
       fetchData();
     }
 
-    function hideSplash() { $('splash').classList.add('gone'); }
+    // Заставка показывается всегда: ждём, пока плашка хотя бы раз пролетит целиком,
+    // и убираем её, когда плашка ушла за край, а не посреди пролёта.
+    const SLAB_CYCLE = 1700, SLAB_OUT = 1250;              // период анимации и момент, когда обе плашки за краем
+    function hideSplash(then) {
+      const sp = $('splash');
+      if (sp.classList.contains('gone')) { if (then) then(); return; }
+      let t = performance.now();
+      try { const a = sp.querySelector('.sting-slab').getAnimations()[0]; if (a && a.currentTime != null) t = a.currentTime; } catch (e) {}
+      const phase = t % SLAB_CYCLE;
+      let wait = phase <= SLAB_OUT ? SLAB_OUT - phase : SLAB_CYCLE - phase + SLAB_OUT;
+      if (t < SLAB_OUT) wait = SLAB_OUT - t;
+      if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) wait = Math.max(0, 600 - t);
+      setTimeout(() => { if (then) then(); sp.classList.add('gone'); }, wait);
+    }
+
+    function toast(msg) {
+      const el = $('toast');
+      el.textContent = msg;
+      el.classList.add('show');
+      clearTimeout(toast.t);
+      toast.t = setTimeout(() => el.classList.remove('show'), 2600);
+    }
 
     function showError(msg) {
       hideSplash();
@@ -637,7 +792,6 @@
     }
 
     function handleData(response) {
-      hideSplash();
       if (response.error) { showError(response.message || "Нет доступа. Откройте приложение через бота."); return; }
 
       globalData = response;
@@ -654,8 +808,28 @@
       activeUserId = String(def);
 
       renderUserTabs();
-      $('dashboard').classList.remove('hidden');
+      const dash = $('dashboard');
+      dash.classList.remove('hidden');
+      dash.classList.add('enter');
+      setTimeout(() => dash.classList.remove('enter'), 900);
+      intro = true; chartReveal = true;
       renderDashboard();
+      intro = false;
+      checkNewMedals();
+    }
+
+    // Данные после обновления потягиванием: остаёмся на том же человеке и периоде
+    function refreshData(response) {
+      if (response.error || !Object.keys(response).length) { toast(response.message || "Не удалось обновить"); return; }
+      globalData = response;
+      if (!globalData[activeUserId]) activeUserId = String(Object.keys(globalData)[0]);
+      medalCache = {};
+      renderUserTabs();
+      $('dashboard').classList.remove('hidden');
+      chartReveal = true;
+      renderDashboard();
+      safeHaptic('success');
+      awardChecked = false;
       checkNewMedals();
     }
 
@@ -664,10 +838,16 @@
       const ids = Object.keys(globalData);
       if (ids.length <= 1) { nav.classList.add('hidden'); return; }
       nav.classList.remove('hidden');
+      nav.style.setProperty('--n', ids.length);
+      nav.style.setProperty('--i', Math.max(0, ids.indexOf(activeUserId)));
+      if (nav.childElementCount === ids.length) {           // те же люди: двигаем ползунок, не перерисовывая
+        [...nav.children].forEach((b, i) => { b.classList.toggle('active', ids[i] === activeUserId); b.textContent = globalData[ids[i]].name || ids[i]; });
+        return;
+      }
       nav.innerHTML = '';
-      ids.forEach((uid, i) => {
+      ids.forEach(uid => {
         const b = document.createElement('button');
-        b.className = 'duel-name' + (String(uid) === activeUserId ? ' active' : '');
+        b.className = 'who-name' + (String(uid) === activeUserId ? ' active' : '');
         b.textContent = globalData[uid].name || uid;
         b.onclick = () => selectUser(uid);
         nav.appendChild(b);
@@ -681,6 +861,7 @@
       currentWeekOffset = 0;
       safeHaptic('selection');
       renderUserTabs();
+      chartReveal = true;
       renderDashboard();
     }
 
@@ -688,6 +869,7 @@
       currentPeriod = p;
       safeHaptic('light');
       document.querySelectorAll('.period-btn').forEach(b => b.classList.toggle('active', b.dataset.p === p));
+      chartReveal = true;
       renderDashboard();
     }
 
@@ -1209,7 +1391,7 @@
       ['weight', 'Вес'], ['habit', 'Привычка'], ['sleep', 'Сон'], ['training', 'Тренировки'],
       ['main', 'Главные'], ['seasonal', 'Сезонные'], ['hidden', 'Скрытые']
     ];
-    const medalCache = {};
+    let medalCache = {};
 
     // Параметры рисования медали по данным с сервера
     function medalOpts(m, forCoin) {
@@ -1324,6 +1506,27 @@
       };
       face(MedalArt.medal(medalOpts(m)), false);
       face(coinBack(m), true);
+      // свечение за монетой — в цвет медали
+      const o = medalOpts(m), f = (grand && o.grandField) || o.field;
+      const col = grand ? '#F2B53A' : (f && f.enamel) || (MedalArt.M[o.rim] || MedalArt.M.gunmetal).mid;
+      $('coinHalo').style.setProperty('--halo', hexA(col, document.documentElement.classList.contains('dark') ? .5 : .42));
+      return grand;
+    }
+    // Конфетти для особых медалей при вручении
+    function confetti(colors) {
+      const box = $('confetti');
+      if (calm()) return;
+      let h = '';
+      for (let i = 0; i < 70; i++) {
+        const c = colors[i % colors.length], w = 6 + Math.random() * 5;
+        h += `<i style="left:${Math.random() * 100}%;width:${w}px;height:${w * 1.6}px;background:${c};` +
+          `--x:${(Math.random() - .5) * 160}px;--r:${(Math.random() - .5) * 1080}deg;` +
+          `--t:${(1.8 + Math.random() * 1.4).toFixed(2)}s;--d:${(Math.random() * .5).toFixed(2)}s;` +
+          `border-radius:${Math.random() < .3 ? '50%' : '2px'}"></i>`;
+      }
+      box.innerHTML = h;
+      clearTimeout(confetti.t);
+      confetti.t = setTimeout(() => { box.innerHTML = ''; }, 4000);
     }
     function coinApply() {
       $('coin').style.transform = `scale(${C.scale}) rotateX(${C.tilt}deg) rotateY(${C.angle}deg)`;
@@ -1361,7 +1564,7 @@
       $('cInfo').classList.toggle('wait', !!award);
       $('coinBurst').classList.remove('go');
       if (!award) safeHaptic('light');
-      buildCoin(m);
+      const grand = buildCoin(m);
       $('cTitle').textContent = m.title;
       $('cDesc').textContent = m.desc;
       $('cWhen').textContent = 'Получена ' + dayMonth(m.date);
@@ -1378,6 +1581,10 @@
           safeHaptic('success');
           $('coinBurst').classList.add('go');
           $('cInfo').classList.remove('wait');
+          if (grand) {
+            const o = medalOpts(m), f = o.grandField || o.field;
+            confetti(['#F2B53A', '#FFE08A', '#FFFFFF', (f && f.enamel) || '#E2A92B', '#FF6B6F', '#2CC3AC']);
+          }
         };
       }
       cancelAnimationFrame(C.raf);
@@ -1385,6 +1592,7 @@
     }
     function closeCoin() {
       $('coinView').classList.remove('open');
+      $('confetti').innerHTML = '';
       navForget(closeCoin);
       C.landed = null;
       setTimeout(() => cancelAnimationFrame(C.raf), 320);
@@ -1589,7 +1797,7 @@
       const goal = u.target;
 
       $('currWeightLabel').textContent = past ? `Замер за ${target.dateStr}` : 'Текущий вес';
-      $('currWeight').textContent = fmt(target.weight);
+      countTo($('currWeight'), target.weight, intro ? start : null);
       renderAchievements(u);
       $('trendWeight').textContent = `${fmt(calculateSMA(all)[ti])} кг`;
 
@@ -1609,7 +1817,12 @@
         const done = (start >= goal) ? start - target.weight : target.weight - start;
         const pct = Math.max(0, Math.min(100, total > 0 ? Math.round(done / total * 100) : 100));
         $('progressText').textContent = `${pct}%`;
-        $('laneFill').style.width = pct + '%';
+        if (intro && !calm()) {                                // дорожка набегает с нуля вместе с весом
+          const lf = $('laneFill');
+          lf.style.transition = 'none'; lf.style.width = '0%'; lf.offsetWidth;
+          lf.style.transition = 'width 1s cubic-bezier(.2, .8, .2, 1) .15s';
+          requestAnimationFrame(() => { lf.style.width = pct + '%'; });
+        } else $('laneFill').style.width = pct + '%';
         const leftKg = parseFloat(Math.abs(target.weight - goal).toFixed(1));
         // Края дорожки — только старт и цель; сброшено/осталось уже есть строкой выше
         $('laneStart').textContent = `Старт ${fmt(start)} кг`;
@@ -1619,7 +1832,8 @@
         const reached = start >= goal ? target.weight <= goal : target.weight >= goal;
         const goalDone = reached || leftKg === 0;
         $('goalEtaLabel').textContent = goalDone ? 'Цель взята' : 'Цель будет взята:';
-        $('goalEtaText').textContent = goalDone ? '🎯' : calculateGoalETA(all, goal, target.weight);
+        if (goalDone) $('goalEtaText').innerHTML = GOAL_ICON;
+        else $('goalEtaText').textContent = calculateGoalETA(all, goal, target.weight);
       } else {
         $('progressText').textContent = '—';
         $('laneFill').style.width = '0%';
@@ -1646,9 +1860,16 @@
       if (typeof Chart === 'undefined') return;
 
       const ink = cssVar('--ink'), volt = cssVar('--volt'), muted = cssVar('--muted'), rule = cssVar('--rule'), panel = cssVar('--panel');
+      // Линия цели — пунктиром, если цель рядом с весами периода и не сплющит график
+      const ws = series.map(p => p.weight).filter(v => v != null);
+      const lo = Math.min(...ws), hi = Math.max(...ws), span = Math.max(1, hi - lo);
+      const showGoal = goal && goal >= lo - span * .6 && goal <= hi + span * .6;
+      const reveal = chartReveal && !calm();
+      chartReveal = false;
 
       chartInstance = new Chart($('weightChart').getContext('2d'), {
         type: 'line',
+        plugins: [revealPlugin, goalLinePlugin(showGoal ? goal : null, muted)],
         data: {
           labels: series.map(p => p.label),
           datasets: [
@@ -1660,6 +1881,14 @@
               borderWidth: 5,
               pointRadius: 0,
               tension: 0.4,
+              fill: 'start',
+              backgroundColor: c => {                         // мягкая заливка под трендом
+                const a = c.chart.chartArea;
+                if (!a) return 'transparent';
+                const g = c.chart.ctx.createLinearGradient(0, a.top, 0, a.bottom);
+                g.addColorStop(0, hexA(volt, .28)); g.addColorStop(1, hexA(volt, 0));
+                return g;
+              },
               order: 2
             },
             {
@@ -1680,6 +1909,7 @@
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          animation: false,
           interaction: { mode: 'index', intersect: false },
           plugins: {
             legend: { display: false },
@@ -1704,12 +1934,81 @@
             y: {
               grid: { color: rule, drawTicks: false },
               border: { display: false },
-              ticks: { color: muted, font: { family: 'Barlow', size: 11 }, padding: 6, maxTicksLimit: 5, callback: v => fmt(Number(v.toFixed(1))) }
+              ticks: { color: muted, font: { family: 'Barlow', size: 11 }, padding: 6, maxTicksLimit: 5, callback: v => fmt(Number(v.toFixed(1))) },
+              ...(showGoal ? { suggestedMin: Math.min(lo, goal) - .3, suggestedMax: Math.max(hi, goal) + .3 } : {})
             }
           }
         }
       });
+      if (reveal) startReveal(chartInstance); else chartInstance.$reveal = 1;
     }
+
+    // ===== Живое построение графика: линии прорисовываются слева направо =====
+    const hexA = (hex, a) => {
+      const h = hex.replace('#', ''), f = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+      return `rgba(${parseInt(f.substr(0, 2), 16)},${parseInt(f.substr(2, 2), 16)},${parseInt(f.substr(4, 2), 16)},${a})`;
+    };
+    const revealPlugin = {
+      id: 'reveal',
+      beforeDatasetsDraw(chart) {
+        const p = chart.$reveal == null ? 1 : chart.$reveal, a = chart.chartArea;
+        if (p >= 1 || !a) return;
+        const ctx = chart.ctx;
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(a.left - 8, a.top - 10, (a.right - a.left + 16) * p, a.bottom - a.top + 20);
+        ctx.clip();
+        chart.$clipped = true;
+      },
+      afterDatasetsDraw(chart) {
+        if (chart.$clipped) { chart.ctx.restore(); chart.$clipped = false; }
+      }
+    };
+    const goalLinePlugin = (goal, color) => ({
+      id: 'goalLine',
+      beforeDatasetsDraw(chart) {
+        if (goal == null) return;
+        const y = chart.scales.y.getPixelForValue(goal), a = chart.chartArea, ctx = chart.ctx;
+        if (y < a.top || y > a.bottom) return;
+        ctx.save();
+        ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.setLineDash([5, 5]);
+        ctx.beginPath(); ctx.moveTo(a.left, y); ctx.lineTo(a.right, y); ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = color; ctx.font = '600 11px Barlow, system-ui, sans-serif'; ctx.textAlign = 'left';
+        ctx.fillText(`цель ${fmt(goal)}`, a.left + 4, y - 5);
+        ctx.restore();
+      }
+    });
+    function startReveal(chart) {
+      const t0 = performance.now(), dur = 1000;
+      chart.$reveal = 0;
+      const step = t => {
+        if (chart !== chartInstance) return;
+        const k = Math.min(1, (t - t0) / dur);
+        chart.$reveal = 1 - Math.pow(1 - k, 3);
+        chart.draw();
+        if (k < 1) requestAnimationFrame(step);
+      };
+      chart.draw();
+      requestAnimationFrame(step);
+    }
+
+    // Вес набегает до нового значения: с нуля при открытии, плавно при смене дня или человека
+    function countTo(el, value, from) {
+      const prev = from != null ? from : parseFloat(String(el.dataset.v || ''));
+      el.dataset.v = value;
+      cancelAnimationFrame(el.$raf);
+      if (isNaN(prev) || prev === value || calm()) { el.textContent = fmt(value); return; }
+      const t0 = performance.now(), dur = from != null ? 900 : 380;
+      const step = t => {
+        const k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+        el.textContent = k < 1 ? fmt((prev + (value - prev) * e).toFixed(1)) : fmt(value);
+        if (k < 1) el.$raf = requestAnimationFrame(step);
+      };
+      el.$raf = requestAnimationFrame(step);
+    }
+
+    const GOAL_ICON = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--down)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px" aria-label="цель взята"><circle cx="12" cy="12" r="9.5"/><path d="M7.5 12.5l3 3 6-6.5"/></svg>`;
   </script>
 </body>
 </html>
