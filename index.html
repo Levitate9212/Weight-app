@@ -829,7 +829,8 @@
     */
     function medal(opts) {
       const id = 'm' + (n++);
-      const rim = M[opts.rim] || M.gunmetal, rel = M[opts.relief] || M.gunmetal;
+      const grand = !!opts.grand && opts.rim !== 'locked';   // особая медаль: золотой лучистый ободок и искры
+      const rim = grand ? M.gold : (M[opts.rim] || M.gunmetal), rel = M[opts.relief] || M.gunmetal;
       const shape = opts.shape || 'circle';
       const F = `font-family="Barlow Condensed, Arial Narrow, sans-serif"`;
 
@@ -838,7 +839,11 @@
         const a = (60 * i - 90) * Math.PI / 180;
         return `${(120 + r * Math.cos(a)).toFixed(1)},${(120 + r * Math.sin(a)).toFixed(1)}`;
       }).join(' ');
-      const outer = shape === 'hex' ? `<polygon points="${hexPts(122)}"` : `<circle cx="120" cy="120" r="120"`;
+      const burst = n => [...Array(n * 2)].map((_, i) => {
+        const a = i * Math.PI / n, r = i % 2 ? 110 : 122;
+        return `${(120 + r * Math.sin(a)).toFixed(1)},${(120 - r * Math.cos(a)).toFixed(1)}`;
+      }).join(' ');
+      const outer = shape === 'hex' ? `<polygon points="${hexPts(122)}"` : grand ? `<polygon points="${burst(24)}" stroke="${rim.lo}" stroke-width="1.2" stroke-linejoin="round"` : `<circle cx="120" cy="120" r="120"`;
       const inner = (r, attrs) => shape === 'hex'
         ? `<polygon points="${hexPts(r + 6)}" ${attrs}/>`
         : `<circle cx="120" cy="120" r="${r}" ${attrs}/>`;
@@ -914,7 +919,7 @@
         <path d="M 88 80 l 2 4.6 4.6 2 -4.6 2 -2 4.6 -2 -4.6 -4.6 -2 4.6 -2 z" stroke-width="0"/>
         <path d="M 160 100 l 1.5 3.4 3.4 1.5 -3.4 1.5 -1.5 3.4 -1.5 -3.4 -3.4 -1.5 3.4 -1.5 z" stroke-width="0"/>` : '';
 
-      const ticks = shape === 'circle' ? `<g stroke="${rim.lo}" stroke-width="1.4" opacity=".5">${[...Array(90)].map((_, i) => {
+      const ticks = shape === 'circle' && !grand ? `<g stroke="${rim.lo}" stroke-width="1.4" opacity=".5">${[...Array(90)].map((_, i) => {
         const a = i * 4 * Math.PI / 180;
         return `<line x1="${(120 + Math.sin(a) * 117).toFixed(1)}" y1="${(120 - Math.cos(a) * 117).toFixed(1)}" x2="${(120 + Math.sin(a) * 111).toFixed(1)}" y2="${(120 - Math.cos(a) * 111).toFixed(1)}"/>`;
       }).join('')}</g>` : '';
@@ -931,7 +936,8 @@
         ${capText}
         ${numeral}
         <g clip-path="url(#${id}cl)"><g transform="${noBand ? 'translate(120 110) scale(.74) translate(-120 -106)' : 'translate(120 116) scale(.68) translate(-120 -106)'}">${raised(opts.art || '')}</g></g>
-        ${opts.paint ? `<g clip-path="url(#${id}cl)"><g transform="${noBand ? 'translate(120 110) scale(.74) translate(-120 -106)' : 'translate(120 116) scale(.68) translate(-120 -106)'}">${opts.paint}</g></g>` : ''}
+        ${grand ? `<g fill="${rel.hi}">${[[58, 92, 6], [182, 88, 7], [66, 146, 4.5], [176, 150, 5], [50, 120, 3.2], [190, 120, 3.6]].map(([x, y, r]) => `<path d="M${x} ${y - r * 1.8} Q${x + r * .25} ${y - r * .25} ${x + r * 1.8} ${y} Q${x + r * .25} ${y + r * .25} ${x} ${y + r * 1.8} Q${x - r * .25} ${y + r * .25} ${x - r * 1.8} ${y} Q${x - r * .25} ${y - r * .25} ${x} ${y - r * 1.8}Z"/>`).join('')}</g>` : ''}
+        ${opts.paint && opts.rim !== 'locked' ? `<g clip-path="url(#${id}cl)"><g transform="${noBand ? 'translate(120 110) scale(.74) translate(-120 -106)' : 'translate(120 116) scale(.68) translate(-120 -106)'}">${opts.paint}</g></g>` : ''}
         <g clip-path="url(#${id}cl)">${opts.cut ? `
           <g transform="${noBand ? 'translate(120 110) scale(.74) translate(-120 -106)' : 'translate(120 116) scale(.68) translate(-120 -106)'}"><g transform="translate(.7,1)" fill="${rel.hi}" stroke="${rel.hi}" opacity=".7">${opts.cut}</g>
           <g fill="${rel.dark}" stroke="${rel.dark}">${opts.cut}</g></g>` : ''}</g>
@@ -985,6 +991,7 @@
               </g>`
       },
       podium: {   // цель взята: лавровый венок с галочкой внутри
+        grand: true,
         art: `${leaves(120, 100, 44, 100, 250, 15)}${leaves(120, 100, 44, -70, 80, 15)}
               <polyline points="98,102 114,118 144,84" fill="none" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>`
       },
@@ -1068,7 +1075,7 @@
           return `<polygon points="${pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ')}"/>`;
         };
         const rows = [57, 66.5, 76, 85.5, 95, 135, 144.5, 154];
-        return { art: `<polygon points="${left.concat(right).join(' ')}"/>`, cut: rows.map(bar).join('') };
+        return { grand: true, art: `<polygon points="${left.concat(right).join(' ')}"/>`, cut: rows.map(bar).join('') };
       })(),
       calendar: {   // недели в минусе: листок календаря со стрелкой вниз
         art: `<rect x="68" y="58" width="104" height="100" rx="9"/><rect x="88" y="46" width="7" height="22" rx="3"/><rect x="145" y="46" width="7" height="22" rx="3"/>`,
@@ -1115,7 +1122,9 @@
               <path d="M120 134 l2.4 5.4 5.4 2.4 -5.4 2.4 -2.4 5.4 -2.4 -5.4 -5.4 -2.4 5.4 -2.4z"/>`
       },
       sneaker: {   // первая тренировка: беговой кроссовок сбоку, носок вправо
+        grand: true,
         art: `<path d="M38 147 C38 141,42 137,50 137 L170 137 C184 137,196 131,205 124 C209 133,207 147,197 153 C191 157,183 159,173 159 L52 159 C44 159,38 155,38 147 Z"/>
+              <rect x="8" y="100" width="26" height="5" rx="2.5"/><rect x="0" y="114" width="34" height="5" rx="2.5"/><rect x="12" y="128" width="22" height="5" rx="2.5"/>
               <path d="M46 137 C39 121,41 105,52 94 C61 101,73 105,85 100 C89 92,93 85,99 80 L108 82 C126 93,151 104,173 112 C190 118,201 121,205 124 C196 131,184 137,170 137 Z"/>`,
         cut: `<path d="M46 137 L170 137 C184 137,196 131,205 124" fill="none" stroke-width="2.6"/>
               ${[58, 78, 98, 118, 138, 158].map(x => `<rect x="${x}" y="150" width="11" height="3" rx="1.5"/>`).join('')}
@@ -1136,14 +1145,20 @@
         cut: `<circle cx="120" cy="106" r="20" fill="none" stroke-width="3"/>`
       },
       laurel: {   // год в деле: лавровый венок со звездой
+        grand: true,
         art: `${leaves(120, 104, 46, 100, 250, 13)}${leaves(120, 104, 46, -70, 80, 13)}
               <path d="M120 80 l6.5 13.5 14.8 2 -10.8 10.3 2.7 14.7 -13.2 -7.1 -13.2 7.1 2.7 -14.7 -10.8 -10.3 14.8 -2z"/>`
       },
       cake: {   // с днём рождения: торт со свечой
+        grand: true,
         art: `<rect x="70" y="112" width="100" height="42" rx="6"/><rect x="84" y="86" width="72" height="30" rx="6"/>
               <rect x="116" y="58" width="8" height="30" rx="2"/><path d="M120 34 C127 44,128 50,120 56 C112 50,113 44,120 34 Z"/>`,
         cut: `<path d="M70 126 q8.3 8 16.6 0 t16.6 0 t16.6 0 t16.6 0 t16.6 0 t16.6 0" fill="none" stroke-width="3"/>
-              <path d="M84 98 q9 7 18 0 t18 0 t18 0 t18 0" fill="none" stroke-width="3"/>`
+              <path d="M84 98 q9 7 18 0 t18 0 t18 0 t18 0" fill="none" stroke-width="3"/>`,
+        paint: `<path d="M120 36 C126 45,127 50,120 55 C113 50,114 45,120 36 Z" fill="#FFB020"/><path d="M120 44 C123 48,123 51,120 53 C117 51,117 48,120 44 Z" fill="#FF6A1A"/>
+              ${[[66, 84, '#E8434B', 20], [174, 82, '#2F8FE0', -30], [70, 108, '#2FBF6A', 40], [180, 106, '#F2B705', -15], [92, 66, '#B455D6', 60], [150, 64, '#2FBF6A', -50], [54, 140, '#F2B705', 10], [188, 138, '#E8434B', -40]]
+                .map(([x, y, c, a]) => `<rect x="${x - 5}" y="${y - 2}" width="10" height="4" rx="1.5" fill="${c}" transform="rotate(${a} ${x} ${y})"/>`).join('')}
+              ${[[84, 90, '#2F8FE0'], [160, 94, '#E8434B'], [100, 72, '#F2B705'], [140, 72, '#B455D6'], [60, 120, '#2F8FE0'], [184, 120, '#2FBF6A']].map(([x, y, c]) => `<circle cx="${x}" cy="${y}" r="2.6" fill="${c}"/>`).join('')}`
       },
       digits: {   // красивое число
         art: `<text x="120" y="132" text-anchor="middle" font-size="64" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-style="italic" font-weight="800">88,8</text>`
