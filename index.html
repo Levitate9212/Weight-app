@@ -69,11 +69,11 @@
     /* ритм-полоски: волна бежит слева направо, один проход = минимум показа */
     .sp-bars { display: flex; gap: 5px; align-items: flex-end; height: 34px; margin-top: 26px; }
     .sp-bars i { width: 7px; height: 100%; border-radius: 2px; background: var(--rule); transform-origin: bottom; transform: scaleY(.25);
-      animation: spBar 1.8s ease-in-out infinite; animation-delay: calc(var(--k) * 70ms); }
+      animation: spBar 1.5s ease-in-out infinite; animation-delay: calc(var(--k) * 50ms); }
     @keyframes spBar {
       0%, 100% { transform: scaleY(.25); background: var(--rule); }
-      28% { transform: scaleY(1); background: var(--volt); }
-      55%, 99% { transform: scaleY(.25); background: var(--rule); }
+      25% { transform: scaleY(1); background: var(--volt); }
+      50%, 99% { transform: scaleY(.25); background: var(--rule); }
     }
     .splash-note {
       position: absolute; left: 24px; right: 24px; bottom: calc(48px + env(safe-area-inset-bottom, 0px));
@@ -691,14 +691,14 @@
 
     // Заставка показывается всегда: ждём, пока плашка хотя бы раз пролетит целиком,
     // и убираем её, когда плашка ушла за край, а не посреди пролёта.
-    const SLAB_CYCLE = 1800, SLAB_OUT = 1560;              // период волны полосок и момент, когда волна прошла целиком
+    const SLAB_CYCLE = 1500, SLAB_OUT = 1170;              // период волны полосок и момент, когда волна прошла целиком
     function hideSplash(then) {
       const sp = $('splash');
       if (sp.classList.contains('gone')) { if (then) then(); return; }
       let t = performance.now();
       try { const a = sp.querySelector('.sp-bars i').getAnimations()[0]; if (a && a.currentTime != null) t = a.currentTime; } catch (e) {}
       const phase = t % SLAB_CYCLE;
-      let wait = phase <= SLAB_OUT ? SLAB_OUT - phase : SLAB_CYCLE - phase + SLAB_OUT;
+      let wait = phase <= SLAB_OUT ? SLAB_OUT - phase : 0;      // полоски стоят — можно убирать сразу
       if (t < SLAB_OUT) wait = SLAB_OUT - t;
       if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) wait = Math.max(0, 600 - t);
       setTimeout(() => { if (then) then(); sp.classList.add('gone'); }, wait);
@@ -1398,10 +1398,11 @@
         curve = `<path d="${xy.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ')}" fill="none" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
                  <circle cx="${xy[xy.length - 1][0]}" cy="${xy[xy.length - 1][1]}" r="6"/>`;
       }
-      const title = `<text x="120" y="70" text-anchor="middle" font-size="17" stroke-width="0" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-weight="700">${m.title}</text>`;
-      const style = MedalArt.STYLE[m.section](m.metal);
-      return MedalArt.medal({ label: 'оборот', rim: style.rim, relief: style.rim, field: 'oxid',
-        art: title + curve, big: dayMonth(m.date), caption: (u.medals.owner || u.name || '').toUpperCase(), band: false });
+      const title = `<text x="120" y="70" text-anchor="middle" font-size="20" stroke-width="0" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-weight="700">${m.title}</text>`;
+      // оборот в тех же цветах, что лицо: тот же ободок (у главных — золотые лучи), то же поле
+      const { art, cut, paint, ...face } = medalOpts(m);
+      return MedalArt.medal(Object.assign(face, { label: 'оборот', art: title + curve,
+        big: dayMonth(m.date), caption: (u.medals.owner || u.name || '').toUpperCase(), band: false }));
     }
 
     const C = { scale: 1, landed: null, angle: 0, vel: 0, tilt: 0, dragging: false, lastX: 0, startY: 0, lastT: 0, mode: 'idle', tween: null, base: 0, idleT0: 0, raf: 0, sheens: null };
@@ -1426,7 +1427,7 @@
       }
       const face = (svg, back) => {
         const f = document.createElement('div');
-        f.className = 'face' + (grand && !back ? ' grand' : '');
+        f.className = 'face' + (grand ? ' grand' : '');
         f.style.transform = back ? `rotateY(180deg) translateZ(${T / 2}px)` : `translateZ(${T / 2}px)`;
         f.innerHTML = svg.replace('viewBox="-4 -4 248 248"', 'viewBox="0 0 240 240"') + '<div class="sheen-mask"><div class="sheen"></div></div>';
         coin.appendChild(f);
@@ -1715,13 +1716,13 @@
       safeHaptic('light');
       if (kind === 'wo') {
         $('sTitle').textContent = 'Тренировки за неделю';
-        $('sDesc').textContent = 'Считаются тренировки, о которых ты написал боту: текстом («сходил в зал», «пробежал 5 км»), командой /тренировка или скриншотом с часов. Неделя с понедельника.';
+        $('sDesc').textContent = 'Сколько тренировок на этой неделе, считая с понедельника.';
         const n = st ? st.workoutsWeek : 0;
         $('sLane').parentElement.classList.remove('hidden');
         $('sLane').style.width = Math.min(100, Math.round(n / 3 * 100)) + '%';
         $('sList').innerHTML = `<dt>На этой неделе</dt><dd>${st ? n : '—'}</dd><dt>Ориентир</dt><dd class="need">3 в неделю</dd>` +
           (st ? `<dt>Всего</dt><dd>${st.workoutsTotal}</dd>` : '');
-        $('sNote').textContent = '3 тренировки за неделю — это «Активная неделя», за них идут медали. Программы тут нет, ориентир общий: 2–4 тренировки в неделю для здоровья и формы.';
+        $('sNote').textContent = '3 тренировки за неделю — это «Активная неделя», за такие недели идут медали.';
       } else {
         $('sTitle').textContent = 'Серия взвешиваний';
         $('sDesc').textContent = 'Сколько дней подряд ты взвешивался без пропусков. День начинается в 4:00, так что ночной замер считается за вчера.';
