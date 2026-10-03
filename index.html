@@ -208,7 +208,7 @@
     .mt-stats .r { text-align: right; }
     .mt-next { font-size: 13px; color: var(--muted); margin-top: 4px; }
     .mt-next b { color: var(--ink); font-weight: 600; }
-    #mtSvg { flex: 1 1 auto; min-height: 0; width: 100%; display: block; }
+    #mtSvg { flex: 1 1 auto; min-height: 0; width: 100%; display: block; margin-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
     .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; touch-action: pan-y; }
     .day {
       display: flex; flex-direction: column; align-items: center; gap: 1px;
@@ -559,7 +559,7 @@
       </div>
       <p class="mt-next" id="mtNext"></p>
     </div>
-    <svg id="mtSvg" viewBox="0 30 360 590" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Гора: тропа от стартового веса к цели"></svg>
+    <svg id="mtSvg" viewBox="0 150 360 475" preserveAspectRatio="xMidYMax meet" role="img" aria-label="Гора: тропа от стартового веса к цели"></svg>
   </div>
 
   <!-- Экран всех медалей -->
@@ -1786,7 +1786,13 @@
     // =====================================================================
     const MT_CAMPS = [10, 25, 50, 75, 90];
     // тропа серпантином от подножия к вершине (координаты внутри силуэта горы)
-    const MT_TRAIL = [[70, 578], [272, 548], [112, 502], [252, 456], [150, 410], [272, 372], [176, 322], [242, 272], [194, 218], [224, 166], [204, 118], [200, 76]];
+    const MT_TRAIL = [[60, 600], [310, 572], [50, 535], [300, 500], [70, 462], [290, 430], [100, 396], [270, 366], [130, 336], [240, 310], [150, 284], [214, 258], [172, 236], [185, 213]];
+    // силуэт горы: широкое основание, плечи, острая вершина
+    const MT_SHAPE = 'M-500 1300V640L-200 600L-60 480L10 420L60 360L120 300L150 262L185 210L214 248L240 282L262 296L296 264L322 300L352 346L390 400L460 500L560 620L860 660V1300Z';
+    const MT_PINES = (() => { let g = '';
+      [[-40, 628, 1.2], [-14, 632, 1], [8, 626, 1.4], [30, 634, .9], [318, 630, 1.1], [338, 624, 1.5], [362, 632, 1], [384, 626, 1.3]].forEach(([x, y, k]) => {
+        g += `<path d="M${x} ${y - 30 * k}L${x + 9 * k} ${y - 12 * k}L${x + 5 * k} ${y - 12 * k}L${x + 11 * k} ${y}L${x - 11 * k} ${y}L${x - 5 * k} ${y - 12 * k}L${x - 9 * k} ${y - 12 * k}Z" fill="#0B0C0F"/>`; });
+      return g; })();
     const MT = { t: null, user: null, raf: 0, open: false, face: 1 };
     const mtSeg = MT_TRAIL.slice(1).map((p, i) => Math.hypot(p[0] - MT_TRAIL[i][0], p[1] - MT_TRAIL[i][1]));
     const mtLen = mtSeg.reduce((a, b) => a + b, 0);
@@ -1809,20 +1815,35 @@
       const [fx, fy] = MT_TRAIL[MT_TRAIL.length - 1];
       // фон и скалы шире рамки: на любом экране края заполнены
       svg.innerHTML = `<defs>
-          <linearGradient id="mtSky" gradientUnits="userSpaceOnUse" x1="0" y1="30" x2="0" y2="620"><stop offset="0" stop-color="#121621"/><stop offset=".55" stop-color="#1C2333"/><stop offset="1" stop-color="#15171C"/></linearGradient>
-          <linearGradient id="mtRock" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#40454E"/><stop offset="1" stop-color="#1E2024"/></linearGradient>
-          <linearGradient id="mtRock2" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2D3139"/><stop offset="1" stop-color="#17181B"/></linearGradient>
+          <linearGradient id="mtSky" gradientUnits="userSpaceOnUse" x1="0" y1="60" x2="0" y2="620"><stop offset="0" stop-color="#121621"/><stop offset=".55" stop-color="#1C2333"/><stop offset="1" stop-color="#15171C"/></linearGradient>
+          <linearGradient id="mtLit" gradientUnits="userSpaceOnUse" x1="120" y1="210" x2="200" y2="620"><stop offset="0" stop-color="#5A6170"/><stop offset=".45" stop-color="#3C424D"/><stop offset="1" stop-color="#22252B"/></linearGradient>
+          <linearGradient id="mtFar" gradientUnits="userSpaceOnUse" x1="0" y1="220" x2="0" y2="560"><stop offset="0" stop-color="#2E3647"/><stop offset="1" stop-color="#1A1E27"/></linearGradient>
+          <linearGradient id="mtMid" gradientUnits="userSpaceOnUse" x1="0" y1="300" x2="0" y2="600"><stop offset="0" stop-color="#262B36"/><stop offset="1" stop-color="#16181D"/></linearGradient>
+          <linearGradient id="mtSnow" gradientUnits="userSpaceOnUse" x1="160" y1="210" x2="220" y2="290"><stop offset="0" stop-color="#F4F6F8"/><stop offset="1" stop-color="#C9D0DA"/></linearGradient>
+          <linearGradient id="mtMist" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1C2333" stop-opacity="0"/><stop offset="1" stop-color="#1C2333" stop-opacity=".85"/></linearGradient>
           <radialGradient id="mtMoon"><stop offset="0" stop-color="#F2F3F0" stop-opacity=".22"/><stop offset="1" stop-color="#F2F3F0" stop-opacity="0"/></radialGradient>
+          <clipPath id="mtClip"><path d="${MT_SHAPE}"/></clipPath>
         </defs>
         <rect x="-500" y="-600" width="1360" height="1900" fill="url(#mtSky)"/>${stars}
-        <circle cx="300" cy="70" r="44" fill="url(#mtMoon)"/><circle cx="300" cy="70" r="13" fill="#E9ECEF" opacity=".85"/>
-        <path d="M-500 1300V420L-60 300L30 360L96 250L150 300L232 150L300 260L350 220L420 300L860 380V1300Z" fill="url(#mtRock2)"/>
-        <path d="M-500 1300V600L20 540L70 470L110 490L150 330L178 300L200 66L226 150L250 200L290 330L340 390L860 470V1300Z" fill="url(#mtRock)"/>
-        <path d="M200 66L216 108L206 100L197 114L189 101L184 108Z" fill="#E9ECEF" opacity=".92"/>
+        <circle cx="300" cy="178" r="46" fill="url(#mtMoon)"/><circle cx="300" cy="178" r="13" fill="#E9ECEF" opacity=".85"/>
+        <path d="M-500 1300V420L-120 400L-40 330L20 372L70 316L118 360L150 340L250 400L300 330L344 368L392 300L460 360L860 400V1300Z" fill="url(#mtFar)"/>
+        <rect x="-500" y="370" width="1360" height="200" fill="url(#mtMist)"/>
+        <path d="M-500 1300V500L-80 470L-10 420L44 450L80 425L120 460L260 460L310 410L352 440L400 400L470 450L860 480V1300Z" fill="url(#mtMid)"/>
+        <path d="${MT_SHAPE}" fill="url(#mtLit)"/>
+        <g clip-path="url(#mtClip)">
+          <path d="M100 300L135 268L150 276L162 258L176 270L190 252L204 268L218 256L232 276L246 270L300 190L100 160Z" fill="url(#mtSnow)"/>
+          <path d="M280 284L296 264L312 282L303 279L297 288L289 281Z" fill="#DDE2E8"/>
+          <path d="M40 470L70 440L84 448L100 430 M110 360L130 342L142 350 M-20 540L10 514 M150 420L166 404" fill="none" stroke="#E9ECEF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" opacity=".13"/>
+          <path d="M185 208L196 260L188 310L206 370L198 440L222 520L214 660L900 660L900 160L185 160Z" fill="#05070C" opacity=".42"/>
+          <path d="M185 208L196 260L188 310L206 370L198 440L222 520L214 660" fill="none" stroke="#7C8492" stroke-width="1.2" opacity=".35"/>
+          <path d="M250 340L262 362 M300 420L320 446L316 462 M260 500L272 530 M340 470L356 494" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" opacity=".25"/>
+        </g>
+        <path d="M-500 1300V626Q-120 600 40 618Q140 628 200 622Q300 612 420 620Q640 630 860 612V1300Z" fill="#101216"/>
+        ${MT_PINES}
         <path d="M${MT_TRAIL.map(p => p.join(' ')).join('L')}" fill="none" stroke="#565B64" stroke-width="3" stroke-dasharray="1 7" stroke-linecap="round"/>
         <path id="mtDone" d="" fill="none" stroke="#C6FF3D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
         ${camps}
-        <text id="mtStartT" x="${MT_TRAIL[0][0] - 6}" y="${MT_TRAIL[0][1] + 22}" font-size="13" font-weight="600" fill="#9A9DA3" font-family="Golos Text, system-ui, sans-serif"></text>
+        <text id="mtStartT" x="${MT_TRAIL[0][0] - 4}" y="${MT_TRAIL[0][1] + 20}" font-size="13" font-weight="600" fill="#9A9DA3" font-family="Golos Text, system-ui, sans-serif"></text>
         <line x1="${fx}" y1="${fy}" x2="${fx}" y2="${fy - 22}" stroke="#F2F3F0" stroke-width="1.6"/>
         <path id="mtFlag" d="M${fx} ${fy - 22}L${fx + 17} ${fy - 17}L${fx} ${fy - 12}Z" fill="#F2B53A"/>
         <text id="mtGoalT" x="${fx + 22}" y="${fy - 12}" font-size="13" font-weight="600" fill="#F2F3F0" font-family="Golos Text, system-ui, sans-serif"></text>
