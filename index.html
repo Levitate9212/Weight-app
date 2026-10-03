@@ -224,6 +224,12 @@
     .m-tile { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; }
     .m-tile svg { width: 100%; max-width: 104px; aspect-ratio: 1; filter: drop-shadow(0 5px 7px rgba(23,33,43,.22)); transition: transform .15s ease; }
     .m-tile:active svg { transform: scale(.94); }
+    /* блик от наклона телефона на полученных медалях витрины (включается, только когда есть данные датчика) */
+    .m-tile .mw { position: relative; display: block; width: 100%; max-width: 104px; }
+    .m-tile .mw svg { max-width: none; }
+    .tilt-on .m-tile:not(.locked) .mw::after { content: ""; position: absolute; inset: 7%; border-radius: 50%; pointer-events: none;
+      background: linear-gradient(115deg, transparent 38%, rgba(255,255,255,.34) 48%, rgba(255,255,255,.08) 53%, transparent 62%);
+      background-size: 260% 260%; background-position: calc(50% - var(--tiltX, 0) * 42%) calc(50% - var(--tiltY, 0) * 42%); }
     .m-tile.locked svg { opacity: .8; filter: none; }
     .m-tile b { font-size: 13.5px; line-height: 1.15; }
     .m-tile small { font-size: 12px; color: var(--muted); }
@@ -244,6 +250,10 @@
     .coin .face.grand { border-radius: 0; overflow: visible; }
     .coin .face.grand svg { overflow: visible; }
     .coin .face.grand .sheen-mask { inset: 12px; }
+    /* по лучам особых медалей бежит отблеск: лучи вспыхивают по очереди, вслед за наклоном и поворотом */
+    .ray-glint { position: absolute; inset: -4px; pointer-events: none;
+      background: conic-gradient(from var(--ga, 0deg), rgba(255,246,214,.8), rgba(255,246,214,0) 55deg, rgba(255,246,214,0) 305deg, rgba(255,246,214,.8));
+      -webkit-mask: radial-gradient(circle, transparent 107px, #000 109px); mask: radial-gradient(circle, transparent 107px, #000 109px); }
     .sheen { position: absolute; top: 0; bottom: 0; left: -100%; width: 300%; will-change: transform;
       background: linear-gradient(110deg, transparent 38%, rgba(255,255,255,.28) 48%, rgba(255,255,255,.08) 52%, transparent 60%); }
     .coin-shadow { position: absolute; left: 50%; bottom: 4%; width: 170px; height: 22px; margin-left: -85px; border-radius: 50%;
@@ -1400,6 +1410,7 @@
       $('achScreen').scrollTop = 0;
       $('achScreen').classList.add('open');
       navPush(closeAchScreen);
+      tiltStart();
     }
     function buildAchScreen(u) {
       achBuiltFor = u;
@@ -1435,7 +1446,7 @@
           if (m.status === 'earned') sub = `<small>${dayMonth(m.date)}</small>`;
           else if (m.status === 'next') sub = `<span class="mini"><i style="width:${Math.round(m.progress * 100)}%"></i></span><small>${m.progressText}</small>`;
           else sub = `<small>${m.hidden ? 'секрет' : 'впереди'}</small>`;
-          b.innerHTML = medalSVG(m) + `<b>${m.title}</b>` + sub;
+          b.innerHTML = `<span class="mw">${medalSVG(m)}</span><b>${m.title}</b>` + sub;
           b.onclick = () => m.status === 'earned' ? openCoin(m) : openMedalSheet(m);
           grid.appendChild(b);
         });
@@ -1445,6 +1456,58 @@
     function closeAchScreen() {
       $('achScreen').classList.remove('open');
       navForget(closeAchScreen);
+      tiltStop();
+    }
+
+    // =====================================================================
+    // НАКЛОН ТЕЛЕФОНА: блики на медалях следуют за наклоном.
+    // Датчик работает, только пока открыты медали. Без датчика блик ходит сам, как раньше.
+    // =====================================================================
+    const Tilt = { x: 0, y: 0, tx: 0, ty: 0, users: 0, b0: null, g0: 0, src: null, raf: 0, wx: 9, wy: 9 };
+    function tiltSample(beta, gamma) {               // градусы
+      if (beta == null || gamma == null || isNaN(beta) || isNaN(gamma)) return;
+      if (Tilt.b0 == null) { Tilt.b0 = beta; Tilt.g0 = gamma; document.documentElement.classList.add('tilt-on'); }
+      Tilt.b0 += (beta - Tilt.b0) * 0.004;            // если держишь телефон по-новому, центр медленно подстраивается
+      Tilt.g0 += (gamma - Tilt.g0) * 0.004;
+      Tilt.tx = Math.max(-1, Math.min(1, (gamma - Tilt.g0) / 22));
+      Tilt.ty = Math.max(-1, Math.min(1, (beta - Tilt.b0) / 22));
+    }
+    function tiltLoop() {
+      Tilt.x += (Tilt.tx - Tilt.x) * 0.18; Tilt.y += (Tilt.ty - Tilt.y) * 0.18;
+      if (Math.abs(Tilt.x - Tilt.wx) > 0.004 || Math.abs(Tilt.y - Tilt.wy) > 0.004) {
+        Tilt.wx = Tilt.x; Tilt.wy = Tilt.y;
+        const st = document.documentElement.style;
+        st.setProperty('--tiltX', Tilt.x.toFixed(3)); st.setProperty('--tiltY', Tilt.y.toFixed(3));
+      }
+      Tilt.raf = requestAnimationFrame(tiltLoop);
+    }
+    const onTgTilt = () => { const d = window.Telegram.WebApp.DeviceOrientation; tiltSample(d.beta * 180 / Math.PI, d.gamma * 180 / Math.PI); };
+    const onWinTilt = e => tiltSample(e.beta, e.gamma);
+    function tiltStart() {
+      if (Tilt.users++ || calm()) return;
+      const tg = window.Telegram?.WebApp;
+      try {
+        if (tg?.DeviceOrientation && tg.isVersionAtLeast?.('8.0')) {
+          Tilt.src = 'tg'; tg.onEvent('deviceOrientationChanged', onTgTilt); tg.DeviceOrientation.start({ refresh_rate: 40 });
+        } else if (window.DeviceOrientationEvent) {
+          Tilt.src = 'win';
+          const go = () => window.addEventListener('deviceorientation', onWinTilt);
+          if (typeof DeviceOrientationEvent.requestPermission === 'function') DeviceOrientationEvent.requestPermission().then(r => r === 'granted' && go()).catch(() => {});
+          else go();
+        }
+      } catch (e) {}
+      cancelAnimationFrame(Tilt.raf); Tilt.raf = requestAnimationFrame(tiltLoop);
+    }
+    function tiltStop() {
+      if (Tilt.users === 0 || --Tilt.users > 0) return;
+      const tg = window.Telegram?.WebApp;
+      try {
+        if (Tilt.src === 'tg') { tg.offEvent('deviceOrientationChanged', onTgTilt); tg.DeviceOrientation.stop(); }
+        if (Tilt.src === 'win') window.removeEventListener('deviceorientation', onWinTilt);
+      } catch (e) {}
+      Tilt.src = null; Tilt.b0 = null; Tilt.tx = Tilt.ty = 0;
+      cancelAnimationFrame(Tilt.raf);
+      document.documentElement.classList.remove('tilt-on');
     }
 
     // =====================================================================
@@ -1469,10 +1532,13 @@
     }
 
     const C = { scale: 1, landed: null, angle: 0, vel: 0, tilt: 0, dragging: false, lastX: 0, startY: 0, lastT: 0, mode: 'idle', tween: null, base: 0, idleT0: 0, raf: 0, sheens: null };
+    // контур звезды особых медалей (24 луча, как burst(24) в MedalArt) в пикселях блока 248×248
+    const STAR_CLIP = [...Array(48)].map((_, i) => { const a = i * Math.PI / 24, r = i % 2 ? 110 : 122.5;
+      return `${(124 + r * Math.sin(a)).toFixed(1)}px ${(124 - r * Math.cos(a)).toFixed(1)}px`; }).join(',');
     function buildCoin(m) {
       const coin = $('coin');
       coin.innerHTML = '';
-      C.sheens = null;
+      C.sheens = null; C.glints = null;
       const style = MedalArt.STYLE[m.section](m.metal, m.art);
       // у особых медалей ободок — золотая звезда: ребро монеты золотое и прячется под впадинами лучей
       const grand = !!(style.grand || (MedalArt.ART[m.art] || {}).grand);
@@ -1508,7 +1574,8 @@
         const f = document.createElement('div');
         f.className = 'face' + (grand ? ' grand' : '');
         f.style.transform = back ? `rotateY(180deg) translateZ(${T / 2}px)` : `translateZ(${T / 2}px)`;
-        f.innerHTML = svg.replace('viewBox="-4 -4 248 248"', 'viewBox="0 0 240 240"') + '<div class="sheen-mask"><div class="sheen"></div></div>';
+        f.innerHTML = svg.replace('viewBox="-4 -4 248 248"', 'viewBox="0 0 240 240"') + '<div class="sheen-mask"><div class="sheen"></div></div>' +
+          (grand ? `<div class="ray-glint" style="clip-path:polygon(${STAR_CLIP})"></div>` : '');
         coin.appendChild(f);
       };
       face(MedalArt.medal(medalOpts(m)), false);
@@ -1536,10 +1603,16 @@
       confetti.t = setTimeout(() => { box.innerHTML = ''; }, 4000);
     }
     function coinApply() {
-      $('coin').style.transform = `scale(${C.scale}) rotateX(${C.tilt}deg) rotateY(${C.angle}deg)`;
-      const shift = (-Math.sin(C.angle * Math.PI / 180) * 30).toFixed(1) + '%';
-      if (!C.sheens) C.sheens = $('coin').querySelectorAll('.sheen');
+      // наклон телефона чуть доворачивает монету и гонит блик
+      const tx = C.dragging ? 0 : Tilt.x, ty = C.dragging ? 0 : Tilt.y;
+      $('coin').style.transform = `scale(${C.scale}) rotateX(${(C.tilt - ty * 7).toFixed(2)}deg) rotateY(${(C.angle + tx * 9).toFixed(2)}deg)`;
+      const shift = (-Math.sin(C.angle * Math.PI / 180) * 30 - Tilt.x * 34).toFixed(1) + '%';
+      if (!C.sheens) { C.sheens = $('coin').querySelectorAll('.sheen'); C.glints = $('coin').querySelectorAll('.ray-glint'); }
       C.sheens.forEach(el => { el.style.transform = `translateX(${shift})`; });
+      if (C.glints.length) {
+        const ga = (C.angle * 0.6 + Tilt.x * 140 + Tilt.y * 70 + 300).toFixed(1) + 'deg';
+        C.glints.forEach(el => el.style.setProperty('--ga', ga));
+      }
     }
     function coinLoop(t) {
       if (C.mode === 'tween') {
@@ -1596,8 +1669,10 @@
       }
       cancelAnimationFrame(C.raf);
       C.raf = requestAnimationFrame(coinLoop);
+      if (!C.tiltOn) { C.tiltOn = true; tiltStart(); }
     }
     function closeCoin() {
+      if (C.tiltOn) { C.tiltOn = false; tiltStop(); }
       $('coinView').classList.remove('open');
       $('confetti').innerHTML = '';
       navForget(closeCoin);
