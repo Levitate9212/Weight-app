@@ -813,6 +813,7 @@
       ti_magenta: { hi: '#FFD6EE', mid: '#C9498F', lo: '#5E1A45', dark: '#26091B' },
       ti_flame:   { hi: '#FFE4C6', mid: '#E8782C', lo: '#7A3008', dark: '#2E1103' },
       ti_green:   { hi: '#D8FFE8', mid: '#2FB36F', lo: '#0F5A33', dark: '#05220F' },
+      ti_lime:    { hi: '#F1FFC9', mid: '#9DC63B', lo: '#4A6512', dark: '#1B2604' },
       rosegold:   { hi: '#FFE6DD', mid: '#D99A8A', lo: '#8A4E42', dark: '#3A1E18' },
       // закрытая медаль: тёмный матовый металл
       locked:     { hi: '#7A838C', mid: '#3B434C', lo: '#22282E', dark: '#14181C' }
@@ -828,7 +829,8 @@
     */
     function medal(opts) {
       const id = 'm' + (n++);
-      const rim = M[opts.rim], rel = M[opts.relief];
+      const grand = !!opts.grand && opts.rim !== 'locked';   // особая медаль: золотой лучистый ободок и искры
+      const rim = grand ? M.gold : (M[opts.rim] || M.gunmetal), rel = M[(grand && opts.grandRelief) || opts.relief] || M.gunmetal;
       const shape = opts.shape || 'circle';
       const F = `font-family="Barlow Condensed, Arial Narrow, sans-serif"`;
 
@@ -837,19 +839,23 @@
         const a = (60 * i - 90) * Math.PI / 180;
         return `${(120 + r * Math.cos(a)).toFixed(1)},${(120 + r * Math.sin(a)).toFixed(1)}`;
       }).join(' ');
-      const outer = shape === 'hex' ? `<polygon points="${hexPts(122)}"` : `<circle cx="120" cy="120" r="120"`;
+      const burst = n => [...Array(n * 2)].map((_, i) => {
+        const a = i * Math.PI / n, r = i % 2 ? 110 : 122;
+        return `${(120 + r * Math.sin(a)).toFixed(1)},${(120 - r * Math.cos(a)).toFixed(1)}`;
+      }).join(' ');
+      const outer = shape === 'hex' ? `<polygon points="${hexPts(122)}"` : grand ? `<polygon points="${burst(24)}" stroke="${rim.lo}" stroke-width="1.2" stroke-linejoin="round"` : `<circle cx="120" cy="120" r="120"`;
       const inner = (r, attrs) => shape === 'hex'
         ? `<polygon points="${hexPts(r + 6)}" ${attrs}/>`
         : `<circle cx="120" cy="120" r="${r}" ${attrs}/>`;
 
       // поле
       let fieldFill, fieldExtra = '', ringsColor, ringsOp = .16;
-      const f = opts.field;
+      const f = (grand && opts.grandField) || opts.field;   // у особой медали может быть своё яркое поле
       if (f === 'oxid') {
         fieldFill = `url(#${id}ox)`; ringsColor = rel.mid; ringsOp = .12;
       } else if (f.enamel) {
         fieldFill = `url(#${id}en)`; ringsColor = '#FFFFFF'; ringsOp = 0;
-        fieldExtra = `<ellipse cx="96" cy="78" rx="62" ry="32" fill="#fff" opacity=".18" transform="rotate(-24 96 78)" clip-path="url(#${id}cl)"/>`;
+        fieldExtra = `<ellipse cx="100" cy="104" rx="50" ry="24" fill="#fff" opacity=".12" transform="rotate(-24 100 104)" clip-path="url(#${id}cl)"/>`;
       } else if (f.metal) {
         fieldFill = `url(#${id}fm)`; ringsColor = M[f.metal].lo; ringsOp = .22;
       } else if (f.night) {
@@ -895,12 +901,12 @@
       const caption = opts.caption || 'ВЕС ТЕЛА';
       const light = !!(f.metal || (f.enamel && ['#F2B705'].includes(f.enamel)));   // светлые поля
       const noBand = opts.band === false;
-      const label = noBand ? (light ? '#14181C' : (opts.relief === 'nickel' ? '#FFFFFF' : rel.hi))
+      const label = noBand ? (light ? '#14181C' : (opts.relief === 'nickel' || f.enamel ? '#FFFFFF' : rel.hi))
                            : (opts.relief === 'nickel' ? '#FFFFFF' : rel.hi);
-      const outline = noBand ? `stroke="${light ? 'rgba(255,255,255,.55)' : 'rgba(0,0,0,.55)'}" stroke-width="2.4" paint-order="stroke" stroke-linejoin="round"` : '';
+      const outline = noBand ? `stroke="${light ? 'rgba(255,255,255,.75)' : 'rgba(0,0,0,.8)'}" stroke-width="3.2" paint-order="stroke" stroke-linejoin="round"` : '';
       const numeral = `<text ${F} font-style="italic" font-weight="800" font-size="${noBand ? 25 : 23}" letter-spacing="1" fill="${label}" ${outline}><textPath href="#${noBand ? id + 'arcB2' : id + 'arcB'}" startOffset="50%" text-anchor="middle">${big}</textPath></text>`;
       const _unused = !opts.art ? '' : `<text x="120" y="188" text-anchor="middle" font-size="${big.length > 4 ? 22 : 30}" ${F} font-style="italic" font-weight="800" stroke-width="0">${big}</text>`;
-      const capText = `<text ${F} font-weight="700" font-size="${noBand ? 14 : 13}" letter-spacing="2.4" fill="${label}" ${outline}><textPath href="#${noBand ? id + 'arc2' : id + 'arc'}" startOffset="50%" text-anchor="middle">${caption}</textPath></text>`;
+      const capText = `<text ${F} font-weight="700" font-size="${noBand ? 14 : 13}" letter-spacing="${caption.length > 12 ? 1.2 : 2.4}" fill="${label}" ${outline}><textPath href="#${noBand ? id + 'arc2' : id + 'arc'}" startOffset="50%" text-anchor="middle">${caption}</textPath></text>`;
       // тёмный эмалевый поясок с металлическими кантами
       const band = `
         <circle cx="120" cy="120" r="87" fill="none" stroke="#121619" stroke-opacity=".9" stroke-width="22"/>
@@ -913,7 +919,7 @@
         <path d="M 88 80 l 2 4.6 4.6 2 -4.6 2 -2 4.6 -2 -4.6 -4.6 -2 4.6 -2 z" stroke-width="0"/>
         <path d="M 160 100 l 1.5 3.4 3.4 1.5 -3.4 1.5 -1.5 3.4 -1.5 -3.4 -3.4 -1.5 3.4 -1.5 z" stroke-width="0"/>` : '';
 
-      const ticks = shape === 'circle' ? `<g stroke="${rim.lo}" stroke-width="1.4" opacity=".5">${[...Array(90)].map((_, i) => {
+      const ticks = shape === 'circle' && !grand ? `<g stroke="${rim.lo}" stroke-width="1.4" opacity=".5">${[...Array(90)].map((_, i) => {
         const a = i * 4 * Math.PI / 180;
         return `<line x1="${(120 + Math.sin(a) * 117).toFixed(1)}" y1="${(120 - Math.cos(a) * 117).toFixed(1)}" x2="${(120 + Math.sin(a) * 111).toFixed(1)}" y2="${(120 - Math.cos(a) * 111).toFixed(1)}"/>`;
       }).join('')}</g>` : '';
@@ -930,6 +936,8 @@
         ${capText}
         ${numeral}
         <g clip-path="url(#${id}cl)"><g transform="${noBand ? 'translate(120 110) scale(.74) translate(-120 -106)' : 'translate(120 116) scale(.68) translate(-120 -106)'}">${raised(opts.art || '')}</g></g>
+        ${grand ? `<g fill="url(#${id}rel)" stroke="${rel.lo}" stroke-width=".6">${[[58, 92, 6], [182, 88, 7], [66, 146, 4.5], [176, 150, 5], [50, 120, 3.2], [190, 120, 3.6]].map(([x, y, r]) => `<path d="M${x} ${y - r * 1.8} Q${x + r * .25} ${y - r * .25} ${x + r * 1.8} ${y} Q${x + r * .25} ${y + r * .25} ${x} ${y + r * 1.8} Q${x - r * .25} ${y + r * .25} ${x - r * 1.8} ${y} Q${x - r * .25} ${y - r * .25} ${x} ${y - r * 1.8}Z"/>`).join('')}</g>` : ''}
+        ${opts.paint && opts.rim !== 'locked' ? `<g clip-path="url(#${id}cl)"><g transform="${noBand ? 'translate(120 110) scale(.74) translate(-120 -106)' : 'translate(120 116) scale(.68) translate(-120 -106)'}">${opts.paint}</g></g>` : ''}
         <g clip-path="url(#${id}cl)">${opts.cut ? `
           <g transform="${noBand ? 'translate(120 110) scale(.74) translate(-120 -106)' : 'translate(120 116) scale(.68) translate(-120 -106)'}"><g transform="translate(.7,1)" fill="${rel.hi}" stroke="${rel.hi}" opacity=".7">${opts.cut}</g>
           <g fill="${rel.dark}" stroke="${rel.dark}">${opts.cut}</g></g>` : ''}</g>
@@ -938,7 +946,6 @@
     }
 
     // ===== РИСУНКИ (координаты в поле 240×240, центр 120,120) =====
-    const runner = (x, y, k) => `<path transform="translate(${x},${y}) scale(${k})" d="M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3c1.3 1.5 3.3 2.5 5.5 2.5v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.2L6 8.3V13h2V9.6l1.8-.7z"/>`;
 
     const leaves = (cx, cy, r, from, to, step) => {
       let o = '';
@@ -950,19 +957,18 @@
     };
 
     const ART = {
-      road: {   // путь к цели: дорога к горизонту, бегун на середине пути, флажок финиша
-        art: `<rect x="44" y="76" width="152" height="2.4"/>
-              <polygon points="76,160 164,160 125,77 115,77"/>
-              <rect x="121" y="46" width="2.4" height="31"/><polygon points="123.4,46 146,52 123.4,58"/>
-              ${runner(103, 92, 1.4)}`,
-        cut: `<rect x="118.6" y="150" width="2.8" height="9"/><rect x="118.9" y="130" width="2.2" height="7"/><rect x="119.2" y="114" width="1.6" height="5"/>`
+      road: {   // путь к цели: дорога к горизонту и флажок финиша
+        art: `<rect x="34" y="80" width="172" height="3" rx="1.5"/>
+              <polygon points="52,168 188,168 128,82 112,82"/>
+              <rect x="118.2" y="30" width="3.6" height="52" rx="1.5"/><polygon points="121.8,30 162,42 121.8,54"/>`,
+        cut: `<rect x="117.5" y="146" width="5" height="16" rx="1"/><rect x="118.2" y="119" width="3.6" height="11" rx="1"/><rect x="118.8" y="98" width="2.4" height="8" rx="1"/>`
       },
-      belt: {   // вес тела: ремень, застёжка на очередной дырочке
-        art: `<rect x="20" y="96" width="200" height="34" rx="4"/>
-              <rect x="62" y="88" width="34" height="50" rx="7" fill="none" stroke-width="7"/>
-              <rect x="94" y="108" width="40" height="10" rx="3"/>`,
-        cut: `<circle cx="150" cy="113" r="4"/><circle cx="168" cy="113" r="4"/><circle cx="186" cy="113" r="4"/><circle cx="204" cy="113" r="4"/>
-              <rect x="20" y="100" width="200" height="1.6"/><rect x="20" y="125" width="200" height="1.6"/>`
+      belt: {   // вес тела: напольные весы и стрелка вниз рядом
+        art: `<rect x="46" y="80" width="96" height="84" rx="16"/>
+              <polygon points="160,56 182,56 182,112 198,112 171,148 144,112 160,112"/>`,
+        cut: `<path d="M74 112 A20 20 0 0 1 114 112" fill="none" stroke-width="5"/>
+              <rect x="92" y="94" width="4" height="20" rx="2" transform="rotate(-40 94 112)"/>
+              <rect x="64" y="146" width="60" height="4" rx="2"/>`
       },
       fire: {   // серия: костёр
         art: `<path d="M120 46 C140 72,152 90,144 114 C139 128,129 134,120 134 C107 134,96 126,95 111 C94 98,103 89,108 80 C110 93,116 98,121 98 C118 82,115 64,120 46 Z"/>
@@ -984,12 +990,11 @@
                 <rect x="64" y="93" width="11" height="37" rx="3"/><rect x="165" y="93" width="11" height="37" rx="3"/>
               </g>`
       },
-      podium: {   // цель взята: пьедестал и лавровый венок
-        art: `<rect x="96" y="118" width="48" height="40"/><rect x="50" y="132" width="46" height="26"/><rect x="144" y="140" width="46" height="18"/>
-              ${leaves(120, 84, 25, 105, 250, 18)}${leaves(120, 84, 25, -70, 75, 18)}`,
-        cut: `<text x="120" y="146" text-anchor="middle" font-size="20" font-family="Barlow Condensed, sans-serif" font-weight="800">1</text>
-              <text x="73" y="152" text-anchor="middle" font-size="14" font-family="Barlow Condensed, sans-serif" font-weight="800">2</text>
-              <text x="167" y="155" text-anchor="middle" font-size="12" font-family="Barlow Condensed, sans-serif" font-weight="800">3</text>`
+      podium: {   // цель взята: лавровый венок с галочкой внутри
+        grand: true,
+        grandField: { enamel: '#2453C9' },
+        art: `${leaves(120, 100, 44, 100, 250, 15)}${leaves(120, 100, 44, -70, 80, 15)}
+              <polyline points="98,102 114,118 144,84" fill="none" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>`
       },
       tree: {   // пережил праздники: ёлка со звездой
         art: `<polygon points="120,52 146,92 94,92"/><polygon points="120,72 154,118 86,118"/><polygon points="120,96 162,144 78,144"/>
@@ -997,13 +1002,16 @@
               <path d="M120 34 l3.5 7.6 8 1 -6 5.4 1.8 8 -7.3-4.2 -7.3 4.2 1.8-8 -6-5.4 8-1z"/>
               <circle cx="66" cy="66" r="3"/><circle cx="176" cy="74" r="3"/><circle cx="170" cy="122" r="2.5"/><circle cx="70" cy="118" r="2.5"/>`
       },
-      target: {   // точно в цель: мишень со стрелой
-        art: `<circle cx="114" cy="116" r="44"/>
-              <g transform="rotate(-42 114 116)"><rect x="112" y="40" width="4" height="74"/><polygon points="114,124 106,108 122,108"/>
-              <polygon points="114,30 104,24 104,40 114,46"/><polygon points="114,30 124,24 124,40 114,46"/></g>`,
-        cut: `<circle cx="114" cy="116" r="36" fill="none" stroke-width="5"/>
-              <circle cx="114" cy="116" r="22" fill="none" stroke-width="5"/>
-              <circle cx="114" cy="116" r="8"/>`
+      target: {   // точно в цель: настоящая мишень (белый, чёрный, синий, красный, жёлтый) и стрела в центре
+        art: `<circle cx="112" cy="118" r="50"/>
+              <g transform="rotate(45 112 118)"><rect x="110" y="30" width="4" height="40" rx="1"/>
+              <polygon points="112,26 102,16 102,32 112,42"/><polygon points="112,26 122,16 122,32 112,42"/></g>`,
+        paint: `<circle cx="112" cy="118" r="45" fill="#F4F4F0"/><circle cx="112" cy="118" r="36" fill="#1E1F22"/>
+              <circle cx="112" cy="118" r="27" fill="#2F7FD6"/><circle cx="112" cy="118" r="18" fill="#E0342B"/>
+              <circle cx="112" cy="118" r="9" fill="#F7D21E"/>
+              <circle cx="112" cy="118" r="40.5" fill="none" stroke="#1E1F22" stroke-width=".8"/><circle cx="112" cy="118" r="31.5" fill="none" stroke="#F4F4F0" stroke-width=".8"/>
+              <circle cx="112" cy="118" r="22.5" fill="none" stroke="#1E1F22" stroke-width=".8"/><circle cx="112" cy="118" r="13.5" fill="none" stroke="#1E1F22" stroke-width=".8"/>`,
+        cut: `<rect x="110.5" y="70" width="3" height="48" rx="1" transform="rotate(45 112 118)"/>`
       },
       peak: {   // рубеж: вершина с флагом
         art: `<polygon points="40,158 94,90 116,114 146,62 202,158"/>
@@ -1024,29 +1032,79 @@
         <rect x="78" y="78" width="15" height="55" rx="4"/><rect x="147" y="78" width="15" height="55" rx="4"/>
         <rect x="64" y="87" width="11" height="37" rx="3"/><rect x="165" y="87" width="11" height="37" rx="3"/></g>`;
     Object.assign(ART, {
-      footprint: {   // первый шаг: отпечаток подошвы
-        art: `<path d="M112 46 C132 44,142 62,140 86 C138 102,130 110,130 124 C130 144,121 164,106 164 C91 164,86 148,88 132 C90 118,95 110,95 94 C95 70,97 48,112 46 Z"/>`,
-        cut: [...Array(7)].map((_, i) => `<rect x="94" y="${62 + i * 13}" width="40" height="3.5" rx="1.5" transform="rotate(-8 114 ${64 + i * 13})"/>`).join('')
-      },
+      footprint: (() => {   // первый шаг: отпечаток левой подошвы
+        // Подошва задаётся осью и двумя полуширинами: снаружи (слева) край почти
+        // прямой, внутри (справа) — выпуклость под большим пальцем и выемка подъёма.
+        // Протектор вырезается из той же формы с отступом, поэтому всегда внутри.
+        const top = 44, len = 122;
+        // Гладкая кривая через точки (Эрмит с касательными Катмулла–Рома),
+        // носок и пятка — четверти эллипса, у носка внутренняя сторона круче.
+        const side = (P, a, b) => t => {
+          if (t <= 0 || t >= 1) return 0;
+          if (t < a) return P[0][1] * Math.sqrt(1 - Math.pow((a - t) / a, 2));
+          if (t > b) return P[P.length - 1][1] * Math.sqrt(1 - Math.pow((t - b) / (1 - b), 2));
+          let i = 1;
+          while (t > P[i][0]) i++;
+          const [t0, w0] = P[i - 1], [t1, w1] = P[i], h = t1 - t0, k = (t - t0) / h;
+          const slope = j => (j <= 0 || j >= P.length - 1) ? 0 : (P[j + 1][1] - P[j - 1][1]) / (P[j + 1][0] - P[j - 1][0]);
+          const m0 = slope(i - 1) * h, m1 = slope(i) * h;
+          return (2 * k ** 3 - 3 * k ** 2 + 1) * w0 + (k ** 3 - 2 * k ** 2 + k) * m0 + (-2 * k ** 3 + 3 * k ** 2) * w1 + (k ** 3 - k ** 2) * m1;
+        };
+        const outer = side([[.3, 22], [.42, 20], [.58, 18], [.72, 17], [.84, 17.5]], .3, .84);
+        const inner = side([[.16, 25], [.3, 24], [.44, 20.5], [.56, 15.5], [.68, 15.5], [.84, 17.5]], .16, .84);
+        const T = y => Math.min(1, Math.max(0, (y - top) / len));
+        const cx = y => { const t = T(y); return 115 - (y - top) * .1 + (t < .35 ? 6 * Math.pow(1 - t / .35, 2) : 0); };
+        const xl = y => cx(y) - outer(T(y)), xr = y => cx(y) + inner(T(y));
+        const N = 140, left = [], right = [];
+        for (let i = 0; i <= N; i++) {
+          const y = top + len * i / N;
+          left.push(`${xl(y).toFixed(1)},${y.toFixed(1)}`);
+          right.unshift(`${xr(y).toFixed(1)},${y.toFixed(1)}`);
+        }
+        // Полоска: наклонная лента толщиной h, концы идут по контуру с отступом m.
+        const m = 4.5, h = 3.6, tilt = -.16;
+        const bar = y0 => {
+          const line = (y, x) => y + tilt * (x - 118);
+          // концы ленты: точка на прямой, где она касается внутреннего контура
+          const end = (yy, f, s) => { let x = 118; for (let i = 0; i < 60; i++) { const ny = line(yy, x); const b = f(ny) + s * m; x = b; } return x; };
+          const pts = [], K = 6;
+          const a1 = end(y0, xl, 1), b1 = end(y0, xr, -1), a2 = end(y0 + h, xl, 1), b2 = end(y0 + h, xr, -1);
+          for (let i = 0; i <= K; i++) { const x = a1 + (b1 - a1) * i / K; pts.push([x, line(y0, x)]); }
+          for (let i = 0; i <= K; i++) { const yy = line(y0, b1) + (line(y0 + h, b2) - line(y0, b1)) * i / K; pts.push([xr(yy) - m, yy]); }
+          for (let i = 0; i <= K; i++) { const x = b2 + (a2 - b2) * i / K; pts.push([x, line(y0 + h, x)]); }
+          for (let i = 0; i <= K; i++) { const yy = line(y0 + h, a2) + (line(y0, a1) - line(y0 + h, a2)) * i / K; pts.push([xl(yy) + m, yy]); }
+          return `<polygon points="${pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ')}"/>`;
+        };
+        const rows = [57, 66.5, 76, 85.5, 95, 135, 144.5, 154];
+        return { grand: true, grandField: { enamel: '#C2185B' }, grandRelief: 'gold', art: `<polygon points="${left.concat(right).join(' ')}"/>`, cut: rows.map(bar).join('') };
+      })(),
       calendar: {   // недели в минусе: листок календаря со стрелкой вниз
         art: `<rect x="68" y="58" width="104" height="100" rx="9"/><rect x="88" y="46" width="7" height="22" rx="3"/><rect x="145" y="46" width="7" height="22" rx="3"/>`,
         cut: `<rect x="68" y="78" width="104" height="3"/><polygon points="111,92 129,92 129,116 142,116 120,142 98,116 111,116"/>`
       },
-      runner: {   // здоровый темп: бегун в ровном шаге и пунктир за спиной
-        art: `${runner(96, 50, 4)}<rect x="44" y="132" width="16" height="5" rx="2.5"/><rect x="66" y="132" width="16" height="5" rx="2.5"/><rect x="40" y="114" width="12" height="5" rx="2.5"/><rect x="58" y="114" width="12" height="5" rx="2.5"/>`
+      runner: {   // здоровый темп: сердце с ровным пульсом
+        art: `<path d="M120 158 C76 128,58 104,66 82 C74 60,104 56,120 78 C136 56,166 60,174 82 C182 104,164 128,120 158 Z"/>`,
+        cut: `<polyline points="70,106 96,106 104,92 114,124 126,84 136,112 142,106 170,106" fill="none" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`
       },
-      boomerang: {  // камбэк: классический V-образный бумеранг и стрелка возврата
-        art: `<polyline points="66,140 112,70 172,116" fill="none" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M150 56 a30 30 0 0 1 30 34" fill="none" stroke-width="5" stroke-linecap="round"/>
-              <polygon points="172,86 190,88 180,102"/>`
+      boomerang: {  // камбэк: график поднялся и вернулся к прежнему минимуму
+        art: `<polyline points="50,64 86,128 122,84 160,128" fill="none" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="160" cy="128" r="12"/>
+              ${[0, 1, 2, 3, 4, 5, 6].map(i => `<rect x="${52 + i * 20}" y="150" width="11" height="3.5" rx="1.75"/>`).join('')}`
       },
       bird: {   // ранняя пташка: птица над восходом
         art: `<path d="M86 158 A34 34 0 0 1 154 158 Z"/>${rays(120, 158, 40, 52, 9, .08)}
               <rect x="50" y="158" width="140" height="4"/>
-              <path d="M74 84 q23 -24 46 0 q23 -24 46 0 q-23 -9 -46 11 q-23 -20 -46 -11z"/>`
+              <path d="M66 82 q27 -28 54 0 q27 -28 54 0 q-27 -10 -54 14 q-27 -24 -54 -14z"/>`
       },
-      steps: {   // идеальная неделя: семь ступенек
-        art: [...Array(7)].map((_, i) => `<rect x="${55 + i * 19}" y="${150 - (16 + i * 13)}" width="16" height="${16 + i * 13}" rx="2"/>`).join('')
+      steps: {   // идеальная неделя: кольцо из семи дней, все закрыты
+        art: (() => {
+          const cx = 120, cy = 106, R = 46, r = 34, gap = 5 * Math.PI / 180;
+          const pt = (a, rr) => `${(cx + rr * Math.cos(a)).toFixed(1)},${(cy + rr * Math.sin(a)).toFixed(1)}`;
+          return [...Array(7)].map((_, i) => {
+            const a1 = -Math.PI / 2 + i * 2 * Math.PI / 7 + gap / 2, a2 = a1 + 2 * Math.PI / 7 - gap;
+            return `<path d="M${pt(a1, R)} A${R} ${R} 0 0 1 ${pt(a2, R)} L${pt(a2, r)} A${r} ${r} 0 0 0 ${pt(a1, r)} Z"/>`;
+          }).join('') + `<polyline points="104,106 116,118 138,94" fill="none" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>`;
+        })()
       },
       sunmoon: {   // полный день: солнце и месяц
         art: `<circle cx="92" cy="104" r="22"/>${rays(92, 104, 28, 40, 10, .12)}
@@ -1064,39 +1122,61 @@
         cut: `<path d="M110 72 l2 4.5 4.5 2 -4.5 2 -2 4.5 -2 -4.5 -4.5 -2 4.5 -2z"/><path d="M130 78 l1.5 3.4 3.4 1.5 -3.4 1.5 -1.5 3.4 -1.5 -3.4 -3.4 -1.5 3.4 -1.5z"/>
               <path d="M120 134 l2.4 5.4 5.4 2.4 -5.4 2.4 -2.4 5.4 -2.4 -5.4 -5.4 -2.4 5.4 -2.4z"/>`
       },
-      sneaker: {   // первая тренировка: кроссовок
-        art: `<path d="M50 134 C50 120,58 114,70 112 L102 106 C110 92,118 80,126 74 L142 74 C144 88,152 98,172 104 C186 108,194 118,194 130 L194 138 C194 144,190 148,184 148 L56 148 C52 148,50 144,50 140 Z"/>`,
-        cut: `<rect x="50" y="135" width="144" height="4"/><rect x="116" y="88" width="14" height="3" rx="1.5" transform="rotate(-30 123 89)"/>
-              <rect x="122" y="98" width="14" height="3" rx="1.5" transform="rotate(-30 129 99)"/><rect x="128" y="108" width="14" height="3" rx="1.5" transform="rotate(-30 135 109)"/>`
+      sneaker: {   // первая тренировка: беговой кроссовок сбоку, носок вправо
+        grand: true,
+        grandRelief: 'gold',
+        art: `<path d="M38 147 C38 141,42 137,50 137 L170 137 C184 137,196 131,205 124 C209 133,207 147,197 153 C191 157,183 159,173 159 L52 159 C44 159,38 155,38 147 Z"/>
+              <rect x="8" y="100" width="26" height="5" rx="2.5"/><rect x="0" y="114" width="34" height="5" rx="2.5"/><rect x="12" y="128" width="22" height="5" rx="2.5"/>
+              <path d="M46 137 C39 121,41 105,52 94 C61 101,73 105,85 100 C89 92,93 85,99 80 L108 82 C126 93,151 104,173 112 C190 118,201 121,205 124 C196 131,184 137,170 137 Z"/>`,
+        cut: `<path d="M46 137 L170 137 C184 137,196 131,205 124" fill="none" stroke-width="2.6"/>
+              ${[58, 78, 98, 118, 138, 158].map(x => `<rect x="${x}" y="150" width="11" height="3" rx="1.5"/>`).join('')}
+              <path d="M53 96 C60 112,62 125,60 137" fill="none" stroke-width="3"/>
+              <path d="M172 113 C179 120,181 128,179 135" fill="none" stroke-width="3"/>
+              <path d="M70 128 C96 127,122 120,146 104" fill="none" stroke-width="4" stroke-linecap="round"/>
+              ${[[104, 88], [114, 93], [124, 98], [134, 103]].map(([x, y]) => `<rect x="${x}" y="${y}" width="12" height="3.2" rx="1.6" transform="rotate(-30 ${x + 6} ${y + 1.6})"/>`).join('')}`
       },
-      crossed: {   // активные недели: скрещённые гантели
-        art: dumbbellAt(-35) + dumbbellAt(35)
+      crossed: {   // активные недели: листок недели, отмечены три дня
+        art: `<rect x="58" y="58" width="124" height="104" rx="10"/><rect x="82" y="48" width="7" height="20" rx="3"/><rect x="151" y="48" width="7" height="20" rx="3"/>`,
+        cut: `<rect x="58" y="76" width="124" height="3"/>
+              ${[[80, 102, 1], [107, 102, 0], [134, 102, 1], [161, 102, 0], [93, 136, 1], [120, 136, 0], [147, 136, 0]].map(([x, y, on]) => on
+                ? `<polyline points="${x - 9},${y} ${x - 3},${y + 7} ${x + 9},${y - 7}" fill="none" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>`
+                : `<circle cx="${x}" cy="${y}" r="3.5"/>`).join('')}`
       },
       sun: {   // серия 365: солнце с 12 лучами
         art: `<circle cx="120" cy="106" r="28"/>${rays(120, 106, 34, 60, 12, .11)}`,
         cut: `<circle cx="120" cy="106" r="20" fill="none" stroke-width="3"/>`
       },
-      laurel: {   // год в деле: лавровый венок
+      laurel: {   // год в деле: лавровый венок со звездой
+        grand: true,
         art: `${leaves(120, 104, 46, 100, 250, 13)}${leaves(120, 104, 46, -70, 80, 13)}
-              <rect x="88" y="154" width="64" height="6" rx="3"/>`
+              <path d="M120 80 l6.5 13.5 14.8 2 -10.8 10.3 2.7 14.7 -13.2 -7.1 -13.2 7.1 2.7 -14.7 -10.8 -10.3 14.8 -2z"/>`
       },
       cake: {   // с днём рождения: торт со свечой
+        grand: true,
         art: `<rect x="70" y="112" width="100" height="42" rx="6"/><rect x="84" y="86" width="72" height="30" rx="6"/>
               <rect x="116" y="58" width="8" height="30" rx="2"/><path d="M120 34 C127 44,128 50,120 56 C112 50,113 44,120 34 Z"/>`,
         cut: `<path d="M70 126 q8.3 8 16.6 0 t16.6 0 t16.6 0 t16.6 0 t16.6 0 t16.6 0" fill="none" stroke-width="3"/>
-              <path d="M84 98 q9 7 18 0 t18 0 t18 0 t18 0" fill="none" stroke-width="3"/>`
+              <path d="M84 98 q9 7 18 0 t18 0 t18 0 t18 0" fill="none" stroke-width="3"/>`,
+        paint: `<path d="M120 36 C126 45,127 50,120 55 C113 50,114 45,120 36 Z" fill="#FFB020"/><path d="M120 44 C123 48,123 51,120 53 C117 51,117 48,120 44 Z" fill="#FF6A1A"/>
+              ${[[66, 84, '#E8434B', 20], [174, 82, '#2F8FE0', -30], [70, 108, '#2FBF6A', 40], [180, 106, '#F2B705', -15], [92, 66, '#B455D6', 60], [150, 64, '#2FBF6A', -50], [54, 140, '#F2B705', 10], [188, 138, '#E8434B', -40]]
+                .map(([x, y, c, a]) => `<rect x="${x - 5}" y="${y - 2}" width="10" height="4" rx="1.5" fill="${c}" transform="rotate(${a} ${x} ${y})"/>`).join('')}
+              ${[[84, 90, '#2F8FE0'], [160, 94, '#E8434B'], [100, 72, '#F2B705'], [140, 72, '#B455D6'], [60, 120, '#2F8FE0'], [184, 120, '#2FBF6A']].map(([x, y, c]) => `<circle cx="${x}" cy="${y}" r="2.6" fill="${c}"/>`).join('')}`
       },
       digits: {   // красивое число
         art: `<text x="120" y="132" text-anchor="middle" font-size="64" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-style="italic" font-weight="800">88,8</text>`
       }
     });
 
+    const HABIT_ENAMEL = { fire: '#167C8C', steps: '#5E43A8', sunmoon: '#245F9E', scale: '#7B5E3B', bird: '#C9577E' };
     const STYLE = {
       weight:   m => ({ rim: m, relief: m, field: 'oxid' }),
-      habit:    m => ({ rim: m, relief: m, field: { enamel: '#0E8F7E' } }),
+      body:     m => ({ rim: m, relief: 'silver', field: { enamel: { ti_sky: '#1E6FB0', ti_blue: '#2A45A8', ti_violet: '#5B36A8', ti_magenta: '#9A2F6E', ti_flame: '#B5521A' }[m] || '#2A45A8' } }),
+      // привычка: у каждой серии своя эмаль, металл ободка — ступень
+      habit:    (m, art) => ({ rim: m, relief: m, field: { enamel: HABIT_ENAMEL[art] || '#0E8F7E' } }),
       sleep:    m => ({ rim: m, relief: 'silver', field: { night: true } }),
       training: m => ({ rim: m, relief: m === 'bronze' ? 'bronze' : m === 'gold' ? 'gold' : 'silver', field: { enamel: '#C8323A' } }),
-      main:     m => ({ rim: 'nickel', relief: 'gold', field: { enamel: '#16191C' } }),
+      // главные: золотой лучистый ободок (grand), поле своё у каждой
+      main:     (m, art) => ({ grand: true, rim: 'nickel', relief: 'gold', field: { enamel: { podium: '#16191C', fire: '#0E8F7E', sun: '#0E8F7E', scale: '#3F5870', dumbbell: '#C8323A', laurel: '#3B2466' }[art] || '#16191C' } }),
       seasonal: m => ({ rim: 'gold', relief: 'gold', field: { metal: 'silver' } }),
       hidden:   m => ({ rim: 'gold', relief: 'nickel', field: { enamel: '#F2B705' } })
     };
@@ -1130,7 +1210,7 @@
     // Параметры рисования медали по данным с сервера
     function medalOpts(m, forCoin) {
       const locked = m.status !== 'earned';
-      const style = locked ? { rim: 'locked', relief: 'locked', field: 'oxid' } : MedalArt.STYLE[m.section](m.metal);
+      const style = locked ? { rim: 'locked', relief: 'locked', field: 'oxid' } : MedalArt.STYLE[m.art === 'belt' ? 'body' : m.section](m.metal, m.art);
       const art = m.art && MedalArt.ART[m.art] ? MedalArt.ART[m.art] : {};
       return { label: m.title, ...style, ...art, big: m.big || '', caption: m.caption || '', band: false };
     }
