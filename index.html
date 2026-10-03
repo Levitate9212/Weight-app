@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Weight Tracker</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;0,800;1,700;1,800&family=Golos+Text:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -135,7 +135,7 @@
     .eta b { color: var(--ink); font-weight: 600; }
 
     /* Неделя */
-    .week-block { margin-top: 12px; }
+    .week-block { margin-top: 12px; overflow: hidden; }
     .week-head { display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: var(--muted); margin-bottom: 6px; }
     .week-nav { display: flex; align-items: center; gap: 2px; }
     .week-nav button { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: var(--muted); }
@@ -160,6 +160,10 @@
     .day.sel .dw, .day.sel .dd { color: var(--volt-ink); opacity: .7; }
     .day.sel.today .dw::after { background: var(--volt-ink); }
     .dd.down { color: var(--down); } .dd.up { color: var(--up); }
+    .days.slide-l { animation: weekInL .32s cubic-bezier(.2, .8, .2, 1); }
+    .days.slide-r { animation: weekInR .32s cubic-bezier(.2, .8, .2, 1); }
+    @keyframes weekInL { from { opacity: .2; transform: translateX(28%); } to { opacity: 1; transform: none; } }
+    @keyframes weekInR { from { opacity: .2; transform: translateX(-28%); } to { opacity: 1; transform: none; } }
     #emptyWeekNote { text-align: center; font-size: 13px; color: var(--muted); margin-top: 6px; }
 
     /* Плашки: тренировки и серия */
@@ -510,6 +514,11 @@
   <script>
     const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx3eYPedBPTxSl83O8NuajX-h0sopO4MV3S30nQfyvfXbSnPd3vKsckGl2ibuggxrFDaQ/exec";
 
+    // Запрос данных уходит сразу, не дожидаясь библиотеки графика и шрифтов
+    const dataUrl = () => `${APPS_SCRIPT_URL}?initData=${encodeURIComponent(window.Telegram?.WebApp?.initData || "")}`;
+    let earlyRequest = fetch(dataUrl()).then(r => r.text());
+    earlyRequest.catch(() => {});
+
     let chartInstance = null;
     let globalData = {};
     let activeUserId = null;
@@ -629,6 +638,7 @@
       selectedDateTimestamp = null;
       safeHaptic('light');
       renderDashboard();
+      slideWeek(dir);
     }
 
     function resetToToday() {
@@ -636,13 +646,23 @@
       selectedDateTimestamp = null;
       safeHaptic('medium');
       renderDashboard();
+      slideWeek(1);
+    }
+
+    // Неделя въезжает с той стороны, куда листали
+    function slideWeek(dir) {
+      if (calm()) return;
+      const el = $('days');
+      el.classList.remove('slide-l', 'slide-r');
+      el.offsetWidth;
+      el.classList.add(dir > 0 ? 'slide-l' : 'slide-r');
     }
 
     async function fetchData(refresh) {
-      const initData = window.Telegram?.WebApp?.initData || "";
       try {
-        const res = await fetch(`${APPS_SCRIPT_URL}?initData=${encodeURIComponent(initData)}`);
-        const text = await res.text();
+        const req = !refresh && earlyRequest ? earlyRequest : fetch(dataUrl()).then(r => r.text());
+        earlyRequest = null;
+        const text = await req;
         let data;
         try { data = JSON.parse(text); }
         catch (e) { throw new Error("Сервер Google ещё просыпается. Нажмите «Повторить попытку» через несколько секунд."); }
@@ -743,6 +763,7 @@
       renderDashboard();
       intro = false;
       checkNewMedals();
+      prebuildAchScreen();
     }
 
     // Данные после обновления потягиванием: остаёмся на том же человеке и периоде
@@ -758,6 +779,7 @@
       safeHaptic('success');
       awardChecked = false;
       checkNewMedals();
+      prebuildAchScreen();
     }
 
     function renderUserTabs() {
@@ -790,6 +812,7 @@
       renderUserTabs();
       chartReveal = true;
       renderDashboard();
+      prebuildAchScreen();
     }
 
     function setPeriod(p) {
@@ -1333,10 +1356,25 @@
       return medalCache[k];
     }
 
+    // Экран достижений собирается заранее, в паузе после открытия главного экрана,
+    // и переиспользуется, пока не сменились данные или человек — открывается мгновенно
+    let achBuiltFor = null, achIdle = 0;
+    function prebuildAchScreen() {
+      const run = () => { const u = globalData[activeUserId]; if (u && u.medals && u.medals.catalog && achBuiltFor !== u) buildAchScreen(u); };
+      if (window.cancelIdleCallback && achIdle) cancelIdleCallback(achIdle); else clearTimeout(achIdle);
+      achIdle = window.requestIdleCallback ? requestIdleCallback(run, { timeout: 2500 }) : setTimeout(run, 1200);
+    }
     function openAchScreen() {
       const u = globalData[activeUserId];
       if (!u || !u.medals || !u.medals.catalog) return;
       safeHaptic('light');
+      if (achBuiltFor !== u) buildAchScreen(u);
+      $('achScreen').scrollTop = 0;
+      $('achScreen').classList.add('open');
+      navPush(closeAchScreen);
+    }
+    function buildAchScreen(u) {
+      achBuiltFor = u;
       const cat = u.medals.catalog;
       const earnedN = cat.filter(m => m.status === 'earned').length;
       $('achScreenCount').textContent = `${earnedN} из ${cat.length}`;
@@ -1375,9 +1413,6 @@
         });
         box.appendChild(sec);
       });
-      $('achScreen').scrollTop = 0;
-      $('achScreen').classList.add('open');
-      navPush(closeAchScreen);
     }
     function closeAchScreen() {
       $('achScreen').classList.remove('open');
