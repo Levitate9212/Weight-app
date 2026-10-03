@@ -931,6 +931,7 @@
         ${capText}
         ${numeral}
         <g clip-path="url(#${id}cl)"><g transform="${noBand ? 'translate(120 110) scale(.74) translate(-120 -106)' : 'translate(120 116) scale(.68) translate(-120 -106)'}">${raised(opts.art || '')}</g></g>
+        ${opts.paint ? `<g clip-path="url(#${id}cl)"><g transform="${noBand ? 'translate(120 110) scale(.74) translate(-120 -106)' : 'translate(120 116) scale(.68) translate(-120 -106)'}">${opts.paint}</g></g>` : ''}
         <g clip-path="url(#${id}cl)">${opts.cut ? `
           <g transform="${noBand ? 'translate(120 110) scale(.74) translate(-120 -106)' : 'translate(120 116) scale(.68) translate(-120 -106)'}"><g transform="translate(.7,1)" fill="${rel.hi}" stroke="${rel.hi}" opacity=".7">${opts.cut}</g>
           <g fill="${rel.dark}" stroke="${rel.dark}">${opts.cut}</g></g>` : ''}</g>
@@ -993,14 +994,16 @@
               <path d="M120 34 l3.5 7.6 8 1 -6 5.4 1.8 8 -7.3-4.2 -7.3 4.2 1.8-8 -6-5.4 8-1z"/>
               <circle cx="66" cy="66" r="3"/><circle cx="176" cy="74" r="3"/><circle cx="170" cy="122" r="2.5"/><circle cx="70" cy="118" r="2.5"/>`
       },
-      target: {   // точно в цель: мишень и стрела в самом центре
-        art: `<circle cx="112" cy="118" r="46"/>
-              <g transform="rotate(45 112 118)"><rect x="110" y="34" width="4" height="40" rx="1"/>
-              <polygon points="112,30 102,20 102,36 112,46"/><polygon points="112,30 122,20 122,36 112,46"/></g>`,
-        cut: `<circle cx="112" cy="118" r="37" fill="none" stroke-width="5"/>
-              <circle cx="112" cy="118" r="23" fill="none" stroke-width="5"/>
-              <circle cx="112" cy="118" r="9"/>
-              <rect x="110" y="72" width="4" height="46" rx="1" transform="rotate(45 112 118)"/>`
+      target: {   // точно в цель: настоящая мишень (белый, чёрный, синий, красный, жёлтый) и стрела в центре
+        art: `<circle cx="112" cy="118" r="50"/>
+              <g transform="rotate(45 112 118)"><rect x="110" y="30" width="4" height="40" rx="1"/>
+              <polygon points="112,26 102,16 102,32 112,42"/><polygon points="112,26 122,16 122,32 112,42"/></g>`,
+        paint: `<circle cx="112" cy="118" r="45" fill="#F4F4F0"/><circle cx="112" cy="118" r="36" fill="#1E1F22"/>
+              <circle cx="112" cy="118" r="27" fill="#2F7FD6"/><circle cx="112" cy="118" r="18" fill="#E0342B"/>
+              <circle cx="112" cy="118" r="9" fill="#F7D21E"/>
+              <circle cx="112" cy="118" r="40.5" fill="none" stroke="#1E1F22" stroke-width=".8"/><circle cx="112" cy="118" r="31.5" fill="none" stroke="#F4F4F0" stroke-width=".8"/>
+              <circle cx="112" cy="118" r="22.5" fill="none" stroke="#1E1F22" stroke-width=".8"/><circle cx="112" cy="118" r="13.5" fill="none" stroke="#1E1F22" stroke-width=".8"/>`,
+        cut: `<rect x="110.5" y="70" width="3" height="48" rx="1" transform="rotate(45 112 118)"/>`
       },
       peak: {   // рубеж: вершина с флагом
         art: `<polygon points="40,158 94,90 116,114 146,62 202,158"/>
@@ -1111,10 +1114,15 @@
         cut: `<path d="M110 72 l2 4.5 4.5 2 -4.5 2 -2 4.5 -2 -4.5 -4.5 -2 4.5 -2z"/><path d="M130 78 l1.5 3.4 3.4 1.5 -3.4 1.5 -1.5 3.4 -1.5 -3.4 -3.4 -1.5 3.4 -1.5z"/>
               <path d="M120 134 l2.4 5.4 5.4 2.4 -5.4 2.4 -2.4 5.4 -2.4 -5.4 -5.4 -2.4 5.4 -2.4z"/>`
       },
-      sneaker: {   // первая тренировка: кроссовок
-        art: `<path d="M50 134 C50 120,58 114,70 112 L102 106 C110 92,118 80,126 74 L142 74 C144 88,152 98,172 104 C186 108,194 118,194 130 L194 138 C194 144,190 148,184 148 L56 148 C52 148,50 144,50 140 Z"/>`,
-        cut: `<rect x="50" y="135" width="144" height="4"/><rect x="116" y="88" width="14" height="3" rx="1.5" transform="rotate(-30 123 89)"/>
-              <rect x="122" y="98" width="14" height="3" rx="1.5" transform="rotate(-30 129 99)"/><rect x="128" y="108" width="14" height="3" rx="1.5" transform="rotate(-30 135 109)"/>`
+      sneaker: {   // первая тренировка: беговой кроссовок сбоку, носок вправо
+        art: `<path d="M38 147 C38 141,42 137,50 137 L170 137 C184 137,196 131,205 124 C209 133,207 147,197 153 C191 157,183 159,173 159 L52 159 C44 159,38 155,38 147 Z"/>
+              <path d="M46 137 C39 121,41 105,52 94 C61 101,73 105,85 100 C89 92,93 85,99 80 L108 82 C126 93,151 104,173 112 C190 118,201 121,205 124 C196 131,184 137,170 137 Z"/>`,
+        cut: `<path d="M46 137 L170 137 C184 137,196 131,205 124" fill="none" stroke-width="2.6"/>
+              ${[58, 78, 98, 118, 138, 158].map(x => `<rect x="${x}" y="150" width="11" height="3" rx="1.5"/>`).join('')}
+              <path d="M53 96 C60 112,62 125,60 137" fill="none" stroke-width="3"/>
+              <path d="M172 113 C179 120,181 128,179 135" fill="none" stroke-width="3"/>
+              <path d="M70 128 C96 127,122 120,146 104" fill="none" stroke-width="4" stroke-linecap="round"/>
+              ${[[104, 88], [114, 93], [124, 98], [134, 103]].map(([x, y]) => `<rect x="${x}" y="${y}" width="12" height="3.2" rx="1.6" transform="rotate(-30 ${x + 6} ${y + 1.6})"/>`).join('')}`
       },
       crossed: {   // активные недели: листок недели, отмечены три дня
         art: `<rect x="58" y="58" width="124" height="104" rx="10"/><rect x="82" y="48" width="7" height="20" rx="3"/><rect x="151" y="48" width="7" height="20" rx="3"/>`,
@@ -1142,13 +1150,16 @@
       }
     });
 
+    const HABIT_ENAMEL = { fire: '#0E8F7E', steps: '#5E43A8', sunmoon: '#245F9E', scale: '#3F5870', bird: '#C46A35' };
     const STYLE = {
       weight:   m => ({ rim: m, relief: m, field: 'oxid' }),
       body:     m => ({ rim: m, relief: 'silver', field: { enamel: { ti_sky: '#1E6FB0', ti_blue: '#2A45A8', ti_violet: '#5B36A8', ti_magenta: '#9A2F6E', ti_flame: '#B5521A' }[m] || '#2A45A8' } }),
-      habit:    m => ({ rim: m, relief: m, field: { enamel: '#0E8F7E' } }),
+      // привычка: у каждой серии своя эмаль, металл ободка — ступень
+      habit:    (m, art) => ({ rim: m, relief: m, field: { enamel: HABIT_ENAMEL[art] || '#0E8F7E' } }),
       sleep:    m => ({ rim: m, relief: 'silver', field: { night: true } }),
       training: m => ({ rim: m, relief: m === 'bronze' ? 'bronze' : m === 'gold' ? 'gold' : 'silver', field: { enamel: '#C8323A' } }),
-      main:     m => ({ rim: 'nickel', relief: 'gold', field: { enamel: '#16191C' } }),
+      // главные: чёрный никель и золото, поле — цвет своей семьи (вес, привычка, тренировки)
+      main:     (m, art) => ({ rim: 'nickel', relief: 'gold', field: { enamel: { podium: '#16191C', fire: HABIT_ENAMEL.fire, sun: HABIT_ENAMEL.fire, scale: HABIT_ENAMEL.scale, dumbbell: '#C8323A', laurel: '#3B2466' }[art] || '#16191C' } }),
       seasonal: m => ({ rim: 'gold', relief: 'gold', field: { metal: 'silver' } }),
       hidden:   m => ({ rim: 'gold', relief: 'nickel', field: { enamel: '#F2B705' } })
     };
@@ -1182,7 +1193,7 @@
     // Параметры рисования медали по данным с сервера
     function medalOpts(m, forCoin) {
       const locked = m.status !== 'earned';
-      const style = locked ? { rim: 'locked', relief: 'locked', field: 'oxid' } : MedalArt.STYLE[m.art === 'belt' ? 'body' : m.section](m.metal);
+      const style = locked ? { rim: 'locked', relief: 'locked', field: 'oxid' } : MedalArt.STYLE[m.art === 'belt' ? 'body' : m.section](m.metal, m.art);
       const art = m.art && MedalArt.ART[m.art] ? MedalArt.ART[m.art] : {};
       return { label: m.title, ...style, ...art, big: m.big || '', caption: m.caption || '', band: false };
     }
