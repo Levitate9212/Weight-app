@@ -2759,10 +2759,15 @@
       mtCompany(u, t);
       cancelAnimationFrame(MT.raf);
       if (calm() || Math.abs(t - from) < 0.002) { MT.face = mtAt(t)[2]; mtDraw(t, reached, false); return; }
-      const t0 = performance.now(), dur = 1600 + 3200 * Math.abs(t - from);
+      // Время идёт по кадрам, а не по часам: пока гора собирается и экран выезжает, кадры
+      // бывают по полсекунды, и раньше человечек стоял, а потом рывком догонял. Долгий кадр
+      // засчитывается как обычный (не больше 34 мс). Старт — после короткой паузы, разгон и торможение плавные.
+      const dur = 3200 + 6400 * Math.abs(t - from);
+      let el = -350, last = null;
       const step = now => {
-        const k = Math.min(1, (now - t0) / dur), e = k < 1 ? 1 - Math.pow(1 - k, 2) : 1;
-        mtDraw(from + (t - from) * e, reached, k < 1);
+        el += last == null ? 0 : Math.min(now - last, 34); last = now;
+        const k = Math.max(0, Math.min(1, el / dur)), e = k < .5 ? 2 * k * k : 1 - Math.pow(2 - 2 * k, 2) / 2;
+        mtDraw(from + (t - from) * e, reached, el > 0 && k < 1);
         if (k < 1) MT.raf = requestAnimationFrame(step);
       };
       MT.raf = requestAnimationFrame(step);
