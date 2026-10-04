@@ -192,6 +192,18 @@
     html.light .st-tile.wait::after, html.light .st-coach.wait::after { background-image: linear-gradient(90deg, var(--panel2), #F6F7F3, var(--panel2)); }
     @keyframes stShim { to { background-position: -200% 0; } }
     .st-week7 { display: flex; justify-content: space-between; }
+    .st-week7 i.pl::after { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--volt); }
+    .st-wo + .st-wo { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--panel2); }
+    .st-wo-h { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+    .st-wo-h i { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; flex: none; }
+    .st-wo-h i svg.col { width: 36px; height: 36px; } .st-wo-h i svg:not(.col) { width: 26px; height: 26px; color: var(--muted); }
+    .st-wo-h b { display: block; font-size: 17px; } .st-wo-h span { color: var(--muted); font-size: 13px; }
+    .st-wo-m { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+    .st-wo-m div { background: var(--panel2); border-radius: 12px; padding: 8px 10px; font-size: 11.5px; color: var(--muted); line-height: 1.25; }
+    .st-wo-m b { display: block; font-family: var(--num); font-size: 19px; color: var(--ink); font-weight: 800; }
+    .st-wo-r { margin-top: 10px; } .st-wo-r summary { cursor: pointer; font-weight: 700; font-size: 14px; color: var(--volt); list-style: none; }
+    .st-wo-r summary::-webkit-details-marker { display: none; } .st-wo-r summary::after { content: " ›"; } .st-wo-r[open] summary::after { content: " ⌄"; }
+    .st-wo-r p { margin-top: 8px; font-size: 14.5px; line-height: 1.45; white-space: pre-line; }
     .st-week7 > div { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); width: 13%; }
     .st-week7 i { width: 32px; height: 32px; border-radius: 10px; background: var(--panel2); display: grid; place-items: center; color: #121315; }
     .st-week7 i svg { width: 19px; height: 19px; }
@@ -1993,11 +2005,23 @@
         return `<div class="st-tile" style="background:${m.c}">${stIcon(m.ic)}${s.km || s.min ? `<span class="n">×${s.n}</span>` : ''}<div class="v">${v}</div><div class="l">${esc(l)}</div></div>`;
       });
       // тренировки, вид которых не удалось узнать, — отдельной плиткой, чтобы плитки сходились со «всего»
-      const rest = workouts - sp.reduce((a, [, s]) => a + s.n, 0);
+      const rest = workouts - sp.reduce((a, [, s]) => a + s.n, 0) - ((dist && dist.plain) || 0);
       if (rest > 0) { tiles.push(`<div class="st-tile unk">${stIcon('q')}<div class="v">${rest}<small>${plural(rest, 'раз', 'раза', 'раз')}</small></div><div class="l">Вид не указан</div></div>`); }
       const km = dist && dist.km;
       tiles.push(`<div class="st-tile tot${tiles.length % 2 ? '' : ' wide'}"><p class="st-k">Всего</p><div class="v">${km ? `${stKm(km)}<small>км</small>` : workouts}</div><div class="l">${km ? stWord(workouts, 'тренировка', 'тренировки', 'тренировок') : plural(workouts, 'тренировка', 'тренировки', 'тренировок')}</div></div>`);
       return `<div class="st-tiles">${tiles.join('')}</div>`;
+    }
+    // карточка одной тренировки (с октября): вид, когда, все показатели со скрина и разбор тренера
+    const ST_WO_M = [['km', 'км', v => stKm(v)], ['min', 'время', v => v >= 60 ? `${Math.floor(v / 60)}:${String(Math.round(v % 60)).padStart(2, '0')}` : `${Math.round(v)} мин`],
+      ['pace', 'темп /км', v => v], ['speed', 'км/ч', v => fmt(v)], ['hr', 'пульс', v => v], ['hrMax', 'пульс макс', v => v], ['kcal', 'ккал', v => v],
+      ['elev', 'набор, м', v => v], ['steps', 'шаги', v => Number(v).toLocaleString('ru-RU')], ['cadence', 'каденс', v => v], ['te', 'эффект', v => fmt(v)]];
+    function stWoCard(w) {
+      const known = w.sport && w.sport !== 'тренировка', m = known ? stSport(w.sport) : null, d = new Date(w.at);
+      const when = isNaN(d) ? '' : `${ST_DAYS[(d.getDay() + 6) % 7].toLowerCase()}, ${d.getDate()} ${ST_GEN[d.getMonth()].slice(0, 3)} · ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+      const met = ST_WO_M.filter(([k]) => w[k] != null && w[k] !== '').map(([k, l, f]) => `<div><b>${esc(String(f(w[k])))}</b>${l}</div>`).join('');
+      return `<div class="st-wo"><div class="st-wo-h"><i style="background:${m ? m.c : 'var(--panel2)'}">${stIcon(m ? m.ic : 'q', '')}</i><div><b>${known ? esc(stCap(w.sport)) : 'Вид не указан'}</b><span>${when}</span></div></div>
+        ${met ? `<div class="st-wo-m">${met}</div>` : ''}
+        ${w.review ? `<details class="st-wo-r"><summary>Разбор тренера</summary><p>${esc(w.review)}</p></details>` : ''}</div>`;
     }
     const stChange = (c, cls) => `<div class="st-big ${cls(c)}">${stKg(c)}<small>кг</small></div>`;
     // карточки: [{ id, tab, html() }]; id нужен, чтобы после ответа сервера остаться на той же
@@ -2014,8 +2038,8 @@
           const days = [...Array(7)].map((_, d) => {
             const day = new Date(w.from); day.setDate(day.getDate() + d);
             const e = w.ws.filter(x => +x.d === +day).pop(), sd = s && s.days[d], wo = sd && sd.workouts[0];
-            const m = wo && stSport(wo.sport);
-            return `<div class="${e ? '' : 'off'}">${ST_DAYS[d]}<i${m ? ` style="background:${m.c}" title="${esc(sd.workouts.map(stWo).join(', '))}"` : ''}>${m ? stIcon(m.ic, '') : ''}</i><b>${e ? fmt(e.w) : '—'}</b></div>`;
+            const m = wo && wo.sport && stSport(wo.sport);
+            return `<div class="${e ? '' : 'off'}">${ST_DAYS[d]}<i${m ? ` style="background:${m.c}" title="${esc(sd.workouts.map(stWo).join(', '))}"` : wo ? ' class="pl" title="тренировка"' : ''}>${m ? stIcon(m.ic, '') : ''}</i><b>${e ? fmt(e.w) : '—'}</b></div>`;
           }).join('');
           const sl = s && s.sleep && s.sleep.nights >= 3 ? s.sleep : null;
           const sleep = sl ? (() => {
@@ -2036,6 +2060,7 @@
               ${w.ws.length ? stChart(w) : '<p class="st-sub">На этой неделе замеров не было</p>'}</div>
             ${failed ? '' : stTiles(s && s.distance, s ? s.workouts : 0, wait)}
             ${stCoach(p && p.workouts)}
+            ${s && s.list && s.list.length ? `<div class="st-box"><p class="st-k">Тренировки недели</p>${s.list.map(stWoCard).join('')}</div>` : ''}
             <div class="st-box"><div class="st-week7">${days}</div>${stCoach(p && p.days, wait)}</div>
             ${sleep}
             ${w.medals.length ? `<div class="st-box"><p class="st-k">Медали недели</p><div class="st-medals">${w.medals.slice(0, 8).map(md => `<div class="md">${medalPic(md)}${esc(md.title)}</div>`).join('')}</div></div>` : ''}
