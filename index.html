@@ -47,7 +47,6 @@
       color-scheme: light;
     }
     html.light #story { background: var(--bg); }
-    html.light .st-bars i { background: rgba(21,23,26,.16); }
     html.light .day.empty .dn { color: #A6A9AE; }
     html.light #mtView { background: #4E9BD6; }
     html.light .mt-top { color: #15171A; }
@@ -136,47 +135,114 @@
       font-family: var(--text); font-size: 10.5px; font-weight: 700; text-transform: uppercase; color: var(--ink); letter-spacing: .02em; }
     #story { position: fixed; inset: 0; z-index: 45; background: #0D0E10; color: var(--ink); display: flex; flex-direction: column;
       padding: calc(10px + env(safe-area-inset-top, 0px)) 16px calc(16px + env(safe-area-inset-bottom, 0px));
-      opacity: 0; pointer-events: none; transform: scale(.96); transition: opacity .25s ease, transform .3s cubic-bezier(.3,.8,.3,1); touch-action: none; user-select: none; -webkit-user-select: none; }
+      opacity: 0; pointer-events: none; transform: scale(.96); transition: opacity .25s ease, transform .3s cubic-bezier(.3,.8,.3,1); user-select: none; -webkit-user-select: none; overflow: hidden; }
     #story.open { opacity: 1; pointer-events: auto; transform: none; }
-    .st-bars { display: flex; gap: 4px; }
-    .st-bars i { flex: 1; height: 3px; border-radius: 2px; background: rgba(242,243,240,.22); overflow: hidden; }
-    .st-bars i b { display: block; height: 100%; width: 0; background: var(--ink); }
-    .st-bars i.done b { width: 100%; }
-    .st-head { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
-    .st-head .t { font-size: 13px; font-weight: 600; color: var(--muted); }
+    .st-head { display: flex; justify-content: space-between; align-items: center; padding: 0 2px; }
+    .st-head .t { font-size: 17px; font-weight: 600; color: var(--muted); }
     .st-head .t b { color: var(--ink); }
-    .st-x { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: var(--ink); font-size: 22px; line-height: 1; }
-    .st-page { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; gap: 18px; padding: 10px 4px; }
-    .st-page.in > * { animation: stIn .5s cubic-bezier(.3,.8,.3,1) both; }
-    .st-page.in > *:nth-child(2) { animation-delay: .07s; } .st-page.in > *:nth-child(3) { animation-delay: .14s; }
-    .st-page.in > *:nth-child(4) { animation-delay: .21s; } .st-page.in > *:nth-child(5) { animation-delay: .28s; }
-    @keyframes stIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
-    .st-k { font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--volt); }
-    .st-month { font-family: var(--display); font-weight: 700; font-size: clamp(38px, 12vw, 54px); line-height: .95; text-transform: uppercase; letter-spacing: -.01em; }
-    .st-big { font-family: var(--num); font-weight: 800; font-size: 84px; line-height: .9; font-variant-numeric: tabular-nums; }
-    .st-big small { font-size: 26px; color: var(--muted); font-weight: 600; }
+    .st-x { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: inherit; font-size: 24px; line-height: 1; }
+    /* переключатель: недели, месяц, прошлый месяц */
+    .st-tabs { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 10px -16px 0; padding: 0 16px 12px; flex: none; }
+    .st-tabs::-webkit-scrollbar { display: none; }
+    .st-tabs button { flex: none; padding: 8px 13px; border-radius: 12px; background: var(--panel); color: var(--muted); font-size: 13px; font-weight: 600; white-space: nowrap; }
+    .st-tabs button.on { background: var(--volt); color: var(--volt-ink); }
+    html.light .st-tabs button.on { background: #C6FF3D; }
+    /* карточка: всё видно сразу, листается вниз */
+    .st-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin: 0 -16px; padding: 0 16px 8px; scrollbar-width: none; touch-action: pan-y; }
+    .st-scroll::-webkit-scrollbar { display: none; }
+    .st-card { display: flex; flex-direction: column; gap: 10px; }
+    .st-card.in-l { animation: stInL .35s cubic-bezier(.3,.8,.3,1) both; } .st-card.in-r { animation: stInR .35s cubic-bezier(.3,.8,.3,1) both; }
+    @keyframes stInL { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
+    @keyframes stInR { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+    .st-box { background: var(--panel); border-radius: 22px; padding: 16px; }
+    .st-k { font-size: 11.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+    .st-hero { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+    .st-hero .side { text-align: right; font-size: 13px; color: var(--muted); line-height: 1.65; margin-top: 2px; white-space: nowrap; }
+    .st-month { font-family: var(--display); font-weight: 700; font-size: 40px; line-height: 1; text-transform: uppercase; letter-spacing: -.01em; margin-top: 6px; }
+    .st-big { font-family: var(--num); font-weight: 800; font-size: 76px; line-height: .9; font-variant-numeric: tabular-nums; margin-top: 8px; }
+    .st-big small { font-size: 24px; color: var(--muted); font-weight: 700; margin-left: 2px; }
     .st-big.down { color: var(--down); } .st-big.up { color: var(--up); }
-    .st-sub { color: var(--muted); font-size: 14px; margin-top: 6px; }
-    .st-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-    .st-chip { background: var(--panel); border-radius: 12px; padding: 9px 12px; font-size: 13px; color: var(--muted); }
-    .st-chip b { display: block; font-family: var(--num); font-size: 24px; color: var(--ink); font-weight: 700; line-height: 1.05; }
-    .st-chart { background: var(--panel); border-radius: 18px; padding: 12px; }
-    .st-chart svg { display: block; width: 100%; height: 120px; overflow: visible; }
-    .st-chart .ln { fill: none; stroke: var(--volt); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-    .st-page.in .st-chart .ln { animation: stDraw 1.1s .25s ease-out both; }
+    .st-sub { color: var(--muted); font-size: 13.5px; margin-top: 6px; }
+    .st-chart { margin-top: 12px; }
+    .st-chart svg { display: block; width: 100%; height: 96px; overflow: visible; }
+    .st-chart .ln { fill: none; stroke: var(--volt); stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+    .st-card.draw .st-chart .ln { animation: stDraw 1s .15s ease-out both; }
     @keyframes stDraw { from { stroke-dashoffset: var(--len); } to { stroke-dashoffset: 0; } }
     .st-chart text { fill: var(--muted); font-size: 11px; font-family: var(--text); }
-    .st-medals { display: flex; gap: 10px; flex-wrap: wrap; }
-    .st-medals .md { width: 76px; text-align: center; font-size: 11.5px; color: var(--muted); line-height: 1.2; }
-    .st-medals svg, .st-medals img { width: 76px; height: 76px; display: block; margin-bottom: 4px; }
-    .st-coach { position: relative; background: var(--panel); border-radius: 16px; padding: 14px 16px 14px 46px; font-size: 16px; line-height: 1.4; min-height: 52px; }
-    .st-coach::before { content: ""; position: absolute; left: 14px; top: 15px; width: 20px; height: 20px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #E9FF9E, var(--volt) 60%, #8FBF1A); }
-    .st-coach.wait { color: transparent; }
-    .st-coach.wait::after { content: ""; position: absolute; left: 46px; right: 16px; top: 18px; height: 12px; border-radius: 6px;
+    .st-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    .st-chip { background: var(--panel2); border-radius: 12px; padding: 8px 12px; font-size: 12.5px; color: var(--muted); }
+    .st-chip b { display: block; font-family: var(--num); font-size: 24px; color: var(--ink); font-weight: 700; line-height: 1.05; }
+    /* виды спорта: у каждого свой цвет и значок */
+    .st-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .st-tile { position: relative; border-radius: 20px; padding: 14px; min-height: 120px; color: #121315; display: flex; flex-direction: column; }
+    .st-tile .si { width: 30px; height: 30px; }
+    .st-tile .n { position: absolute; right: 14px; top: 15px; font-weight: 700; font-size: 13px; }
+    .st-tile .v { font-family: var(--num); font-weight: 800; font-size: 38px; line-height: 1; margin-top: auto; padding-top: 10px; }
+    .st-tile .v small { font-size: 17px; margin-left: 2px; }
+    .st-tile .l { font-size: 12.5px; font-weight: 600; opacity: .72; margin-top: 3px; }
+    .st-tile.tot { background: var(--panel); color: var(--ink); }
+    .st-tile.tot .v { color: var(--volt); } .st-tile.tot .v small, .st-tile.tot .l { color: var(--muted); opacity: 1; }
+    .st-tile.wait { background: var(--panel); }
+    .st-tile.wait::after, .st-coach.wait::after { content: ""; position: absolute; left: 16px; right: 16px; top: 18px; height: 12px; border-radius: 6px;
       background: linear-gradient(90deg, var(--panel2), #34373D, var(--panel2)); background-size: 200% 100%; animation: stShim 1.2s linear infinite; }
+    html.light .st-tile.wait::after, html.light .st-coach.wait::after { background-image: linear-gradient(90deg, var(--panel2), #F6F7F3, var(--panel2)); }
     @keyframes stShim { to { background-position: -200% 0; } }
-    .st-close { align-self: stretch; height: 52px; border-radius: 16px; background: var(--volt); color: #121315; font-weight: 700; font-size: 16px; }
-    @media (prefers-reduced-motion: reduce) { .st-page.in > *, .st-page.in .st-chart .ln { animation: none; } }
+    .st-week7 { display: flex; justify-content: space-between; }
+    .st-week7 > div { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); width: 13%; }
+    .st-week7 i { width: 32px; height: 32px; border-radius: 10px; background: var(--panel2); display: grid; place-items: center; color: #121315; }
+    .st-week7 i svg { width: 19px; height: 19px; }
+    .st-week7 b { font-family: var(--num); font-size: 14px; white-space: nowrap; letter-spacing: -.01em; font-weight: 700; color: var(--ink); }
+    .st-week7 .off b { color: var(--muted); font-weight: 600; }
+    .st-sleep { display: flex; gap: 6px; align-items: flex-end; height: 74px; margin-top: 12px; }
+    .st-sleep > div { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%; gap: 4px; font-size: 10.5px; color: var(--muted); }
+    .st-sleep i { width: 100%; border-radius: 6px; background: var(--panel2); min-height: 3px; }
+    .st-sleep i.best { background: var(--volt); } .st-sleep i.low { background: #FF7A3D; }
+    .st-medals { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+    .st-medals .md { width: 72px; text-align: center; font-size: 11px; color: var(--muted); line-height: 1.2; }
+    .st-medals svg, .st-medals img { width: 72px; height: 72px; display: block; margin-bottom: 4px; }
+    .st-coach { position: relative; background: var(--panel); border-radius: 18px; padding: 14px 16px 14px 46px; font-size: 15px; line-height: 1.4; min-height: 50px; }
+    .st-coach::before { content: ""; position: absolute; left: 15px; top: 15px; width: 20px; height: 20px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #E9FF9E, #C6FF3D 60%, #8FBF1A); }
+    .st-coach.wait { color: transparent; }
+    .st-coach.wait::after { left: 46px; }
+    .st-box .st-coach { background: none; padding: 0 0 0 32px; min-height: 0; margin-top: 12px; color: var(--ink); }
+    .st-box .st-coach::before { left: 0; top: 1px; }
+    .st-verdict { font-size: 19px; line-height: 1.35; font-weight: 600; margin-top: 10px; }
+    .st-plan { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+    .st-plan > div { display: flex; gap: 12px; align-items: center; font-size: 16px; font-weight: 600; line-height: 1.25; }
+    .st-plan > div span { flex: none; width: 28px; height: 28px; border-radius: 50%; background: #C6FF3D; color: #121315; display: grid; place-items: center; font-family: var(--num); font-weight: 800; }
+    .st-wk { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-top: 1px solid var(--rule); width: 100%; text-align: left; color: inherit; }
+    .st-wk:first-of-type { border-top: 0; }
+    .st-wk span { font-size: 14px; } .st-wk small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+    .st-wk b { margin-left: auto; font-family: var(--num); font-size: 22px; font-weight: 700; }
+    .st-wk b.down { color: var(--down); } .st-wk b.up { color: var(--up); }
+    .st-wk em { font-style: normal; color: var(--muted); font-size: 18px; }
+    .st-close { height: 54px; border-radius: 18px; background: #C6FF3D; color: #121315; font-weight: 700; font-size: 16px; margin-top: 2px; flex: none; }
+    /* яркая обложка недели при открытии: тап или 4 секунды — и под ней карточка */
+    .st-poster { position: absolute; inset: 0; z-index: 3; background: #C6FF3D; color: #121315; display: flex; flex-direction: column;
+      padding: calc(14px + env(safe-area-inset-top, 0px)) 24px calc(24px + env(safe-area-inset-bottom, 0px)); transition: transform .45s cubic-bezier(.5,0,.3,1), opacity .45s; }
+    .st-poster.gone { transform: translateY(-100%); opacity: .6; pointer-events: none; }
+    .st-poster.off { display: none; }
+    .st-poster .bar { height: 3px; border-radius: 2px; background: rgba(0,0,0,.18); overflow: hidden; }
+    .st-poster .bar b { display: block; height: 100%; width: 0; background: #121315; }
+    .st-poster .st-head { margin: 10px -2px 0; } .st-poster .st-head .t { color: rgba(18,19,21,.7); font-size: 14px; }
+    .st-poster .st-k { color: rgba(18,19,21,.6); margin-top: auto; }
+    .st-poster .huge { font-family: var(--num); font-weight: 800; font-size: clamp(110px, 40vw, 190px); line-height: .85; letter-spacing: -.02em; margin-top: 12px; font-variant-numeric: tabular-nums; }
+    .st-poster .huge.sm { font-size: clamp(60px, 22vw, 92px); text-transform: uppercase; font-family: var(--display); letter-spacing: -.02em; }
+    .st-poster .unit { font-family: var(--num); font-weight: 700; font-size: 24px; margin-top: 16px; }
+    .st-poster svg.sp { width: 100%; height: 90px; margin-top: 26px; overflow: visible; }
+    .st-poster .stats { display: flex; gap: 26px; margin-top: 30px; }
+    .st-poster .stats b { display: block; font-family: var(--num); font-weight: 800; font-size: 46px; line-height: 1; }
+    .st-poster .stats span { font-size: 13px; font-weight: 600; opacity: .7; }
+    .st-poster .say { margin-top: 26px; font-size: 17px; font-weight: 600; line-height: 1.35; min-height: 46px; }
+    .st-poster .hint { margin-top: auto; padding-top: 18px; text-align: center; font-size: 13px; font-weight: 600; opacity: .55; }
+    .st-poster.in .huge, .st-poster.in .unit, .st-poster.in .stats, .st-poster.in .say { animation: stIn .55s cubic-bezier(.3,.8,.3,1) both; }
+    .st-poster.in .unit { animation-delay: .08s; } .st-poster.in .stats { animation-delay: .16s; } .st-poster.in .say { animation-delay: .24s; }
+    .st-poster.in svg.sp path { animation: stDraw 1.1s .2s ease-out both; }
+    @keyframes stIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+    @media (prefers-reduced-motion: reduce) {
+      .st-card.in-l, .st-card.in-r, .st-card.draw .st-chart .ln, .st-poster.in *, .st-poster.in svg.sp path { animation: none !important; }
+      .st-poster { transition: none; }
+    }
     .who-name {
       font-size: 14px; font-weight: 600; padding: 7px 18px; border-radius: 999px;
       color: var(--muted); box-shadow: inset 0 0 0 1px var(--rule);
@@ -232,6 +298,15 @@
     .mt-next b { color: var(--ink); font-weight: 600; }
     .mt-hint { position: absolute; left: 0; right: 0; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); text-align: center; font-size: 12.5px; font-weight: 600; color: rgba(242,243,240,.55); pointer-events: none; transition: opacity .4s ease; }
     .mt-hint.off { opacity: 0; }
+    #mtSvg .mt-baked { opacity: 0; transition: opacity .5s; }
+    #mtSvg .mt-baked.on { opacity: 1; }
+    /* костёр: языки огня чуть колышутся, искры поднимаются и гаснут */
+    #mtSvg .mt-flame { transform-box: fill-box; transform-origin: 50% 100%; animation: mtFlick 1.3s ease-in-out infinite alternate; }
+    #mtSvg .mt-flame.b { animation-duration: .9s; animation-delay: -.4s; }
+    #mtSvg .mt-spark { animation: mtSpark 2.4s linear infinite; }
+    @keyframes mtFlick { from { transform: scale(1, 1); } 50% { transform: scale(.94, 1.07) skewX(-3deg); } to { transform: scale(1.04, .95) skewX(2deg); } }
+    @keyframes mtSpark { from { transform: translateY(24px); opacity: 0; } 15% { opacity: 1; } to { transform: translateY(-14px); opacity: 0; } }
+    @media (prefers-reduced-motion: reduce) { #mtSvg .mt-flame, #mtSvg .mt-spark { animation: none; } }
     #mtSvg { flex: 1 1 auto; min-height: 0; width: 100%; display: block; touch-action: none; cursor: grab; margin-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
     .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; touch-action: pan-y; }
     .day {
@@ -500,10 +575,11 @@
   <div id="ptr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg></div>
   <div id="toast" role="status"></div>
   <div id="confetti" aria-hidden="true"></div>
-  <div id="story" role="dialog" aria-label="Итоги месяца" aria-hidden="true">
-    <div class="st-bars" id="stBars"></div>
+  <div id="story" role="dialog" aria-label="Итоги" aria-hidden="true">
     <div class="st-head"><span class="t" id="stTitle"></span><button class="st-x" onclick="closeStory()" aria-label="Закрыть">×</button></div>
-    <div class="st-page" id="stPage"></div>
+    <div class="st-tabs" id="stTabs"></div>
+    <div class="st-scroll" id="stPage"></div>
+    <div class="st-poster off" id="stPoster"></div>
   </div>
 
   <main>
@@ -1770,32 +1846,46 @@
     }
 
     // =====================================================================
-    // ИТОГИ МЕСЯЦА: «сторис» за прошлый месяц, по страничке на неделю.
-    // Вес и медали берём из уже загруженных данных, тренировки и фразы тренера
-    // приходят с сервера (фразы каждый раз новые).
+    // ИТОГИ: «сторис» месяца, который состоит из недель. Неделя — с понедельника по воскресенье
+    // и относится к месяцу, где её воскресенье. У каждой закончившейся недели своя глава:
+    // вес по дням, сон, тренировки и километры, медали, вывод и план тренера. В понедельник
+    // появляется новая неделя, и кружок снова загорается. Вес и медали — из уже загруженных
+    // данных, остальное (сон, тренировки, тексты тренера) приходит с сервера.
     // =====================================================================
     const ST_MONTHS = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
     const ST_GEN = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
-    const ST = { u: null, pages: [], i: 0, timer: 0, t0: 0, left: 0, paused: false, srv: null, req: 0 };
-    const ST_DUR = 8000;
-    function storyMonth() { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); return { y: d.getFullYear(), m: d.getMonth() }; }
-    const stYm = ({ y, m }) => `${y}-${String(m + 1).padStart(2, '0')}`;
-    const stSeenKey = u => `story_seen_${u.id || activeUserId}_${stYm(storyMonth())}`;
+    const ST = { u: null, views: [], i: 0, timer: 0, posterT0: 0, posterOn: false, srv: null, prev: null, req: 0 };
+    const ST_POSTER = 4500;
     function stDay(ts) { const d = new Date(ts); if (d.getHours() < 4) d.setDate(d.getDate() - 1); d.setHours(0, 0, 0, 0); return d; }
+    const stKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    // последнее закончившееся воскресенье (сегодняшнее ещё идёт)
+    function stLastSunday() { const d = stDay(Date.now()); d.setDate(d.getDate() - ((d.getDay() + 6) % 7) - 1); return d; }
+    // кружок показывает месяц последней закончившейся недели
+    function storyMonth() { const s = stLastSunday(); return { y: s.getFullYear(), m: s.getMonth() }; }
+    const stYm = ({ y, m }) => `${y}-${String(m + 1).padStart(2, '0')}`;
+    const stSeenKey = u => `story_seen_${u.id || activeUserId}_${stKey(stLastSunday())}`;
+    // закончившиеся недели месяца: воскресенье в этом месяце и уже позади
     function stWeeks(y, m) {
-      const last = new Date(y, m + 1, 0), out = [];
-      let from = new Date(y, m, 1);
-      while (from <= last) {
-        const to = new Date(from); to.setDate(to.getDate() + ((7 - to.getDay()) % 7));
-        if (to > last) to.setTime(last.getTime());
-        out.push({ from: new Date(from), to: new Date(to) });
-        from = new Date(to); from.setDate(from.getDate() + 1);
+      const last = new Date(y, m + 1, 0), end = stLastSunday(), out = [];
+      const sun = new Date(y, m, 1); sun.setDate(sun.getDate() + (7 - sun.getDay()) % 7);
+      while (sun <= last && sun <= end) {
+        const from = new Date(sun); from.setDate(from.getDate() - 6);
+        out.push({ from, to: new Date(sun) });
+        sun.setDate(sun.getDate() + 7);
       }
       return out;
     }
+    // границы месяца — его полные недели: с понедельника первой по воскресенье последней
+    // (октябрь 2026 — 28 сентября – 25 октября), так сумма недель всегда равна месяцу
+    function stMonthSpan(y, m) {
+      const from = new Date(y, m, 1); from.setDate(from.getDate() + (7 - from.getDay()) % 7 - 6);
+      const to = new Date(y, m + 1, 0); to.setDate(to.getDate() - to.getDay());
+      return { from, to };
+    }
     function renderStoryRing(u) {
-      const mo = storyMonth(), ring = $('storyRing');
-      const has = (u.entries || []).some(e => { const d = stDay(e.timestamp); return d.getFullYear() === mo.y && d.getMonth() === mo.m; });
+      const mo = storyMonth(), ring = $('storyRing'), wk = stWeeks(mo.y, mo.m);
+      const from = stMonthSpan(mo.y, mo.m).from;
+      const has = (u.entries || []).some(e => stDay(e.timestamp) >= from);
       ring.classList.toggle('hidden', !has);
       if (!has) return;
       $('storyRingTxt').textContent = ST_MONTHS[mo.m].slice(0, 3);
@@ -1811,27 +1901,31 @@
       const weeks = stWeeks(y, m).map((wk, i) => {
         const ws = E.filter(e => inR(e.d, wk.from, wk.to)), b = before(wk.from);
         const base = b.length ? b[b.length - 1].w : (ws[0] ? ws[0].w : null), end = ws.length ? ws[ws.length - 1].w : null;
-        return { i, ...wk, ws, days: Math.round((wk.to - wk.from) / DAY_MS) + 1,
+        return { i, ...wk, ws, days: 7, key: stKey(wk.from),
           change: base != null && end != null ? +(end - base).toFixed(1) : null,
           medals: cat.filter(md => md.status === 'earned' && md.date && inR(stDay(new Date(md.date).getTime()), wk.from, wk.to)) };
       });
-      const mFirst = new Date(y, m, 1), mLast = new Date(y, m + 1, 0);
+      const { from: mFirst, to: mLast } = stMonthSpan(y, m);
       const mw = E.filter(e => inR(e.d, mFirst, mLast)), bm = before(mFirst);
       const startW = bm.length ? bm[bm.length - 1].w : (mw[0] ? mw[0].w : null), endW = mw.length ? mw[mw.length - 1].w : null;
       const good = c => c != null && (losing ? c < 0 : c > 0);
       const best = weeks.filter(w => good(w.change)).sort((a, b) => losing ? a.change - b.change : b.change - a.change)[0];
-      // путь к цели: где был в начале месяца и где в конце
+      // путь к цели: где был в начале месяца и где сейчас
       let path = null;
       if (u.target && u.start && startW != null && endW != null && u.start !== u.target) {
         const pc = w => Math.max(0, Math.min(100, Math.round((u.start - w) / (u.start - u.target) * 100)));
         path = [pc(startW), pc(endW)];
       }
-      return { y, m, losing, weeks, change: startW != null && endW != null ? +(endW - startW).toFixed(1) : null,
-               weighIns: mw.length, medals: weeks.reduce((s, w) => s + w.medals.length, 0), best, path, good };
+      return { y, m, losing, weeks, from: mFirst, to: mLast, ended: mLast < stDay(Date.now()), change: startW != null && endW != null ? +(endW - startW).toFixed(1) : null,
+               weighIns: mw.length, medals: cat.filter(md => md.status === 'earned' && md.date && inR(stDay(new Date(md.date).getTime()), mFirst, mLast)).length, best, path, good };
     }
     const stKg = c => c == null ? '—' : (c > 0 ? '+' : c < 0 ? '−' : '') + fmt(Math.abs(c).toFixed(1));
+    const stKm = v => fmt(+(+v).toFixed(1));
+    const stHm = min => `${Math.floor(min / 60)}ч ${String(min % 60).padStart(2, '0')}м`;
     const stRange = (a, b) => a.getMonth() === b.getMonth() ? `${a.getDate()}–${b.getDate()} ${ST_GEN[b.getMonth()]}` : `${a.getDate()} ${ST_GEN[a.getMonth()]} – ${b.getDate()} ${ST_GEN[b.getMonth()]}`;
-    function stCoach(text) { return text ? `<div class="st-coach">${esc(text)}</div>` : `<div class="st-coach wait">…</div>`; }
+    const ST_DAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+    const ST_WEEKDAY_ACC = ['в воскресенье', 'в понедельник', 'во вторник', 'в среду', 'в четверг', 'в пятницу', 'в субботу'];
+    function stCoach(text, wait) { return text ? `<div class="st-coach">${esc(text)}</div>` : wait ? `<div class="st-coach wait">…</div>` : ''; }
     function esc(t) { return String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
     function stChart(w) {
       if (w.ws.length < 2) return w.ws.length ? `<div class="st-chart"><svg viewBox="0 0 300 120"><circle cx="150" cy="60" r="6" fill="var(--volt)"/><text x="150" y="92" text-anchor="middle">${fmt(w.ws[0].w)} кг</text></svg></div>` : '';
@@ -1839,8 +1933,7 @@
       const X = e => 16 + (e.d - w.from) / DAY_MS / Math.max(1, n - 1) * 268, Y = v => 14 + (hi + pad - v) / (hi - lo + 2 * pad) * 84;
       const pts = ws.map(e => [X(e), Y(e.w)]);
       let len = 0; pts.forEach((p, i) => { if (i) len += Math.hypot(p[0] - pts[i - 1][0], p[1] - pts[i - 1][1]); });
-      const days = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб'];
-      const labels = [...Array(n)].map((_, k) => { const d = new Date(w.from); d.setDate(d.getDate() + k); return `<text x="${(16 + k / Math.max(1, n - 1) * 268).toFixed(1)}" y="118" text-anchor="middle">${days[d.getDay()]}</text>`; }).join('');
+      const labels = [...Array(n)].map((_, k) => `<text x="${(16 + k / Math.max(1, n - 1) * 268).toFixed(1)}" y="118" text-anchor="middle">${ST_DAYS[k].toLowerCase()}</text>`).join('');
       const lastP = pts[pts.length - 1];
       return `<div class="st-chart"><svg viewBox="0 0 300 120">${labels}
         <polyline class="ln" points="${pts.map(p => p.map(v => v.toFixed(1)).join(',')).join(' ')}" style="--len:${len.toFixed(0)};stroke-dasharray:${len.toFixed(0)}"/>
@@ -1848,105 +1941,236 @@
         <text x="${pts[0][0].toFixed(1)}" y="${(pts[0][1] - 9).toFixed(1)}" text-anchor="start">${fmt(ws[0].w)}</text>
         <text x="${lastP[0].toFixed(1)}" y="${(lastP[1] - 10).toFixed(1)}" text-anchor="end" style="fill:var(--ink);font-weight:600">${fmt(ws[ws.length - 1].w)}</text></svg></div>`;
     }
-    function stPages(u, b) {
-      const srv = ST.srv, ph = srv && srv.phrases, wo = i => srv && srv.weeks && srv.weeks[i] ? srv.weeks[i].workouts : null;
-      const cls = c => c == null ? '' : b.good(c) ? 'down' : c === 0 ? '' : 'up';
-      const totalWo = srv && srv.summary ? srv.summary.workouts : null, dots = srv && srv.failed ? '—' : '…';
-      const pages = [() => `
-        <p class="st-k">Итоги месяца · ${esc(u.name || '')}</p>
-        <div class="st-month">${ST_MONTHS[b.m]}</div>
-        <div><div class="st-big ${cls(b.change)}">${stKg(b.change)} <small>кг</small></div><p class="st-sub">за месяц</p></div>
-        <div class="st-chips"><span class="st-chip"><b>${b.weighIns}</b>замеров</span><span class="st-chip"><b>${totalWo == null ? dots : totalWo}</b>тренировок</span><span class="st-chip"><b>${b.medals}</b>медалей</span></div>
-        ${stCoach(ph && ph.cover)}`];
-      b.weeks.forEach(w => pages.push(() => `
-        <p class="st-k">Неделя ${w.i + 1} · ${stRange(w.from, w.to)}</p>
-        <div><div class="st-big ${cls(w.change)}">${stKg(w.change)} <small>кг</small></div><p class="st-sub">${w.ws.length ? 'за неделю' : 'на этой неделе замеров не было'}</p></div>
-        ${stChart(w)}
-        <div class="st-chips"><span class="st-chip"><b>${w.ws.length}/${w.days}</b>замеров</span><span class="st-chip"><b>${wo(w.i) == null ? dots : wo(w.i)}</b>тренировок</span>${w.medals.length ? '' : '<span class="st-chip"><b>0</b>медалей</span>'}</div>
-        ${w.medals.length ? `<div class="st-medals">${w.medals.slice(0, 4).map(md => `<div class="md">${medalPic(md)}${esc(md.title)}</div>`).join('')}</div>` : ''}
-        ${stCoach(ph && ph.weeks && ph.weeks[w.i])}`));
-      pages.push(() => `
-        <p class="st-k">Итог ${ST_GEN[b.m].replace(/я$/, 'я')}</p>
-        <div><div class="st-big ${cls(b.change)}">${stKg(b.change)} <small>кг</small></div><p class="st-sub">за ${ST_MONTHS[b.m]}${b.best ? ` · лучшая неделя ${b.best.i + 1}-я (${stKg(b.best.change)} кг)` : ''}</p></div>
-        ${b.path ? `<div class="st-chips"><span class="st-chip"><b>${b.path[0]}% → ${b.path[1]}%</b>путь к цели за месяц</span></div>` : ''}
-        ${stCoach(ph && ph.final)}
-        <button class="st-close" onclick="closeStory()">Вперёд, в ${ST_MONTHS[(b.m + 1) % 12].replace(/ь$/, 'ь')}</button>`);
-      return pages;
+    // виды спорта: свой цвет и значок; новый вид получает цвет из запасных и гантель
+    const ST_SI = {
+      run: '<circle cx="14.5" cy="4" r="2"/><path d="M13 7.5 10.5 13l3 3-1.5 5.5M7.5 10.5l3.5-3 3.5 2.5 3 1M10.5 13 6.5 15.5 4 14.5"/>',
+      swim: '<circle cx="17" cy="7.5" r="2"/><path d="M3.5 12.5 9 9.5l4 3M2 17c2.5-2 4.5-2 7 0s4.5 2 7 0 4.5-2 6 0"/>',
+      walk: '<circle cx="12.5" cy="3.8" r="2"/><path d="M12.5 7.5l-1 6 3 3.5v4.5M11.5 13.5 9 17l-1.5 4M8 11.5l4-3.5 3.5 3"/>',
+      bike: '<circle cx="5.5" cy="16.5" r="3.6"/><circle cx="18.5" cy="16.5" r="3.6"/><path d="M5.5 16.5 9.5 9.5h6l3 7M9.5 9.5l3 7 3-7M8 7.5h3M15.5 9.5 14.5 6.5h2"/>',
+      ski: '<circle cx="15" cy="4" r="2"/><path d="M13.5 7.5 10 12l3 3-2 4M7 10l4-2.5 3 3 3 .5M3 20.5l18-3M6 6l-1 12"/>',
+      gym: '<path d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12"/>'
+    };
+    const ST_SPORTS = [[/^бег/, '#FF7A3D', 'run'], [/^плав/, '#3DC8FF', 'swim'], [/^вело/, '#B48CFF', 'bike'], [/^ходьб|^прогул/, '#9BE15D', 'walk'], [/^лыж/, '#7FE3E0', 'ski']];
+    const ST_SPARE = ['#FFC93D', '#FF7FB2', '#4DE3B5', '#8FB0FF', '#FFA98F'];
+    function stSport(name) {
+      const n = String(name || '').toLowerCase(), hit = ST_SPORTS.find(([re]) => re.test(n));
+      if (hit) return { c: hit[1], ic: hit[2] };
+      let h = 0; for (const ch of n) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+      return { c: ST_SPARE[h % ST_SPARE.length], ic: 'gym' };
     }
-    function stShow(i, anim) {
-      ST.i = Math.max(0, Math.min(ST.pages.length - 1, i));
-      const pg = $('stPage');
-      pg.classList.remove('in'); void pg.offsetWidth;
-      pg.innerHTML = ST.pages[ST.i]();
-      if (anim !== false) pg.classList.add('in');
-      [...$('stBars').children].forEach((el, k) => { el.classList.toggle('done', k < ST.i); el.firstElementChild.style.width = k < ST.i ? '100%' : '0'; });
-      ST.left = ST_DUR; ST.t0 = performance.now();
+    const stIcon = (ic, cls = 'si') => `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${ST_SI[ic]}</svg>`;
+    const stCap = t => t ? t[0].toUpperCase() + t.slice(1) : '';
+    const stMin = m => m >= 60 ? `${Math.floor(m / 60)} ч ${String(m % 60).padStart(2, '0')} мин` : `${m} мин`;
+    const stWo = w => [w.sport, w.km ? stKm(w.km) + ' км' : '', !w.km && w.min ? w.min + ' мин' : ''].filter(Boolean).join(' ');
+    const stWord = (n, a, b, c) => `${n} ${plural(n, a, b, c)}`;
+    // плитки видов спорта: километры каждого вида отдельно, сколько раз и время; последняя — всего
+    function stTiles(dist, workouts, wait) {
+      if (wait) return `<div class="st-tiles"><div class="st-tile wait"></div><div class="st-tile wait"></div></div>`;
+      const sp = Object.entries((dist && dist.bySport) || {}).filter(([, s]) => s.n || s.km)
+        .sort((a, b) => b[1].km - a[1].km || b[1].n - a[1].n);
+      if (!sp.length && !workouts) return '';
+      const tiles = sp.map(([k, s]) => {
+        const m = stSport(k), name = k === 'тренировка' ? 'Тренировка' : stCap(k);
+        const v = s.km ? `${stKm(s.km)}<small>км</small>` : s.min >= 60 ? `${Math.floor(s.min / 60)}<small>ч</small> ${s.min % 60}<small>мин</small>` : s.min ? `${s.min}<small>мин</small>` : `${s.n}<small>${plural(s.n, 'раз', 'раза', 'раз')}</small>`;
+        const l = [name, s.km && s.min ? stMin(s.min) : ''].filter(Boolean).join(' · ');
+        return `<div class="st-tile" style="background:${m.c}">${stIcon(m.ic)}<span class="n">×${s.n}</span><div class="v">${v}</div><div class="l">${esc(l)}</div></div>`;
+      });
+      const km = dist && dist.km;
+      tiles.push(`<div class="st-tile tot"><p class="st-k">Всего</p><div class="v">${km ? `${stKm(km)}<small>км</small>` : workouts}</div><div class="l">${km ? stWord(workouts, 'тренировка', 'тренировки', 'тренировок') : plural(workouts, 'тренировка', 'тренировки', 'тренировок')}</div></div>`);
+      return `<div class="st-tiles">${tiles.join('')}</div>`;
+    }
+    const stChange = (c, cls) => `<div class="st-big ${cls(c)}">${stKg(c)}<small>кг</small></div>`;
+    // карточки: [{ id, tab, html() }]; id нужен, чтобы после ответа сервера остаться на той же
+    function stViews(u, b) {
+      const srv = ST.srv, ph = srv && srv.phrases, failed = srv && srv.failed, wait = !srv;
+      const sw = w => srv && srv.weeks ? srv.weeks.find(x => x.from === w.key) : null;
+      const cls = c => c == null ? '' : b.good(c) ? 'down' : c === 0 ? '' : 'up';
+      const sum = srv && srv.summary, dots = failed ? '—' : '…';
+      const V = [];
+      b.weeks.forEach((w, wi) => {
+        const s = sw(w), p = s && s.phrases;
+        const d2 = d => `${d.getDate()}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+        V.push({ id: w.key, tab: `Нед ${w.i + 1} · ${d2(w.from)}–${d2(w.to)}`, week: w, html: () => {
+          const days = [...Array(7)].map((_, d) => {
+            const day = new Date(w.from); day.setDate(day.getDate() + d);
+            const e = w.ws.filter(x => +x.d === +day).pop(), sd = s && s.days[d], wo = sd && sd.workouts[0];
+            const m = wo && stSport(wo.sport);
+            return `<div class="${e ? '' : 'off'}">${ST_DAYS[d]}<i${m ? ` style="background:${m.c}" title="${esc(sd.workouts.map(stWo).join(', '))}"` : ''}>${m ? stIcon(m.ic, '') : ''}</i><b>${e ? fmt(e.w) : '—'}</b></div>`;
+          }).join('');
+          const sl = s && s.sleep && s.sleep.nights >= 3 ? s.sleep : null;
+          const sleep = sl ? (() => {
+            const top = Math.max(600, ...s.days.map(d => d.sleepMin || 0));
+            const bars = s.days.map((d, k) => `<div><i class="${d.sleepMin == null ? '' : d.date === sl.best.date ? 'best' : d.sleepMin < 360 ? 'low' : ''}" style="height:${d.sleepMin == null ? 0 : Math.round(d.sleepMin / top * 100)}%"></i>${ST_DAYS[k].toLowerCase()}</div>`).join('');
+            const bd = new Date(sl.best.date + 'T12:00:00');
+            return `<div class="st-box"><p class="st-k">Сон</p>
+              <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap"><div class="st-big" style="font-size:52px;white-space:nowrap">${stHm(sl.avg)}</div><span class="st-sub">в среднем · ${stWord(sl.nights, 'ночь', 'ночи', 'ночей')}</span></div>
+              <div class="st-sleep">${bars}</div>
+              <p class="st-sub" style="margin-top:10px">Лучшая ночь ${ST_WEEKDAY_ACC[bd.getDay()]}, ${stHm(sl.best.min)}${sl.debt ? ` · недосып до 8 ч: ${stHm(sl.debt)}` : ''}</p>
+              ${stCoach(p && p.sleep)}</div>`;
+          })() : '';
+          const last = wi === b.weeks.length - 1 && !V.length;
+          return `
+            <div class="st-box"><div class="st-hero">
+              <div><p class="st-k">Вес за неделю</p>${stChange(w.change, cls)}</div>
+              <div class="side">${w.ws.length}/7 замеров<br>${s ? stWord(s.workouts, 'тренировка', 'тренировки', 'тренировок') : `${dots} тренировок`}${sl ? `<br>сон ${stHm(sl.avg)}` : ''}</div></div>
+              ${w.ws.length ? stChart(w) : '<p class="st-sub">На этой неделе замеров не было</p>'}</div>
+            ${failed ? '' : stTiles(s && s.distance, s ? s.workouts : 0, wait)}
+            ${stCoach(p && p.workouts)}
+            <div class="st-box"><div class="st-week7">${days}</div>${stCoach(p && p.days, wait)}</div>
+            ${sleep}
+            ${w.medals.length ? `<div class="st-box"><p class="st-k">Медали недели</p><div class="st-medals">${w.medals.slice(0, 8).map(md => `<div class="md">${medalPic(md)}${esc(md.title)}</div>`).join('')}</div></div>` : ''}
+            ${wait || p ? `<div class="st-box"><p class="st-k">Вывод тренера</p>${p ? `<p class="st-verdict">${esc(p.verdict)}</p>` : stCoach('', true)}</div>` : ''}
+            ${p && p.plan && p.plan.length ? `<div class="st-box"><p class="st-k">План на новую неделю</p><div class="st-plan">${p.plan.map((t, n) => `<div><span>${n + 1}</span>${esc(t)}</div>`).join('')}</div></div>` : ''}
+            <button class="st-close" onclick="stNext()">Принял, погнали</button>`;
+        } });
+      });
+      V.push({ id: 'month', tab: stCap(ST_MONTHS[b.m]), html: () => {
+        const rows = b.weeks.map((w, k) => {
+          const s = sw(w);
+          return `<button class="st-wk" onclick="stGo(${k})"><span>Неделя ${w.i + 1}<small>${stRange(w.from, w.to)}${s && s.distance.km ? ` · ${stKm(s.distance.km)} км` : ''}</small></span><b class="${cls(w.change)}">${stKg(w.change)}</b><em>›</em></button>`;
+        }).join('');
+        return `
+          <div class="st-box">
+            <p class="st-k">${b.ended ? 'Итоги месяца' : 'Месяц идёт'} · ${esc(u.name || '')}</p>
+            <div class="st-month">${ST_MONTHS[b.m]}</div>
+            ${stChange(b.change, cls)}<p class="st-sub">${stRange(b.from, b.to)}${b.ended ? '' : ' · месяц идёт'}${b.ended && b.best ? ` · лучшая неделя ${b.best.i + 1}-я` : ''}</p>
+            <div class="st-chips"><span class="st-chip"><b>${b.weighIns}</b>замеров</span><span class="st-chip"><b>${sum ? sum.workouts : dots}</b>тренировок</span><span class="st-chip"><b>${b.medals}</b>медалей</span>${b.ended && b.path ? `<span class="st-chip"><b>${b.path[0]}% → ${b.path[1]}%</b>путь к цели</span>` : ''}</div>
+            ${stCoach(ph && (b.ended ? ph.final : ph.cover) || '', wait)}</div>
+          ${failed ? '' : stTiles(sum && sum.distance, sum ? sum.workouts : 0, wait)}
+          ${rows ? `<div class="st-box"><p class="st-k">Недели</p>${rows}</div>` : ''}
+          ${b.ended ? `<button class="st-close" onclick="closeStory()">Вперёд, в ${ST_MONTHS[(b.m + 1) % 12]}</button>` : ''}`;
+      } });
+      // итог прошлого месяца — первую неделю нового месяца
+      const pv = ST.prev;
+      if (pv && pv.summary && pv.summary.ended) {
+        const pm = +pv.summary.month.slice(5) - 1;
+        V.push({ id: 'prev', tab: stCap(ST_MONTHS[pm]), html: () => `
+          <div class="st-box">
+            <p class="st-k">Итог ${ST_GEN[pm]}</p>
+            <div class="st-month">${ST_MONTHS[pm]}</div>
+            ${stChange(pv.summary.change, cls)}<p class="st-sub">${pv.summary.from ? stRange(new Date(pv.summary.from + 'T12:00:00'), new Date(pv.summary.to + 'T12:00:00')) : 'за ' + ST_MONTHS[pm]}</p>
+            <div class="st-chips"><span class="st-chip"><b>${pv.summary.weighIns}</b>замеров</span><span class="st-chip"><b>${pv.summary.workouts}</b>тренировок</span><span class="st-chip"><b>${pv.summary.medals || 0}</b>медалей</span></div>
+            ${stCoach(pv.phrases && pv.phrases.final)}</div>
+          ${stTiles(pv.summary.distance, pv.summary.workouts)}
+          <button class="st-close" onclick="closeStory()">Закрыть</button>` });
+      }
+      return V;
+    }
+    // яркая обложка: вес недели крупно, мини-график, замеры, тренировки, километры
+    function stPosterHtml(v, b) {
+      const w = v.week, s = ST.srv && ST.srv.weeks ? ST.srv.weeks.find(x => x.from === w.key) : null, dots = ST.srv && ST.srv.failed ? '—' : '…';
+      let spark = '';
+      if (w.ws.length > 1) {
+        const lo = Math.min(...w.ws.map(e => e.w)), hi = Math.max(...w.ws.map(e => e.w)), r = Math.max(.4, hi - lo);
+        const pts = w.ws.map(e => [8 + (e.d - w.from) / DAY_MS / 6 * 324, 10 + (hi - e.w) / r * 70]);
+        let len = 0; pts.forEach((p, i) => { if (i) len += Math.hypot(p[0] - pts[i - 1][0], p[1] - pts[i - 1][1]); });
+        const d = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' '), lp = pts[pts.length - 1];
+        spark = `<svg class="sp" viewBox="0 0 340 90"><path d="${d}" fill="none" stroke="#121315" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" style="--len:${len.toFixed(0)};stroke-dasharray:${len.toFixed(0)}"/><circle cx="${lp[0].toFixed(1)}" cy="${lp[1].toFixed(1)}" r="8" fill="#121315"/></svg>`;
+      }
+      const a = w.ws.length ? w.ws[0].w : null, z = w.ws.length ? w.ws[w.ws.length - 1].w : null;
+      return `<div class="bar"><b id="stPosterBar"></b></div>
+        <div class="st-head"><span class="t">Неделя ${w.i + 1} · ${stRange(w.from, w.to)}</span><button class="st-x" onclick="closeStory()" aria-label="Закрыть">×</button></div>
+        <p class="st-k">Вес за неделю</p>
+        <div class="huge${w.change == null ? ' sm' : ''}">${w.change == null ? 'Без замеров' : stKg(w.change)}</div>
+        ${a != null ? `<div class="unit">КГ · ${fmt(a)} → ${fmt(z)}</div>` : ''}
+        ${spark}
+        <div class="stats"><div><b>${w.ws.length}/7</b><span>замеров</span></div><div><b>${s ? s.workouts : dots}</b><span>тренировки</span></div>${s && s.distance.km ? `<div><b>${stKm(s.distance.km)}</b><span>км</span></div>` : ''}</div>
+        <div class="say">${s && s.phrases ? esc(s.phrases.cover) : ''}</div>
+        <div class="hint">Нажми, чтобы открыть неделю</div>`;
+    }
+    function stPoster(v, b) {
+      const el = $('stPoster');
+      if (!v || !v.week) { el.className = 'st-poster off'; return; }
+      el.className = 'st-poster'; el.innerHTML = stPosterHtml(v, b); void el.offsetWidth; el.classList.add('in');
+      ST.posterT0 = performance.now(); ST.posterOn = true;
+      cancelAnimationFrame(ST.timer); ST.timer = requestAnimationFrame(stTick);
+    }
+    function stPosterHide() {
+      if (!ST.posterOn) return;
+      ST.posterOn = false; cancelAnimationFrame(ST.timer);
+      $('stPoster').classList.add('gone');
     }
     function stTick(now) {
-      if (!$('story').classList.contains('open')) return;
-      if (!ST.paused) {
-        const k = Math.min(1, 1 - (ST.left - (now - ST.t0)) / ST_DUR);
-        const bar = $('stBars').children[ST.i];
-        if (bar) bar.firstElementChild.style.width = (k * 100).toFixed(1) + '%';
-        if (k >= 1) { if (ST.i < ST.pages.length - 1) stShow(ST.i + 1); else { ST.paused = true; } }
-      }
-      ST.timer = requestAnimationFrame(stTick);
+      if (!ST.posterOn) return;
+      const k = Math.min(1, (now - ST.posterT0) / ST_POSTER), bar = $('stPosterBar');
+      if (bar) bar.style.width = (k * 100).toFixed(1) + '%';
+      if (k >= 1) stPosterHide(); else ST.timer = requestAnimationFrame(stTick);
+    }
+    function stTabs() {
+      $('stTabs').innerHTML = ST.views.map((v, k) => `<button class="${k === ST.i ? 'on' : ''}" onclick="stGo(${k})">${esc(v.tab)}</button>`).join('');
+      const on = $('stTabs').children[ST.i];
+      if (on) on.scrollIntoView({ block: 'nearest', inline: 'center' });
+    }
+    function stGo(i, anim = true) {
+      i = Math.max(0, Math.min(ST.views.length - 1, i));
+      const dir = i > ST.i ? 'in-r' : i < ST.i ? 'in-l' : '';
+      ST.i = i; stTabs();
+      const pg = $('stPage');
+      pg.innerHTML = `<div class="st-card${anim && dir ? ' ' + dir : ''}${anim ? ' draw' : ''}">${ST.views[i].html()}</div>`;
+      if (anim) pg.scrollTop = 0;
+    }
+    // «Принял, погнали»: к следующей неделе, после последней — к месяцу
+    function stNext() { if (ST.i < ST.views.length - 1) stGo(ST.i + 1); else closeStory(); }
+    // пришли данные с сервера: пересобрать и остаться на той же карточке и прокрутке
+    function stRebuild(u, b) {
+      const id = ST.views[ST.i] && ST.views[ST.i].id, top = $('stPage').scrollTop;
+      ST.views = stViews(u, b);
+      ST.i = Math.max(0, ST.views.findIndex(v => v.id === id));
+      stGo(ST.i, false); $('stPage').scrollTop = top;
+      if (ST.posterOn) { const bar = $('stPosterBar'), wd = bar && bar.style.width; $('stPoster').innerHTML = stPosterHtml(ST.views[ST.i], b); if (wd) $('stPosterBar').style.width = wd; }
     }
     function openStory() {
       const u = globalData[activeUserId];
       if (!u) return;
       safeHaptic('light');
-      ST.u = u; ST.srv = null;
+      ST.u = u; ST.srv = null; ST.prev = null; ST.i = 0;
       const b = stBuild(u);
-      ST.pages = stPages(u, b);
-      $('stBars').innerHTML = ST.pages.map(() => '<i><b></b></i>').join('');
-      $('stTitle').innerHTML = `Итоги <b>${ST_GEN[b.m]}</b>`;
+      ST.views = stViews(u, b);
+      $('stTitle').innerHTML = `Итоги · <b>${ST_MONTHS[b.m]}</b>`;
       $('story').classList.add('open'); $('story').setAttribute('aria-hidden', 'false');
-      ST.paused = false; stShow(0);
-      cancelAnimationFrame(ST.timer); ST.timer = requestAnimationFrame(stTick);
+      // начинаем с самой свежей недели (с яркой обложкой); если недель ещё нет — с месяца
+      ST.i = b.weeks.length ? b.weeks.length - 1 : 0;
+      stGo(ST.i);
+      stPoster(ST.views[ST.i], b);
       navPush(closeStory);
       try { localStorage.setItem(stSeenKey(u), '1'); } catch (e) {}
       $('storyRing').classList.add('seen');
-      // тренировки и свежие фразы тренера
-      const req = ++ST.req;
-      fetch(`${dataUrl()}&action=story&uid=${encodeURIComponent(u.id || activeUserId)}&month=${stYm(storyMonth())}`)
-        .then(r => r.json()).then(j => {
-          if (req !== ST.req || !j || j.error) throw 0;
-          ST.srv = j; ST.pages = stPages(u, b);
-          const keep = ST.left - (performance.now() - ST.t0), at = ST.i;
-          $('stPage').innerHTML = ST.pages[at]();
-          ST.left = keep; ST.t0 = performance.now();
-        }).catch(() => {
+      // сон, тренировки, километры и тексты тренера; первую неделю месяца — ещё итог прошлого
+      const req = ++ST.req, uid = encodeURIComponent(u.id || activeUserId);
+      const get = ym => fetch(`${dataUrl()}&action=story&uid=${uid}&month=${ym}`).then(r => r.json()).then(j => { if (!j || j.error) throw 0; return j; });
+      // прошлый месяц закончился неделю назад — пока в новом месяце одна неделя
+      const pm = new Date(b.y, b.m, 0);
+      if (b.weeks.length <= 1)
+        get(stYm({ y: pm.getFullYear(), m: pm.getMonth() })).then(j => {
           if (req !== ST.req) return;
-          ST.srv = { phrases: null, failed: true }; ST.pages = stPages(u, b);
-          $('stPage').innerHTML = ST.pages[ST.i]().replace(/<div class="st-coach wait">…<\/div>/g, '');
-        });
+          ST.prev = j; stRebuild(u, b);
+        }).catch(() => {});
+      get(stYm(b)).then(j => {
+        if (req !== ST.req) return;
+        ST.srv = j; stRebuild(u, b);
+      }).catch(() => {
+        if (req !== ST.req) return;
+        ST.srv = { phrases: null, failed: true, weeks: null }; stRebuild(u, b);
+      });
     }
     function closeStory() {
-      ST.req++;
+      ST.req++; ST.posterOn = false;
       $('story').classList.remove('open'); $('story').setAttribute('aria-hidden', 'true');
       cancelAnimationFrame(ST.timer);
       navForget(closeStory);
     }
-    // тап справа — дальше, слева — назад, удержание — пауза, свайп вниз — закрыть
+    // обложка: тап — открыть неделю. Карточка: свайп вбок — соседняя, свайп вниз сверху — закрыть
     (() => {
-      const el = $('story');
-      let x0 = 0, y0 = 0, t0 = 0, holdStart = 0;
-      el.addEventListener('pointerdown', e => {
-        if (e.target.closest('button')) return;
-        x0 = e.clientX; y0 = e.clientY; t0 = performance.now();
-        ST.paused = true; holdStart = performance.now();
-      });
-      el.addEventListener('pointerup', e => {
-        if (e.target.closest('button')) return;
-        const held = performance.now() - holdStart, dy = e.clientY - y0, dx = e.clientX - x0;
-        ST.paused = false; ST.t0 += held;
-        if (dy > 90 && Math.abs(dy) > Math.abs(dx)) { closeStory(); return; }
-        if (performance.now() - t0 > 350) return;                 // это было удержание
-        if (Math.abs(dx) > 50) { stShow(ST.i + (dx < 0 ? 1 : -1)); return; }
-        if (x0 < window.innerWidth * .3) stShow(ST.i - 1); else if (ST.i < ST.pages.length - 1) stShow(ST.i + 1);
-      });
-      el.addEventListener('pointercancel', () => { ST.paused = false; });
+      $('stPoster').addEventListener('click', e => { if (!e.target.closest('button')) stPosterHide(); });
+      const el = $('stPage');
+      let x0 = 0, y0 = 0, top0 = 0, on = false;
+      el.addEventListener('touchstart', e => { const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; top0 = el.scrollTop; on = true; }, { passive: true });
+      el.addEventListener('touchend', e => {
+        if (!on) return; on = false;
+        const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0;
+        if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) stGo(ST.i + (dx < 0 ? 1 : -1));
+        else if (dy > 110 && top0 <= 0 && Math.abs(dy) > Math.abs(dx)) closeStory();
+      }, { passive: true });
     })();
 
     // =====================================================================
@@ -2033,7 +2257,7 @@
       return out;
     })();
     const MT_SHAPE = 'M-300 1600V1320L' + MT_RIDGE.map(p => p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join('L') + 'V1600Z';
-    const MT = { t: null, user: null, raf: 0, open: false, face: 1, cx: 0, cy: 700, visW: 410, visH: 650, follow: true };
+    const MT = { t: null, user: null, raf: 0, gen: 0, blobs: [], open: false, face: 1, cx: 0, cy: 700, visW: 410, visH: 650, follow: true };
     const mtSeg = MT_TRAIL.slice(1).map((p, i) => Math.hypot(p[0] - MT_TRAIL[i][0], p[1] - MT_TRAIL[i][1]));
     const mtLen = mtSeg.reduce((a, b) => a + b, 0);
     function mtAt(t) {
@@ -2138,16 +2362,64 @@
       }
       return g;
     }
+    // скальные пояса: ступени поперёк склона — тень под кромкой и светлый край сверху
+    function mtBands() {
+      const rnd = mtRnd(77);
+      let sh = '', li = '';
+      for (let i = 0; i < 70; i++) {
+        const x0 = -150 + rnd() * 1950, len = 60 + rnd() * 200, d = 30 + Math.pow(rnd(), 1.3) * 520, top = [], bot = [];
+        for (let x = x0; x <= x0 + len; x += 9) {
+          const taper = Math.sin((x - x0) / len * Math.PI), y = mtRidgeY(x) + d + (rnd() - .5) * 5;
+          if (y > 1160) break;
+          top.push([x, y]); bot.push([x - 2, y + taper * (5 + rnd() * 9)]);
+        }
+        if (top.length < 4) continue;
+        sh += mtD([...top, ...bot.reverse()]) + 'Z'; li += mtD(top);
+      }
+      return { sh, li };
+    }
+    // желобки на снегу: от гребня вниз, сходятся к кулуарам
+    function mtFlutes() {
+      const rnd = mtRnd(91);
+      let a = '', b = '';
+      for (let x = 1040; x < 1960; x += 16 + rnd() * 22) {
+        const y = mtRidgeY(x);
+        if (y > MT_SNOW - 10) continue;
+        const L = 40 + rnd() * Math.min(260, MT_SNOW + 120 - y), lean = (x < 1500 ? -.32 : .22) + (rnd() - .5) * .2;
+        const p = mtJag([[x, y + 2], [x + lean * L * .5, y + L * .5], [x + lean * L, y + L]], .12, 3, rnd);
+        a += mtD(p); b += mtD(p.map(q => [q[0] + 1.6, q[1] + .4]));
+      }
+      return { a, b };
+    }
+    // грани дальних хребтов: у каждой вершины склон, отвёрнутый от луны, в тени
+    function mtFaces(ridge) {
+      let d = '';
+      for (let i = 3; i < ridge.length - 3; i++) {
+        const p = ridge[i];
+        if (!ridge.every(q => Math.abs(q[0] - p[0]) > 45 || q[1] >= p[1])) continue;
+        let j = i;
+        while (j > 0 && ridge[j - 1][1] >= ridge[j][1] - 1 && p[0] - ridge[j - 1][0] < 260) j--;
+        const s = ridge[j], h = 120 + (s[1] - p[1]) * 1.6;
+        d += mtD([...ridge.slice(j, i + 1).reverse(), [p[0] - h * .08, p[1] + h * .5], [p[0] - h * .22, p[1] + h], [s[0] - 10, s[1] + h]]) + 'Z';
+      }
+      return d;
+    }
     // цвета горы: ночью — луна и звёзды, днём (светлая тема телефона) — солнце, облака, зелёные склоны
     const MT_PAL = {
       night: { sky: ['#121621', '#1C2333', '#15171C'], lit: ['#6B7486', '#4B5261', '#30343D', '#1D2026'], far: ['#323B4F', '#1A1E27'], farSnow: ['#8C97AB', .38],
-        mid: ['#2A303C', '#16181D'], mist: '#1C2333', shade: ['#070A12', .55, .38], snow: ['#F4F7FB', '#DCE3EC', '#B9C3D1'], ledgeL: ['#8B95A7', .22], ledgeD: ['#0C0E13', .4],
-        gully: ['#06080D', .35], spur: ['#C3CCDA', .35], ridge: ['#C9D2DF', .28], ground: '#101216', pines: '#0B0C0F', trail: '#6A707A', me: '#C6FF3D', meBack: '#8FB82C',
-        start: '#9A9DA3', goal: '#F2F3F0', pole: '#F2F3F0', campOn: '#F2F3F0', campOff: '#8A8D94', triOff: '#24262A', triOffS: '#5A5F68', meShadow: .4 },
+        mid: ['#2A303C', '#16181D'], mist: '#1C2333', shade: ['#070A12', .55, .38], snow: ['#E6ECF4', '#C9D3E0', '#A3AFC2'], ledgeL: ['#8B95A7', .22], ledgeD: ['#0C0E13', .4],
+        gully: ['#06080D', .35], spur: ['#C3CCDA', .35], ground: '#101216', pines: '#0B0C0F', trail: '#6A707A', me: '#C6FF3D', meBack: '#8FB82C',
+        start: '#9A9DA3', goal: '#F2F3F0', pole: '#F2F3F0', campOn: '#F2F3F0', campOff: '#8A8D94', triOff: '#24262A', triOffS: '#5A5F68', meShadow: .4,
+        other: '#FFB547', otherBack: '#D98F2B', pill: 'rgba(18,19,21,.75)', pillText: '#F2F3F0', smoke: '#B9C0CA',
+        grain: .3, grainL: .08, tone: .1, rim: '#DCE6F5', rimOp: .55, fog: '#1C2333', fogOp: .55, far2: ['#3A4560', '#232A3A'], milky: .16,
+        snowSh: ['#3E4F72', .55], flute: ['#56688C', .34], bandSh: ['#05070C', .45], bandLi: ['#9AA4B5', .3], faceSh: ['#0B0F18', .4] },
       day: { sky: ['#4E9BD6', '#8EC3EA', '#DCEEF7'], lit: ['#9AA5B3', '#7D8896', '#5F7466', '#3E6440'], far: ['#8FA9C0', '#B8CCDB'], farSnow: ['#FFFFFF', .75],
         mid: ['#7893A6', '#A3BBCB'], mist: '#DCEEF7', shade: ['#22324A', .42, .26], snow: ['#FFFFFF', '#F1F6FB', '#D9E4EF'], ledgeL: ['#E6ECF2', .3], ledgeD: ['#2A3340', .3],
-        gully: ['#1E2836', .3], spur: ['#FFFFFF', .5], ridge: ['#FFFFFF', .45], ground: '#3A5D34', pines: '#1D3B25', trail: '#4A525C', me: '#5E9400', meBack: '#3F6A00',
-        start: '#1D2228', goal: '#15171A', pole: '#2A2F36', campOn: '#15171A', campOff: '#3D444D', triOff: '#E8ECEF', triOffS: '#59616B', meShadow: .25 }
+        gully: ['#1E2836', .3], spur: ['#FFFFFF', .5], ground: '#3A5D34', pines: '#1D3B25', trail: '#4A525C', me: '#5E9400', meBack: '#3F6A00',
+        start: '#1D2228', goal: '#15171A', pole: '#2A2F36', campOn: '#15171A', campOff: '#3D444D', triOff: '#E8ECEF', triOffS: '#59616B', meShadow: .25,
+        other: '#D9661A', otherBack: '#A84C10', pill: 'rgba(255,255,255,.85)', pillText: '#15171A', smoke: '#8C949E',
+        grain: .18, grainL: .2, tone: .14, rim: '#FFFFFF', rimOp: .8, fog: '#EAF4FA', fogOp: .6, far2: ['#A9C0D3', '#C9DAE6'], milky: 0,
+        snowSh: ['#7E9CC4', .42], flute: ['#9DB3CF', .38], bandSh: ['#1E2733', .32], bandLi: ['#F2F5F8', .4], faceSh: ['#5C7690', .35] }
     };
     const mtPal = () => MT_PAL[document.documentElement.classList.contains('light') ? 'day' : 'night'];
     function mtBuild() {
@@ -2157,6 +2429,12 @@
       const P = mtPal(), day = P === MT_PAL.day;
       let stars = '';
       for (let i = 0; i < 70; i++) stars += `<circle cx="${(i * 97 + 13) % 560 - 40}" cy="${(i * 37 + 11) % 380 - 20}" r="${i % 6 ? .7 : 1.3}" fill="#F2F3F0" opacity="${i % 3 ? .25 : .5}"/>`;
+      // ночью по небу идёт Млечный Путь: полоса из мелких звёзд
+      const sr = mtRnd(5);
+      for (let i = 0; i < 160; i++) {
+        const u = sr(), x = -60 + u * 520, y = 330 - u * 300 + (sr() - .5) * 90 * (sr() + .2);
+        stars += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(.35 + sr() * .5).toFixed(2)}" fill="#E8ECF5" opacity="${(.2 + sr() * .45).toFixed(2)}"/>`;
+      }
       const camps = MT_CAMPS.map(c => { const [x, y] = mtAt(c / 100);
         return `<g class="mt-camp" data-c="${c}"><path d="M${x - 8} ${y + 3}L${x} ${y - 10}L${x + 8} ${y + 3}Z" stroke-width="1.4"/><text x="${x}" y="${y + 22}" text-anchor="middle" font-size="14" font-weight="700" font-family="Barlow Condensed, Arial Narrow, sans-serif">${c}%</text></g>`; }).join('');
       const [fx, fy] = MT_TRAIL[MT_TRAIL.length - 1];
@@ -2165,44 +2443,78 @@
       if (day) [[40, 70, 1], [250, 150, .8], [-20, 250, .7], [420, 40, .9]].forEach(([x, y, k]) => {
         clouds += `<g opacity="${(.55 + k * .35).toFixed(2)}"><ellipse cx="${x}" cy="${y}" rx="${46 * k}" ry="${12 * k}"/><ellipse cx="${x - 16 * k}" cy="${y - 8 * k}" rx="${22 * k}" ry="${12 * k}"/><ellipse cx="${x + 12 * k}" cy="${y - 12 * k}" rx="${26 * k}" ry="${15 * k}"/></g>`;
       });
-      const rock = mtRock(), far = mtRange(420, 170, 11, 5), mid = mtRange(560, 120, 23, 5);
+      const rock = mtRock(), bands = mtBands(), flutes = mtFlutes();
+      const far2 = mtRange(330, 140, 41, 5), far = mtRange(420, 170, 11, 5), mid = mtRange(560, 120, 23, 5);
+      // data-bake="x y w h масштаб": слой с шумом или размытием один раз рисуется в картинку (см. mtBake)
       svg.innerHTML = `<defs>
           <linearGradient id="mtSky" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="700"><stop offset="0" stop-color="${P.sky[0]}"/><stop offset=".55" stop-color="${P.sky[1]}"/><stop offset="1" stop-color="${P.sky[2]}"/></linearGradient>
           <linearGradient id="mtLit" gradientUnits="userSpaceOnUse" x1="0" y1="210" x2="0" y2="1180"><stop offset="0" stop-color="${P.lit[0]}"/><stop offset=".35" stop-color="${P.lit[1]}"/><stop offset=".7" stop-color="${P.lit[2]}"/><stop offset="1" stop-color="${P.lit[3]}"/></linearGradient>
+          <linearGradient id="mtFar2" gradientUnits="userSpaceOnUse" x1="0" y1="180" x2="0" y2="560"><stop offset="0" stop-color="${P.far2[0]}"/><stop offset="1" stop-color="${P.far2[1]}"/></linearGradient>
           <linearGradient id="mtFar" gradientUnits="userSpaceOnUse" x1="0" y1="230" x2="0" y2="700"><stop offset="0" stop-color="${P.far[0]}"/><stop offset="1" stop-color="${P.far[1]}"/></linearGradient>
           <linearGradient id="mtMid" gradientUnits="userSpaceOnUse" x1="0" y1="430" x2="0" y2="820"><stop offset="0" stop-color="${P.mid[0]}"/><stop offset="1" stop-color="${P.mid[1]}"/></linearGradient>
           <linearGradient id="mtMist" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${P.mist}" stop-opacity="0"/><stop offset="1" stop-color="${P.mist}" stop-opacity=".85"/></linearGradient>
           <radialGradient id="mtMoon"><stop offset="0" stop-color="${day ? '#FFF1B8' : '#F2F3F0'}" stop-opacity="${day ? .6 : .22}"/><stop offset="1" stop-color="${day ? '#FFF1B8' : '#F2F3F0'}" stop-opacity="0"/></radialGradient>
+          <radialGradient id="mtFireGlow"><stop offset="0" stop-color="#FFB547" stop-opacity=".75"/><stop offset=".4" stop-color="#FF7A2E" stop-opacity=".3"/><stop offset="1" stop-color="#FF7A2E" stop-opacity="0"/></radialGradient>
           <linearGradient id="mtShade" x1=".8" y1="0" x2=".2" y2="1"><stop offset="0" stop-color="${P.shade[0]}" stop-opacity="${P.shade[1]}"/><stop offset=".55" stop-color="${P.shade[0]}" stop-opacity="${P.shade[2]}"/><stop offset="1" stop-color="${P.shade[0]}" stop-opacity=".05"/></linearGradient>
           <linearGradient id="mtSnow" gradientUnits="userSpaceOnUse" x1="0" y1="210" x2="0" y2="720"><stop offset="0" stop-color="${P.snow[0]}"/><stop offset=".6" stop-color="${P.snow[1]}"/><stop offset="1" stop-color="${P.snow[2]}"/></linearGradient>
           <clipPath id="mtClip"><path d="${MT_SHAPE}"/></clipPath>
           <clipPath id="mtFarClip"><path d="${far.d}"/></clipPath>
+          <clipPath id="mtSnowClip"><path d="${rock.snow}"/></clipPath>
+          <filter id="mtGrainF" filterUnits="userSpaceOnUse" x="-300" y="150" width="2400" height="1100"><feTurbulence type="fractalNoise" baseFrequency=".03 .11" numOctaves="3" seed="7"/><feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -2.6 1.45"/></filter>
+          <filter id="mtGrainL" filterUnits="userSpaceOnUse" x="-300" y="150" width="2400" height="1100"><feTurbulence type="fractalNoise" baseFrequency=".06 .2" numOctaves="2" seed="19"/><feColorMatrix values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 2.4 -1.35"/></filter>
+          <filter id="mtTone" filterUnits="userSpaceOnUse" x="-300" y="150" width="2400" height="1100"><feTurbulence type="fractalNoise" baseFrequency=".0045 .007" numOctaves="2" seed="12"/><feColorMatrix values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 3.2 -1.5"/></filter>
+          <filter id="mtSnowTex" filterUnits="userSpaceOnUse" x="-300" y="150" width="2400" height="1100"><feTurbulence type="fractalNoise" baseFrequency=".012 .05" numOctaves="4" seed="3"/><feColorMatrix values="0 0 0 0 .55  0 0 0 0 .64  0 0 0 0 .78  0 0 0 -3 1.5"/></filter>
+          <filter id="mtFog" x="-20%" y="-60%" width="140%" height="220%"><feGaussianBlur stdDeviation="22"/></filter>
+          <filter id="mtSoft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="40"/></filter>
+          <filter id="mtGlow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3"/></filter>
         </defs>
-        <g id="mtSkyG"><rect x="-600" y="-900" width="1800" height="3200" fill="url(#mtSky)"/>${day ? `<circle cx="330" cy="90" r="70" fill="url(#mtMoon)"/><circle cx="330" cy="90" r="17" fill="#FFF4CF"/><g fill="#FFFFFF">${clouds}</g>` : `${stars}
+        <g id="mtSkyG"><rect x="-600" y="-900" width="1800" height="3200" fill="url(#mtSky)"/>${day ? `<circle cx="330" cy="90" r="70" fill="url(#mtMoon)"/><circle cx="330" cy="90" r="17" fill="#FFF4CF"/><g fill="#FFFFFF">${clouds}</g>` : `
+          <ellipse data-bake="-260 -60 920 500 .5" cx="200" cy="185" rx="320" ry="55" transform="rotate(-30 200 185)" fill="#7C8DB5" opacity="${P.milky}" filter="url(#mtSoft)"/>${stars}
           <circle cx="330" cy="90" r="50" fill="url(#mtMoon)"/><circle cx="330" cy="90" r="14" fill="#E9ECEF" opacity=".85"/>`}</g>
-        <g id="mtFarG"><path d="${far.d}" fill="url(#mtFar)"/>
+        <g id="mtFar2G"><path d="${far2.d}" fill="url(#mtFar2)"/><path d="${mtFaces(far2.ridge)}" fill="${P.faceSh[0]}" opacity="${P.faceSh[1] * .7}"/>
+          <path d="${mtRangeSnow(far2.ridge, 250)}" fill="${P.farSnow[0]}" opacity="${P.farSnow[1] * .7}"/>
+          <ellipse data-bake="-700 330 2000 280 .5" cx="300" cy="470" rx="900" ry="60" fill="${P.fog}" opacity="${P.fogOp}" filter="url(#mtFog)"/></g>
+        <g id="mtFarG"><path d="${far.d}" fill="url(#mtFar)"/><path d="${mtFaces(far.ridge)}" fill="${P.faceSh[0]}" opacity="${P.faceSh[1]}" clip-path="url(#mtFarClip)"/>
           <path d="${mtRangeSnow(far.ridge, 330)}" fill="${P.farSnow[0]}" opacity="${P.farSnow[1]}" clip-path="url(#mtFarClip)"/>
           <rect x="-600" y="380" width="2400" height="260" fill="url(#mtMist)"/></g>
-        <g id="mtMidG"><path d="${mid.d}" fill="url(#mtMid)"/><rect x="-600" y="560" width="2400" height="240" fill="url(#mtMist)" opacity=".7"/></g>
+        <g id="mtMidG"><path d="${mid.d}" fill="url(#mtMid)"/><path d="${mtFaces(mid.ridge)}" fill="${P.faceSh[0]}" opacity="${P.faceSh[1] * .8}"/>
+          <rect x="-600" y="560" width="2400" height="240" fill="url(#mtMist)" opacity=".7"/>
+          <ellipse data-bake="-560 580 1520 240 .5" cx="200" cy="700" rx="700" ry="50" fill="${P.fog}" opacity="${P.fogOp * .8}" filter="url(#mtFog)"/></g>
         <path d="${MT_SHAPE}" fill="url(#mtLit)"/>
         <g clip-path="url(#mtClip)">
+          <g data-bake="-80 150 1740 1080 1"><rect x="-300" y="150" width="2400" height="1100" filter="url(#mtGrainF)" opacity="${P.grain}"/>
+            <rect x="-300" y="150" width="2400" height="1100" filter="url(#mtGrainL)" opacity="${P.grainL}"/>
+            <rect x="-300" y="150" width="2400" height="1100" filter="url(#mtTone)" opacity="${P.tone}"/></g>
           <path d="${rock.ledgeL}" fill="none" stroke="${P.ledgeL[0]}" stroke-width="1" opacity="${P.ledgeL[1]}" stroke-linecap="round"/>
           <path d="${rock.ledgeD}" fill="none" stroke="${P.ledgeD[0]}" stroke-width="1.6" opacity="${P.ledgeD[1]}" stroke-linecap="round"/>
-          <path d="${rock.snow}" fill="url(#mtSnow)"/>
+          <path d="${bands.sh}" fill="${P.bandSh[0]}" opacity="${P.bandSh[1]}"/>
+          <path d="${bands.li}" fill="none" stroke="${P.bandLi[0]}" stroke-width="1.1" opacity="${P.bandLi[1]}" stroke-linecap="round"/>
           <g fill="url(#mtShade)">${rock.shade}</g>
+          <path d="${rock.snow}" fill="url(#mtSnow)"/>
+          <g data-bake="1000 150 680 560 1" clip-path="url(#mtSnowClip)"><rect x="-300" y="150" width="2400" height="1100" filter="url(#mtSnowTex)" opacity=".5"/></g>
+          <g clip-path="url(#mtSnowClip)">
+            <g fill="${P.snowSh[0]}" opacity="${P.snowSh[1]}">${rock.shade}</g>
+            <path d="${flutes.a}" fill="none" stroke="${P.flute[0]}" stroke-width="1.2" opacity="${P.flute[1]}" stroke-linecap="round"/>
+            <path d="${flutes.b}" fill="none" stroke="#FFFFFF" stroke-width=".9" opacity=".4" stroke-linecap="round"/>
+          </g>
           <path d="${rock.gully}" fill="none" stroke="${P.gully[0]}" stroke-width="2" opacity="${P.gully[1]}" stroke-linecap="round" stroke-linejoin="round"/>
           <path d="${rock.lit}" fill="none" stroke="${P.spur[0]}" stroke-width="1.3" opacity="${P.spur[1]}" stroke-linecap="round" stroke-linejoin="round"/>
+          <ellipse data-bake="-560 1050 1720 200 .5" cx="300" cy="1150" rx="800" ry="40" fill="${P.fog}" opacity="${P.fogOp * .7}" filter="url(#mtFog)"/>
         </g>
-        <path d="${mtD(MT_RIDGE)}" fill="none" stroke="${P.ridge[0]}" stroke-width="1.2" opacity="${P.ridge[1]}" stroke-linejoin="round"/>
+        <path data-bake="-80 190 1740 1000 1" d="${mtD(MT_RIDGE)}" fill="none" stroke="${P.rim}" stroke-width="5" opacity="${P.rimOp * .45}" filter="url(#mtGlow)" stroke-linejoin="round"/>
+        <path d="${mtD(MT_RIDGE)}" fill="none" stroke="${P.rim}" stroke-width="1.4" opacity="${P.rimOp}" stroke-linejoin="round"/>
+        <ellipse data-bake="1420 160 280 180 1" cx="1560" cy="250" rx="90" ry="22" fill="#FFFFFF" opacity=".22" filter="url(#mtFog)" transform="rotate(-12 1560 250)"/>
         <path d="M-600 1700V1170Q-200 1156 100 1168Q400 1180 700 1166Q1000 1154 1300 1170Q1600 1180 2200 1164V1700Z" fill="${P.ground}"/>
         <path d="${mtPines()}" fill="${P.pines}"/>
         <path d="${mtD(MT_TRAIL)}" fill="none" stroke="${P.trail}" stroke-width="3" stroke-dasharray="1 7" stroke-linecap="round" stroke-linejoin="round"/>
         <path id="mtDone" d="" fill="none" stroke="${P.me}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
         ${camps}
+        <g id="mtFire"></g>
         <text id="mtStartT" x="${MT_TRAIL[0][0] - 4}" y="${MT_TRAIL[0][1] + 22}" font-size="13" font-weight="600" fill="${P.start}" font-family="Golos Text, system-ui, sans-serif"></text>
         <line x1="${fx}" y1="${fy}" x2="${fx}" y2="${fy - 24}" stroke="${P.pole}" stroke-width="1.6"/>
         <path id="mtFlag" d="M${fx} ${fy - 24}L${fx + 18} ${fy - 19}L${fx} ${fy - 14}Z" fill="#F2B53A"/>
         <text id="mtGoalT" x="${fx + 24}" y="${fy - 13}" font-size="13" font-weight="600" fill="${P.goal}" font-family="Golos Text, system-ui, sans-serif"></text>
+        <g id="mtOthers"></g>
         <g id="mtMe">
           <ellipse cx="0" cy="1" rx="14" ry="3.5" fill="#000" opacity="${P.meShadow}"/>
           <g id="mtBody">
@@ -2215,8 +2527,36 @@
             <circle cx="2.6" cy="-26" r="4.3" fill="${P.me}"/>
             <path d="M-1.6 -27.5Q2.6 -32.5 6.8 -27.5Z" fill="#F2B53A"/>
           </g>
+          <g id="mtMePill"></g>
         </g>`;
+      mtBake(svg);
       if (!svg.dataset.drag) { svg.dataset.drag = '1'; mtInitDrag(svg); }
+    }
+    // Шум (фактура камня и снега) и размытие (туман, свечение гребня) дорого считать на каждом кадре,
+    // а камера двигает гору постоянно. Эти слои неподвижны: рисуем каждый один раз в картинку и
+    // дальше показываем её. Пока картинка готовится, слоя просто нет — он плавно появится.
+    function mtBake(svg) {
+      const NS = 'http://www.w3.org/2000/svg', ser = new XMLSerializer();
+      MT.blobs.forEach(u => URL.revokeObjectURL(u)); MT.blobs = [];
+      const gen = ++MT.gen, defs = ser.serializeToString(svg.querySelector('defs'));
+      svg.querySelectorAll('[data-bake]').forEach(el => {
+        const [x, y, w, h, k] = el.dataset.bake.split(' ').map(Number), pw = Math.round(w * k), ph = Math.round(h * k);
+        el.removeAttribute('data-bake');
+        const src = `<svg xmlns="${NS}" width="${pw}" height="${ph}" viewBox="${x} ${y} ${w} ${h}">${defs}${ser.serializeToString(el)}</svg>`;
+        const im = document.createElementNS(NS, 'image');
+        [['x', x], ['y', y], ['width', w], ['height', h], ['preserveAspectRatio', 'none'], ['class', 'mt-baked']].forEach(([a, v]) => im.setAttribute(a, v));
+        el.replaceWith(im);
+        const show = href => { if (gen !== MT.gen) return; im.setAttribute('href', href); requestAnimationFrame(() => im.classList.add('on')); };
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const c = document.createElement('canvas'); c.width = pw; c.height = ph;
+            c.getContext('2d').drawImage(img, 0, 0, pw, ph);
+            c.toBlob(b => { if (!b) return show(img.src); const u = URL.createObjectURL(b); MT.blobs.push(u); show(u); });
+          } catch (e) { show(img.src); }      // браузер не дал перерисовать: показываем как есть
+        };
+        img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(src);
+      });
     }
     // камера: кусок горы размером с экран; дальние хребты сдвигаются медленнее (глубина)
     function mtCamera(x, y) {
@@ -2229,7 +2569,7 @@
       MT.cy = clamp(MT.cy, -20, MT_H + 30 - MT.visH);
       svg.setAttribute('viewBox', `${MT.cx.toFixed(1)} ${MT.cy.toFixed(1)} ${MT.visW.toFixed(1)} ${MT.visH.toFixed(1)}`);
       const par = (id, kx, ky) => { const g = $(id); if (g) g.setAttribute('transform', `translate(${(MT.cx * kx).toFixed(1)} ${(MT.cy * ky).toFixed(1)})`); };
-      par('mtSkyG', 1, 1); par('mtFarG', .82, .88); par('mtMidG', .62, .72);
+      par('mtSkyG', 1, 1); par('mtFar2G', .9, .93); par('mtFarG', .82, .88); par('mtMidG', .62, .72);
     }
     function mtInitDrag(svg) {
       let x0 = null, y0 = 0, cx0 = 0, cy0 = 0, vx = 0, vy = 0, lastX = 0, lastY = 0, lastT = 0, glide = 0;
@@ -2282,6 +2622,66 @@
         txt.setAttribute('fill', on ? P.campOn : P.campOff);
       });
     }
+    // Гора общая: на ней все, у каждого свой путь от своего старта к своей цели (по последнему замеру)
+    function mtTrailT(u) {
+      const e = (u && u.entries) || [], goal = u && u.target;
+      if (!e.length || !goal) return null;
+      const start = u.start || e[0].weight, cur = e[e.length - 1].weight;
+      if (start === goal) return null;
+      return Math.max(0, Math.min(1, (start > goal ? start - cur : cur - start) / Math.abs(start - goal)));
+    }
+    const mtWeighedToday = u => { const e = (u && u.entries) || []; return e.length > 0 && stDay(e[e.length - 1].timestamp).getTime() === stDay(Date.now()).getTime(); };
+    // плашка с именем над человечком; ширина — по настоящей длине текста
+    function mtPill(g, name, col, lift = 0) {
+      const P = mtPal();
+      g.innerHTML = name ? `<g transform="translate(0 ${-62 - lift})"><rect y="-11" height="20" rx="10" fill="${P.pill}" stroke="${col}" stroke-width="1.2"/><text y="4" text-anchor="middle" font-size="12" font-weight="700" fill="${P.pillText}" font-family="Golos Text, system-ui, sans-serif"></text></g>` : '';
+      if (!name) return;
+      const t = g.querySelector('text'), r = g.querySelector('rect');
+      t.textContent = name;
+      let w = name.length * 7.5;
+      try { w = t.getComputedTextLength() || w; } catch (e) {}
+      r.setAttribute('x', (-w / 2 - 9).toFixed(1)); r.setAttribute('width', (w + 18).toFixed(1));
+    }
+    // костёр в общем лагере — самом высоком, до которого дошли все. Горит, если сегодня взвесились все;
+    // тлеет, если кто-то один; остывшие дрова, если никто
+    function mtFireSvg(x, y, state) {
+      const P = mtPal(), n = v => v.toFixed(1);
+      const flame = (dx, top, w, col, cls) => `<path class="mt-flame${cls}" d="M${n(x + dx)} ${n(y - top)}C${n(x + dx + w)} ${n(y - top * .6)} ${n(x + dx + w * 1.1)} ${n(y - top * .2)} ${n(x + dx)} ${n(y - 1)}C${n(x + dx - w * 1.1)} ${n(y - top * .2)} ${n(x + dx - w * .9)} ${n(y - top * .55)} ${n(x + dx)} ${n(y - top)}Z" fill="${col}"/>`;
+      const logs = `<g stroke="#4A2E1A" stroke-width="3.2" stroke-linecap="round"><line x1="${x - 9}" y1="${y + 2}" x2="${x + 9}" y2="${y - 3}"/><line x1="${x - 9}" y1="${y - 3}" x2="${x + 9}" y2="${y + 2}"/></g>`;
+      if (state === 'on') return `<circle cx="${x}" cy="${y - 8}" r="54" fill="url(#mtFireGlow)"/>${logs}` +
+        flame(0, 30, 9, '#FF7A2E', '') + flame(-5, 15, 3.6, '#FF9F3A', ' b') + flame(1, 21, 5.5, '#FFC94A', ' b') +
+        [[-7, -40, 0], [6, -48, -.8], [2, -58, -1.6], [-3, -66, -2]].map(([dx, dy, d]) => `<circle class="mt-spark" style="animation-delay:${d}s" cx="${x + dx}" cy="${y + dy}" r="1.2" fill="#FFD27A"/>`).join('');
+      const smoke = (dx, dy, w, op) => `<path d="M${x + dx} ${y - dy}c-6 -8 6 -12 0 -20s6 -12 1 -20" fill="none" stroke="${P.smoke}" stroke-width="${w}" stroke-linecap="round" opacity="${op}"/>`;
+      if (state === 'low') return `<circle cx="${x}" cy="${y - 2}" r="22" fill="url(#mtFireGlow)" opacity=".7"/>${logs}<g fill="#FF6A2A">` +
+        [[-3, -2, 1.8], [3, -3, 1.5], [0, -5, 1.2], [5, 0, 1.1]].map(([dx, dy, r]) => `<circle cx="${x + dx}" cy="${y + dy}" r="${r}"/>`).join('') + '</g>' + smoke(0, 6, 2.4, .55) + smoke(4, 10, 1.8, .4);
+      return `<ellipse cx="${x}" cy="${y + 2}" rx="12" ry="3" fill="#6E727A" opacity=".6"/>${logs}`;
+    }
+    // второй человечек: тот же рисунок, свой цвет, стоит на месте
+    const mtFigure = (col, back) => `<ellipse cx="0" cy="1" rx="14" ry="3.5" fill="#000" opacity="${mtPal().meShadow}"/><g transform="scale(1.5)">
+      <line x1="0" y1="-10" x2="-2.3" y2=".2" stroke="${back}" stroke-width="3.4" stroke-linecap="round"/><rect x="-8.5" y="-22" width="6.5" height="10" rx="2" fill="#9AA0AA"/>
+      <line x1="0" y1="-10" x2="1.5" y2="-21" stroke="${col}" stroke-width="4.4" stroke-linecap="round"/><line x1="0" y1="-10" x2="2.3" y2=".2" stroke="${col}" stroke-width="3.4" stroke-linecap="round"/>
+      <line x1="1.5" y1="-18.5" x2="6.5" y2="-12.5" stroke="${col}" stroke-width="2.8" stroke-linecap="round"/><line x1="6.5" y1="-14" x2="8.5" y2=".5" stroke="#E9ECEF" stroke-width="1.3" stroke-linecap="round"/>
+      <circle cx="2.6" cy="-26" r="4.3" fill="${col}"/><path d="M-1.6 -27.5Q2.6 -32.5 6.8 -27.5Z" fill="#F2B53A"/></g>`;
+    function mtCompany(u, t) {
+      const P = mtPal(), others = Object.values(globalData).filter(o => o !== u).map(o => [o, mtTrailT(o)]).filter(([, tt]) => tt != null);
+      // если стоят рядом (например, оба на вершине), имя второго поднимается над первым
+      const spot = (tt, me) => { const [x, y] = mtAt(tt); return [x + (tt >= 1 ? (me ? -10 : -30) : 0), y]; }, taken = t != null ? [spot(t, true)] : [];
+      let html = '';
+      const lifts = others.map(([o, tt]) => {
+        const [x, y] = spot(tt), lift = taken.filter(([a, b]) => Math.abs(a - x) < 80 && Math.abs(b - y) < 30).length * 24;
+        taken.push([x, y]);
+        html += `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)})">${mtFigure(P.other, P.otherBack)}<g class="mt-pill"></g></g>`;
+        return lift;
+      });
+      $('mtOthers').innerHTML = html;
+      [...$('mtOthers').querySelectorAll('.mt-pill')].forEach((g, i) => mtPill(g, others[i][0].name || '', P.other, lifts[i]));
+      mtPill($('mtMePill'), others.length && t != null ? (u.name || '') : '', P.me);
+      if (!others.length || t == null) { $('mtFire').innerHTML = ''; return; }
+      const low = Math.min(t, ...others.map(([, tt]) => tt)) * 100, camp = [...MT_CAMPS].reverse().find(c => c <= low + 1e-6);
+      const [cx, cy] = camp ? mtAt(camp / 100) : MT_TRAIL[0];
+      const today = [u, ...others.map(([o]) => o)].filter(mtWeighedToday).length;
+      $('mtFire').innerHTML = mtFireSvg(cx + 22, cy + 4, today === others.length + 1 ? 'on' : today ? 'low' : 'off');
+    }
     const fmt1 = v => fmt(parseFloat((+v).toFixed(1)));
     function renderMountain(u, start, goal, current) {
       MT.last = [u, start, goal, current];
@@ -2293,6 +2693,7 @@
         $('mtUp').innerHTML = '—'; $('mtLeft').innerHTML = '—';
         $('mtNext').textContent = 'Задай цель в боте, и тропа появится';
         cancelAnimationFrame(MT.raf); MT.face = 1; mtDraw(0, () => false, false); MT.t = 0;
+        mtCompany(u, null);
         return;
       }
       const down = start > goal, total = Math.abs(start - goal);
@@ -2310,6 +2711,7 @@
       // человечек идёт по тропе: при открытии и смене человека — от подножия
       const from = (MT.user !== u || MT.t == null) ? 0 : MT.t;
       MT.user = u; MT.t = t;
+      mtCompany(u, t);
       cancelAnimationFrame(MT.raf);
       if (calm() || Math.abs(t - from) < 0.002) { MT.face = mtAt(t)[2]; mtDraw(t, reached, false); return; }
       const t0 = performance.now(), dur = 1600 + 3200 * Math.abs(t - from);
