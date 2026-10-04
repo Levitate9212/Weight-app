@@ -1975,6 +1975,9 @@
         const l = [name, s.km && s.min ? stMin(s.min) : ''].filter(Boolean).join(' · ');
         return `<div class="st-tile" style="background:${m.c}">${stIcon(m.ic)}<span class="n">×${s.n}</span><div class="v">${v}</div><div class="l">${esc(l)}</div></div>`;
       });
+      // тренировки, вид которых не удалось узнать, — отдельной плиткой, чтобы плитки сходились со «всего»
+      const rest = workouts - sp.reduce((a, [, s]) => a + s.n, 0);
+      if (rest > 0) { const m = stSport('тренировка'); tiles.push(`<div class="st-tile" style="background:${m.c}">${stIcon(m.ic)}<span class="n">×${rest}</span><div class="v">${rest}<small>${plural(rest, 'раз', 'раза', 'раз')}</small></div><div class="l">Вид не указан</div></div>`); }
       const km = dist && dist.km;
       tiles.push(`<div class="st-tile tot"><p class="st-k">Всего</p><div class="v">${km ? `${stKm(km)}<small>км</small>` : workouts}</div><div class="l">${km ? stWord(workouts, 'тренировка', 'тренировки', 'тренировок') : plural(workouts, 'тренировка', 'тренировки', 'тренировок')}</div></div>`);
       return `<div class="st-tiles">${tiles.join('')}</div>`;
