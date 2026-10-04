@@ -1927,11 +1927,83 @@
     const MT_CAMPS = [10, 25, 50, 75, 90];
     // Большая гора по диагонали: подножие слева внизу, вершина справа вверху.
     // На экране кусок горы, камера ведёт человечка, гору можно двигать пальцем.
+    // Гора строится один раз из «скелета» хребта: гребень ломается на разных масштабах,
+    // как у настоящих гор, по склону спускаются скальные отроги с тенью от луны,
+    // у вершины снег с языками по кулуарам. Случайность фиксированная — гора всегда одна и та же.
     const MT_W = 1600, MT_H = 1180, MT_K = 1.05;
-    const MT_RIDGE = [[-300, 1300], [-60, 1160], [60, 1120], [170, 1100], [260, 1040], [330, 1056], [450, 960], [520, 980], [640, 870], [700, 890], [820, 770], [880, 792], [1000, 660], [1060, 684], [1180, 540], [1230, 566], [1300, 450], [1400, 330], [1500, 220], [1580, 300], [1660, 420], [1760, 600], [1950, 950], [2100, 1300]];
-    // тропа по склону чуть ниже гребня
-    const MT_TRAIL = [[30, 1170], [160, 1146], [260, 1090], [340, 1094], [450, 1010], [525, 1022], [640, 920], [705, 932], [820, 820], [885, 836], [1000, 712], [1065, 728], [1180, 596], [1240, 608], [1310, 500], [1400, 384], [1460, 300], [1500, 224]];
-    const MT_SHAPE = 'M-300 1600V1300L' + MT_RIDGE.map(p => p.join(' ')).join('L') + 'V1600Z';
+    const mtRnd = seed => () => { seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+    // неровная линия: середина каждого отрезка смещается, на каждом шаге всё меньше
+    function mtJag(pts, rough, depth, rnd, vertical) {
+      let out = pts;
+      for (let d = 0; d < depth; d++) {
+        const next = [out[0]];
+        for (let i = 1; i < out.length; i++) {
+          const [ax, ay] = out[i - 1], [bx, by] = out[i], len = Math.hypot(bx - ax, by - ay) || 1, off = (rnd() - .5) * rough * len;
+          if (vertical) next.push([(ax + bx) / 2 + (rnd() - .5) * (bx - ax) * .3, (ay + by) / 2 + off], out[i]);
+          else next.push([(ax + bx) / 2 - (by - ay) / len * off, (ay + by) / 2 + (bx - ax) / len * off], out[i]);
+        }
+        out = next;
+      }
+      return out;
+    }
+    const mtD = pts => 'M' + pts.map(p => p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join('L');
+    // скелет хребта: плавный профиль (длинный склон с плечами, крутой верх, вершина, обрыв вправо),
+    // по нему — контрфорсы разной ширины и высоты с седловинами между ними
+    const MT_BASE = [[-300, 1320], [-80, 1196], [120, 1128], [300, 1052], [420, 1004], [520, 984], [610, 944], [760, 840], [870, 800], [960, 774], [1080, 654], [1170, 580], [1230, 552], [1300, 452], [1380, 352], [1440, 280], [1500, 214], [1548, 244], [1610, 318], [1690, 440], [1790, 616], [1910, 830], [2100, 1320]];
+    function mtBaseY(x) {
+      const b = MT_BASE; let i = 1;
+      while (i < b.length - 1 && b[i][0] < x) i++;
+      const p = b[i - 1], q = b[i], k = Math.max(0, Math.min(1, (x - p[0]) / (q[0] - p[0])));
+      return p[1] + (q[1] - p[1]) * (k * k * (3 - 2 * k));
+    }
+    const { MT_RIDGE, MT_BUTTS } = (() => {
+      const rnd = mtRnd(7), key = [], butts = [];
+      key.push([-300, 1320]);
+      let x = -260, up = true;
+      while (x < 2060) {
+        if (Math.abs(x - 1500) < 40) { x = 1500; key.push([1500, 214]); butts.push({ top: key.length - 1 }); up = false; x += 40 + rnd() * 30; continue; }
+        const hi = mtBaseY(x) < 700, amp = (hi ? 12 : 3) + rnd() * (hi ? 26 : 12);
+        key.push([x, mtBaseY(x) + (up ? -amp : amp * .7)]);
+        if (up) butts.push({ top: key.length - 1 });
+        up = !up;
+        x += (up ? 40 : 60) + rnd() * (hi ? 60 : 110);
+      }
+      key.push([2100, 1320]);
+      // ломаем каждый отрезок, у вершины острее
+      const out = [key[0]], idx = [0];
+      for (let i = 1; i < key.length; i++) {
+        const seg = mtJag([key[i - 1], key[i]], key[i][1] < 650 ? .42 : .3, 4, rnd, true);
+        out.push(...seg.slice(1)); idx.push(out.length - 1);
+      }
+      butts.forEach(b => { b.top = idx[b.top]; });
+      return { MT_RIDGE: out, MT_BUTTS: butts };
+    })();
+    const MT_SUMMIT = MT_RIDGE.reduce((m, p) => p[1] < m[1] ? p : m);
+    function mtRidgeY(x) {
+      const r = MT_RIDGE;
+      let i = 1;
+      while (i < r.length - 1 && r[i][0] < x) i++;
+      const a = r[i - 1], b = r[i];
+      return a[1] + (b[1] - a[1]) * Math.max(0, Math.min(1, (x - a[0]) / ((b[0] - a[0]) || 1)));
+    }
+    // тропа: плавная кривая через опорные точки ([x, на сколько ниже гребня]), в конце — на вершину
+    const MT_TRAIL = (() => {
+      const ctl = [[30, 22], [150, 46], [290, 70], [420, 62], [540, 84], [660, 72], [790, 64], [900, 86], [1010, 96], [1110, 74], [1210, 66], [1310, 56], [1400, 42]]
+        .map(([x, d]) => [x, mtBaseY(x) + 18 + d]);
+      for (let i = 1; i < ctl.length; i++) ctl[i][1] = Math.min(ctl[i][1], ctl[i - 1][1] - 14);
+      ctl.push([MT_SUMMIT[0] - 4, MT_SUMMIT[1] + 8]);
+      const P = [ctl[0], ...ctl, ctl[ctl.length - 1]], out = [];
+      for (let i = 1; i < P.length - 2; i++) {
+        const [p0, p1, p2, p3] = [P[i - 1], P[i], P[i + 1], P[i + 2]];
+        for (let s = 0; s < 14; s++) {
+          const t = s / 14, t2 = t * t, t3 = t2 * t;
+          out.push([0, 1].map(k => .5 * (2 * p1[k] + (-p0[k] + p2[k]) * t + (2 * p0[k] - 5 * p1[k] + 4 * p2[k] - p3[k]) * t2 + (-p0[k] + 3 * p1[k] - 3 * p2[k] + p3[k]) * t3)));
+        }
+      }
+      out.push(ctl[ctl.length - 1]);
+      return out;
+    })();
+    const MT_SHAPE = 'M-300 1600V1320L' + MT_RIDGE.map(p => p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join('L') + 'V1600Z';
     const MT = { t: null, user: null, raf: 0, open: false, face: 1, cx: 0, cy: 700, visW: 410, visH: 650, follow: true };
     const mtSeg = MT_TRAIL.slice(1).map((p, i) => Math.hypot(p[0] - MT_TRAIL[i][0], p[1] - MT_TRAIL[i][1]));
     const mtLen = mtSeg.reduce((a, b) => a + b, 0);
@@ -1943,37 +2015,97 @@
       }
       return [...MT_TRAIL[MT_TRAIL.length - 1], 1];
     }
-    // тени на правых склонах вершин и снежные шапки на высоких
-    function mtFaces() {
-      let shade = '', snow = '', ridge = '';
-      for (let i = 1; i < MT_RIDGE.length - 1; i++) {
-        const [px, py] = MT_RIDGE[i], prev = MT_RIDGE[i - 1], next = MT_RIDGE[i + 1];
-        if (py >= prev[1] || py >= next[1]) continue;
-        const big = py < 300, dl = big ? 520 : 170;
-        shade += `<path d="M${px} ${py}L${next[0]} ${next[1]}L${next[0] + (big ? 120 : 30)} ${next[1] + dl}L${px + (big ? 40 : 14)} ${py + dl * 1.1}Z"/>`;
-        ridge += `M${px} ${py}L${px + 8} ${py + 40}L${px + 3} ${py + 80}`;
-        if (py > 600) continue;
-        const d = 22 + (600 - py) * .13;
-        const on = (a, b) => { const f = Math.min(1, d / Math.max(1, a[1] - py)); return [px + (a[0] - px) * f, py + (a[1] - py) * f]; };
-        const [lx, ly] = on(prev), [rx, ry] = on(next), w = rx - lx;
-        snow += `<path d="M${px} ${py}L${rx.toFixed(1)} ${ry.toFixed(1)}L${(lx + w * .78).toFixed(1)} ${(py + d * .7).toFixed(1)}L${(lx + w * .62).toFixed(1)} ${(py + d * 1.05).toFixed(1)}L${(lx + w * .45).toFixed(1)} ${(py + d * .75).toFixed(1)}L${(lx + w * .25).toFixed(1)} ${(py + d * 1.1).toFixed(1)}L${lx.toFixed(1)} ${ly.toFixed(1)}Z"/>`;
+    // Скалы: от каждого контрфорса вниз уходит отрог, от седловины — кулуар. Грань между
+    // кулуаром и отрогом смотрит от луны — она в тени. Плюс мелкие уступы и снег у вершины.
+    const MT_SNOW = 560;
+    function mtRock() {
+      const rnd = mtRnd(31), r = MT_RIDGE;
+      let shade = '', lit = '', gully = '', tongues = '';
+      // язык снега вдоль линии: от снеговой кромки вниз, сужается к концу
+      const tongue = (line, depth) => {
+        const pts = line.filter(q => q[1] > MT_SNOW - 30 && q[1] < MT_SNOW + depth);
+        if (pts.length < 3) return '';
+        const L = [], R = [];
+        pts.forEach((q, i) => {
+          const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)], len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+          const w = (1 - i / (pts.length - 1)) * (10 + rnd() * 9), nx = -(b[1] - a[1]) / len, ny = (b[0] - a[0]) / len;
+          L.push([q[0] + nx * w, q[1] + ny * w]); R.push([q[0] - nx * w * .6, q[1] - ny * w * .6]);
+        });
+        return mtD([...L, ...R.reverse()]) + 'Z';
+      };
+      MT_BUTTS.forEach((b, n) => {
+        const ti = b.top, P = r[ti], from = n ? MT_BUTTS[n - 1].top : 0;
+        let mi = from;                                              // седловина слева
+        for (let i = from; i < ti; i++) if (r[i][1] > r[mi][1]) mi = i;
+        const M = r[mi];
+        if (P[0] < -200 || P[0] > 1950) return;
+        const L = Math.max(90, Math.min(560, (1240 - P[1]) * .62)) * (.75 + rnd() * .5);
+        const spur = mtJag([P, [P[0] - L * .18 - 6, P[1] + L * .5], [P[0] - L * .42, P[1] + L]], .28, 4, rnd);
+        const gl = L * (.6 + rnd() * .3);
+        const gul = mtJag([M, [M[0] - gl * .1, M[1] + gl * .45], [M[0] - gl * .32, M[1] + gl]], .24, 4, rnd);
+        shade += `<path d="${mtD([...r.slice(mi, ti + 1), ...spur.slice(1), ...gul.slice().reverse()])}Z"/>`;
+        lit += mtD(spur);
+        gully += mtD(gul);
+        if (P[1] < MT_SNOW + 20) { tongues += tongue(gul, 60 + rnd() * 130); if (rnd() < .5) tongues += tongue(spur, 30 + rnd() * 70); }
+      });
+      // мелкие уступы: тёмная черта и светлая кромка над ней
+      let ledgeD = '', ledgeL = '';
+      for (let i = 0; i < 120; i++) {
+        const x = -150 + rnd() * 1900, top = mtRidgeY(x);
+        const y = top + 16 + Math.pow(rnd(), 1.5) * 480;
+        if (y > 1150) continue;
+        const w = 8 + rnd() * 18, s = .3 + rnd() * .4;
+        ledgeD += `M${x.toFixed(1)} ${y.toFixed(1)}l${w.toFixed(1)} ${(-w * s).toFixed(1)}`;
+        ledgeL += `M${x.toFixed(1)} ${(y - 1.5).toFixed(1)}l${w.toFixed(1)} ${(-w * s).toFixed(1)}`;
       }
-      return { shade, snow, ridge };
+      // снег: всё выше рваной снеговой кромки
+      const edge = [];
+      for (let x = 1000; x <= 1960; x += 7) edge.push([x, MT_SNOW + (x - 1500) * .12 + Math.sin(x * .021) * 30 + Math.sin(x * .07 + 1) * 12 + Math.sin(x * .19) * 5 + (rnd() - .5) * 8]);
+      const snow = mtD([[1000, -200], ...edge, [1960, -200]]) + 'Z' + tongues;
+      return { shade, lit, gully, ledgeD, ledgeL, snow };
     }
-    function mtRange(base, amp, step, seed) {
-      let d = `M-600 2400V${base}`;
-      for (let x = -600, i = 0; x <= 1800; x += step, i++) d += `L${x} ${base - amp * (.45 + .55 * Math.abs(Math.sin(i * 1.7 + seed)))}`;
-      return d + 'L1800 2400Z';
+    // дальние хребты: те же природные неровности, у высоких вершин — снег
+    function mtRange(base, amp, seed, n) {
+      const rnd = mtRnd(seed), key = [[-600, base]];
+      for (let x = -600; x < 1800;) {
+        const w = 120 + rnd() * 220;
+        key.push([x + w * .5, base - amp * (.35 + rnd() * .65)], [x + w, base - amp * rnd() * .3]);
+        x += w;
+      }
+      const ridge = mtJag(key, .3, n, rnd, true);
+      return { d: mtD(ridge) + 'L1800 2400L-600 2400Z', ridge };
     }
+    function mtRangeSnow(ridge, line) {
+      let d = '';
+      for (let i = 1; i < ridge.length - 1; i++) {
+        const p = ridge[i];
+        if (p[1] >= line || ridge[i - 1][1] < p[1] || ridge[i + 1][1] < p[1]) continue;
+        const h = (line - p[1]) * .9;
+        d += `M${p[0].toFixed(1)} ${p[1].toFixed(1)}l${(h * .9).toFixed(1)} ${(h * .75).toFixed(1)}l${(-h * .3).toFixed(1)} ${(-h * .2).toFixed(1)}l${(-h * .25).toFixed(1)} ${(h * .22).toFixed(1)}l${(-h * .3).toFixed(1)} ${(-h * .3).toFixed(1)}l${(-h * .3).toFixed(1)} ${(h * .25).toFixed(1)}Z`;
+      }
+      return d;
+    }
+    // ели: ярусами, разной высоты, не на тропе
     function mtPines() {
+      const rnd = mtRnd(53);
       let g = '';
-      // ёлки по нижним склонам, под гребнем
-      for (let i = 0, x = -200; x < 760; i++, x += 26 + (i * 29) % 34) {
-        const r = MT_RIDGE.findIndex(p => p[0] > x), a = MT_RIDGE[r - 1], b = MT_RIDGE[r];
-        const top = a[1] + (b[1] - a[1]) * (x - a[0]) / (b[0] - a[0]);
-        const k = .8 + ((i * 37) % 10) / 14, y = top + 90 + (i * 53) % 150;
-        if (Math.abs(y - (top + 50)) < 34 || y > 1172) continue;
-        g += `<path d="M${x} ${y - 30 * k}L${x + 9 * k} ${y - 12 * k}L${x + 5 * k} ${y - 12 * k}L${x + 11 * k} ${y}L${x - 11 * k} ${y}L${x - 5 * k} ${y - 12 * k}L${x - 9 * k} ${y - 12 * k}Z"/>`;
+      for (let i = 0; i < 120; i++) {
+        const x = -220 + rnd() * 1000, top = mtRidgeY(x);
+        // часть елей стоит прямо на гребне (силуэтом на фоне неба), остальные — по склону
+        const y = i % 4 === 0 ? top + 3 : top + 10 + rnd() * Math.max(0, 1176 - top - 10), k = (.6 + rnd() * .7) * (x > 500 ? .8 : 1);
+        if (y > 1176 || MT_TRAIL.some(p => Math.abs(p[0] - x) < 16 && p[1] > y - 40 * k && p[1] < y + 10)) continue;
+        const h = 34 * k, w = 10 * k;
+        let d = `M${x.toFixed(1)} ${(y - h).toFixed(1)}`;
+        [[.34, .55], [.62, .8], [.9, 1]].forEach(([t, ww], j) => {
+          const yy = y - h + h * t, xw = w * ww;
+          d += `L${(x + xw).toFixed(1)} ${yy.toFixed(1)}L${(x + xw * .45).toFixed(1)} ${(yy - h * .06).toFixed(1)}`;
+        });
+        d += `L${(x + w * .15).toFixed(1)} ${y.toFixed(1)}L${(x - w * .15).toFixed(1)} ${y.toFixed(1)}`;
+        [[.9, 1], [.62, .8], [.34, .55]].forEach(([t, ww]) => {
+          const yy = y - h + h * t, xw = w * ww;
+          d += `L${(x - xw * .45).toFixed(1)} ${(yy - h * .06).toFixed(1)}L${(x - xw).toFixed(1)} ${yy.toFixed(1)}`;
+        });
+        g += d + 'Z';
       }
       return g;
     }
@@ -1986,30 +2118,38 @@
       const camps = MT_CAMPS.map(c => { const [x, y] = mtAt(c / 100);
         return `<g class="mt-camp" data-c="${c}"><path d="M${x - 8} ${y + 3}L${x} ${y - 10}L${x + 8} ${y + 3}Z" stroke-width="1.4"/><text x="${x}" y="${y + 22}" text-anchor="middle" font-size="14" font-weight="700" font-family="Barlow Condensed, Arial Narrow, sans-serif">${c}%</text></g>`; }).join('');
       const [fx, fy] = MT_TRAIL[MT_TRAIL.length - 1];
-      const f = mtFaces();
+      const rock = mtRock(), far = mtRange(420, 170, 11, 5), mid = mtRange(560, 120, 23, 5);
       svg.innerHTML = `<defs>
           <linearGradient id="mtSky" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="700"><stop offset="0" stop-color="#121621"/><stop offset=".55" stop-color="#1C2333"/><stop offset="1" stop-color="#15171C"/></linearGradient>
-          <linearGradient id="mtLit" gradientUnits="userSpaceOnUse" x1="0" y1="220" x2="0" y2="1180"><stop offset="0" stop-color="#5E6676"/><stop offset=".5" stop-color="#3C424D"/><stop offset="1" stop-color="#202328"/></linearGradient>
-          <linearGradient id="mtFar" gradientUnits="userSpaceOnUse" x1="0" y1="260" x2="0" y2="700"><stop offset="0" stop-color="#2E3647"/><stop offset="1" stop-color="#1A1E27"/></linearGradient>
-          <linearGradient id="mtMid" gradientUnits="userSpaceOnUse" x1="0" y1="380" x2="0" y2="800"><stop offset="0" stop-color="#272C37"/><stop offset="1" stop-color="#16181D"/></linearGradient>
+          <linearGradient id="mtLit" gradientUnits="userSpaceOnUse" x1="0" y1="210" x2="0" y2="1180"><stop offset="0" stop-color="#6B7486"/><stop offset=".35" stop-color="#4B5261"/><stop offset=".7" stop-color="#30343D"/><stop offset="1" stop-color="#1D2026"/></linearGradient>
+          <linearGradient id="mtFar" gradientUnits="userSpaceOnUse" x1="0" y1="230" x2="0" y2="700"><stop offset="0" stop-color="#323B4F"/><stop offset="1" stop-color="#1A1E27"/></linearGradient>
+          <linearGradient id="mtMid" gradientUnits="userSpaceOnUse" x1="0" y1="430" x2="0" y2="820"><stop offset="0" stop-color="#2A303C"/><stop offset="1" stop-color="#16181D"/></linearGradient>
           <linearGradient id="mtMist" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1C2333" stop-opacity="0"/><stop offset="1" stop-color="#1C2333" stop-opacity=".85"/></linearGradient>
           <radialGradient id="mtMoon"><stop offset="0" stop-color="#F2F3F0" stop-opacity=".22"/><stop offset="1" stop-color="#F2F3F0" stop-opacity="0"/></radialGradient>
-          <linearGradient id="mtShade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#05070C" stop-opacity=".48"/><stop offset=".6" stop-color="#05070C" stop-opacity=".28"/><stop offset="1" stop-color="#05070C" stop-opacity="0"/></linearGradient>
+          <linearGradient id="mtShade" x1=".8" y1="0" x2=".2" y2="1"><stop offset="0" stop-color="#070A12" stop-opacity=".55"/><stop offset=".55" stop-color="#070A12" stop-opacity=".38"/><stop offset="1" stop-color="#070A12" stop-opacity=".05"/></linearGradient>
+          <linearGradient id="mtSnow" gradientUnits="userSpaceOnUse" x1="0" y1="210" x2="0" y2="720"><stop offset="0" stop-color="#F4F7FB"/><stop offset=".6" stop-color="#DCE3EC"/><stop offset="1" stop-color="#B9C3D1"/></linearGradient>
           <clipPath id="mtClip"><path d="${MT_SHAPE}"/></clipPath>
+          <clipPath id="mtFarClip"><path d="${far.d}"/></clipPath>
         </defs>
         <g id="mtSkyG"><rect x="-600" y="-900" width="1800" height="3200" fill="url(#mtSky)"/>${stars}
           <circle cx="330" cy="90" r="50" fill="url(#mtMoon)"/><circle cx="330" cy="90" r="14" fill="#E9ECEF" opacity=".85"/></g>
-        <g id="mtFarG"><path d="${mtRange(400, 130, 70, .3)}" fill="url(#mtFar)"/><rect x="-600" y="360" width="2400" height="260" fill="url(#mtMist)"/></g>
-        <g id="mtMidG"><path d="${mtRange(540, 100, 56, 2.1)}" fill="url(#mtMid)"/></g>
+        <g id="mtFarG"><path d="${far.d}" fill="url(#mtFar)"/>
+          <path d="${mtRangeSnow(far.ridge, 330)}" fill="#8C97AB" opacity=".38" clip-path="url(#mtFarClip)"/>
+          <rect x="-600" y="380" width="2400" height="260" fill="url(#mtMist)"/></g>
+        <g id="mtMidG"><path d="${mid.d}" fill="url(#mtMid)"/><rect x="-600" y="560" width="2400" height="240" fill="url(#mtMist)" opacity=".7"/></g>
         <path d="${MT_SHAPE}" fill="url(#mtLit)"/>
         <g clip-path="url(#mtClip)">
-          <g fill="#E9EDF2">${f.snow}</g>
-          <g fill="url(#mtShade)">${f.shade}</g>
-          <path d="${f.ridge}" fill="none" stroke="#7C8492" stroke-width="1.2" opacity=".3"/>
+          <path d="${rock.ledgeL}" fill="none" stroke="#8B95A7" stroke-width="1" opacity=".22" stroke-linecap="round"/>
+          <path d="${rock.ledgeD}" fill="none" stroke="#0C0E13" stroke-width="1.6" opacity=".4" stroke-linecap="round"/>
+          <path d="${rock.snow}" fill="url(#mtSnow)"/>
+          <g fill="url(#mtShade)">${rock.shade}</g>
+          <path d="${rock.gully}" fill="none" stroke="#06080D" stroke-width="2" opacity=".35" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="${rock.lit}" fill="none" stroke="#C3CCDA" stroke-width="1.3" opacity=".35" stroke-linecap="round" stroke-linejoin="round"/>
         </g>
-        <path d="M-600 1700V1166Q-200 1150 100 1164Q400 1178 700 1162Q1000 1150 1300 1166Q1600 1176 2200 1160V1700Z" fill="#101216"/>
-        <g fill="#0B0C0F">${mtPines()}</g>
-        <path d="M${MT_TRAIL.map(p => p.join(' ')).join('L')}" fill="none" stroke="#5E636C" stroke-width="3" stroke-dasharray="1 7" stroke-linecap="round"/>
+        <path d="${mtD(MT_RIDGE)}" fill="none" stroke="#C9D2DF" stroke-width="1.2" opacity=".28" stroke-linejoin="round"/>
+        <path d="M-600 1700V1170Q-200 1156 100 1168Q400 1180 700 1166Q1000 1154 1300 1170Q1600 1180 2200 1164V1700Z" fill="#101216"/>
+        <path d="${mtPines()}" fill="#0B0C0F"/>
+        <path d="${mtD(MT_TRAIL)}" fill="none" stroke="#6A707A" stroke-width="3" stroke-dasharray="1 7" stroke-linecap="round" stroke-linejoin="round"/>
         <path id="mtDone" d="" fill="none" stroke="#C6FF3D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
         ${camps}
         <text id="mtStartT" x="${MT_TRAIL[0][0] - 4}" y="${MT_TRAIL[0][1] + 22}" font-size="13" font-weight="600" fill="#9A9DA3" font-family="Golos Text, system-ui, sans-serif"></text>
