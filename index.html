@@ -1875,9 +1875,16 @@
       }
       return out;
     }
+    // границы месяца — его полные недели: с понедельника первой по воскресенье последней
+    // (октябрь 2026 — 28 сентября – 25 октября), так сумма недель всегда равна месяцу
+    function stMonthSpan(y, m) {
+      const from = new Date(y, m, 1); from.setDate(from.getDate() + (7 - from.getDay()) % 7 - 6);
+      const to = new Date(y, m + 1, 0); to.setDate(to.getDate() - to.getDay());
+      return { from, to };
+    }
     function renderStoryRing(u) {
       const mo = storyMonth(), ring = $('storyRing'), wk = stWeeks(mo.y, mo.m);
-      const from = wk.length ? wk[0].from : new Date(mo.y, mo.m, 1);
+      const from = stMonthSpan(mo.y, mo.m).from;
       const has = (u.entries || []).some(e => stDay(e.timestamp) >= from);
       ring.classList.toggle('hidden', !has);
       if (!has) return;
@@ -1898,7 +1905,7 @@
           change: base != null && end != null ? +(end - base).toFixed(1) : null,
           medals: cat.filter(md => md.status === 'earned' && md.date && inR(stDay(new Date(md.date).getTime()), wk.from, wk.to)) };
       });
-      const mFirst = new Date(y, m, 1), mLast = new Date(y, m + 1, 0);
+      const { from: mFirst, to: mLast } = stMonthSpan(y, m);
       const mw = E.filter(e => inR(e.d, mFirst, mLast)), bm = before(mFirst);
       const startW = bm.length ? bm[bm.length - 1].w : (mw[0] ? mw[0].w : null), endW = mw.length ? mw[mw.length - 1].w : null;
       const good = c => c != null && (losing ? c < 0 : c > 0);
@@ -1909,7 +1916,7 @@
         const pc = w => Math.max(0, Math.min(100, Math.round((u.start - w) / (u.start - u.target) * 100)));
         path = [pc(startW), pc(endW)];
       }
-      return { y, m, losing, weeks, ended: mLast < stDay(Date.now()), change: startW != null && endW != null ? +(endW - startW).toFixed(1) : null,
+      return { y, m, losing, weeks, from: mFirst, to: mLast, ended: mLast < stDay(Date.now()), change: startW != null && endW != null ? +(endW - startW).toFixed(1) : null,
                weighIns: mw.length, medals: cat.filter(md => md.status === 'earned' && md.date && inR(stDay(new Date(md.date).getTime()), mFirst, mLast)).length, best, path, good };
     }
     const stKg = c => c == null ? '—' : (c > 0 ? '+' : c < 0 ? '−' : '') + fmt(Math.abs(c).toFixed(1));
@@ -2026,7 +2033,7 @@
           <div class="st-box">
             <p class="st-k">${b.ended ? 'Итоги месяца' : 'Месяц идёт'} · ${esc(u.name || '')}</p>
             <div class="st-month">${ST_MONTHS[b.m]}</div>
-            ${stChange(b.change, cls)}<p class="st-sub">${b.ended ? 'за месяц' : 'с начала месяца'}${b.ended && b.best ? ` · лучшая неделя ${b.best.i + 1}-я` : ''}</p>
+            ${stChange(b.change, cls)}<p class="st-sub">${stRange(b.from, b.to)}${b.ended ? '' : ' · месяц идёт'}${b.ended && b.best ? ` · лучшая неделя ${b.best.i + 1}-я` : ''}</p>
             <div class="st-chips"><span class="st-chip"><b>${b.weighIns}</b>замеров</span><span class="st-chip"><b>${sum ? sum.workouts : dots}</b>тренировок</span><span class="st-chip"><b>${b.medals}</b>медалей</span>${b.ended && b.path ? `<span class="st-chip"><b>${b.path[0]}% → ${b.path[1]}%</b>путь к цели</span>` : ''}</div>
             ${stCoach(ph && (b.ended ? ph.final : ph.cover) || '', wait)}</div>
           ${failed ? '' : stTiles(sum && sum.distance, sum ? sum.workouts : 0, wait)}
@@ -2041,7 +2048,7 @@
           <div class="st-box">
             <p class="st-k">Итог ${ST_GEN[pm]}</p>
             <div class="st-month">${ST_MONTHS[pm]}</div>
-            ${stChange(pv.summary.change, cls)}<p class="st-sub">за ${ST_MONTHS[pm]}</p>
+            ${stChange(pv.summary.change, cls)}<p class="st-sub">${pv.summary.from ? stRange(new Date(pv.summary.from + 'T12:00:00'), new Date(pv.summary.to + 'T12:00:00')) : 'за ' + ST_MONTHS[pm]}</p>
             <div class="st-chips"><span class="st-chip"><b>${pv.summary.weighIns}</b>замеров</span><span class="st-chip"><b>${pv.summary.workouts}</b>тренировок</span><span class="st-chip"><b>${pv.summary.medals || 0}</b>медалей</span></div>
             ${stCoach(pv.phrases && pv.phrases.final)}</div>
           ${stTiles(pv.summary.distance, pv.summary.workouts)}
@@ -2131,8 +2138,9 @@
       // сон, тренировки, километры и тексты тренера; первую неделю месяца — ещё итог прошлого
       const req = ++ST.req, uid = encodeURIComponent(u.id || activeUserId);
       const get = ym => fetch(`${dataUrl()}&action=story&uid=${uid}&month=${ym}`).then(r => r.json()).then(j => { if (!j || j.error) throw 0; return j; });
-      const today = stDay(Date.now()), pm = new Date(b.y, b.m, 0);
-      if (today - pm <= 7 * DAY_MS && today.getMonth() === b.m)
+      // прошлый месяц закончился неделю назад — пока в новом месяце одна неделя
+      const pm = new Date(b.y, b.m, 0);
+      if (b.weeks.length <= 1)
         get(stYm({ y: pm.getFullYear(), m: pm.getMonth() })).then(j => {
           if (req !== ST.req) return;
           ST.prev = j; stRebuild(u, b);
