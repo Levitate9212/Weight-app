@@ -12,7 +12,7 @@
   <style>
     /* =====================================================================
        Стиль «Спорт-ночь»: графит, один лаймовый акцент, узкие жирные цифры.
-       Тёмный всегда — так задумано, медали на графите смотрятся сильнее.
+       Тёмный или светлый — как в телефоне (светлый: html.light, цвета ниже).
        ===================================================================== */
     :root {
       --bg:      #121315;   /* графит */
@@ -31,6 +31,28 @@
       --text:    'Golos Text', system-ui, -apple-system, sans-serif;
       color-scheme: dark;
     }
+    /* светлый режим телефона: тот же стиль на светлом фоне; лайм темнее, чтобы читался на белом */
+    html.light {
+      --bg:      #F2F3EF;
+      --panel:   #FFFFFF;
+      --panel2:  #E8E9E4;
+      --ink:     #15171A;
+      --muted:   #6C7078;
+      --rule:    #E1E2DD;
+      --volt:    #6BA300;
+      --volt-dim: rgba(107, 163, 0, .12);
+      --volt-ink:#121315;
+      --down:    #5E9400;
+      --up:      #E0503A;
+      color-scheme: light;
+    }
+    html.light #story { background: var(--bg); }
+    html.light .st-bars i { background: rgba(21,23,26,.16); }
+    html.light .day.empty .dn { color: #A6A9AE; }
+    html.light #mtView { background: #4E9BD6; }
+    html.light .mt-top { color: #15171A; }
+    html.light .mt-top .k, html.light .mt-stats .v small, html.light .mt-next { color: rgba(21,23,26,.62); }
+    html.light .mt-hint { color: rgba(21,23,26,.6); }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body {
@@ -637,7 +659,13 @@
 
     // Тема Telegram: тёмная или светлая
     function applyTelegramTheme() {
-      document.documentElement.classList.add('dark');      // стиль «Спорт-ночь» всегда тёмный
+      // тема как в телефоне: Telegram сообщает свою, вне Telegram — настройка системы
+      const tgScheme = window.Telegram?.WebApp?.colorScheme;
+      const dark = tgScheme ? tgScheme !== 'light' : !(window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches);
+      const root = document.documentElement, changed = root.classList.contains('dark') !== dark;
+      root.classList.toggle('dark', dark); root.classList.toggle('light', !dark);
+      // гора перерисуется в новых цветах при следующем открытии (или сразу, если открыта)
+      if (changed && $('mtSvg').dataset.built) { delete $('mtSvg').dataset.built; if (MT.open && MT.last) { MT.t = null; renderMountain(...MT.last); } }
       // шапка и фон Telegram в цвет приложения, без белой полосы сверху
       try {
         const tg = window.Telegram?.WebApp, bg = cssVar('--bg');
@@ -657,6 +685,7 @@
         try { tg.onEvent('themeChanged', applyTelegramTheme); } catch (e) {}
       }
       applyTelegramTheme();
+      try { if (!tg) matchMedia('(prefers-color-scheme: light)').addEventListener('change', applyTelegramTheme); } catch (e) {}
       initSwipe();
       initPullToRefresh();
       fetchData();
@@ -2109,67 +2138,85 @@
       }
       return g;
     }
+    // цвета горы: ночью — луна и звёзды, днём (светлая тема телефона) — солнце, облака, зелёные склоны
+    const MT_PAL = {
+      night: { sky: ['#121621', '#1C2333', '#15171C'], lit: ['#6B7486', '#4B5261', '#30343D', '#1D2026'], far: ['#323B4F', '#1A1E27'], farSnow: ['#8C97AB', .38],
+        mid: ['#2A303C', '#16181D'], mist: '#1C2333', shade: ['#070A12', .55, .38], snow: ['#F4F7FB', '#DCE3EC', '#B9C3D1'], ledgeL: ['#8B95A7', .22], ledgeD: ['#0C0E13', .4],
+        gully: ['#06080D', .35], spur: ['#C3CCDA', .35], ridge: ['#C9D2DF', .28], ground: '#101216', pines: '#0B0C0F', trail: '#6A707A', me: '#C6FF3D', meBack: '#8FB82C',
+        start: '#9A9DA3', goal: '#F2F3F0', pole: '#F2F3F0', campOn: '#F2F3F0', campOff: '#8A8D94', triOff: '#24262A', triOffS: '#5A5F68', meShadow: .4 },
+      day: { sky: ['#4E9BD6', '#8EC3EA', '#DCEEF7'], lit: ['#9AA5B3', '#7D8896', '#5F7466', '#3E6440'], far: ['#8FA9C0', '#B8CCDB'], farSnow: ['#FFFFFF', .75],
+        mid: ['#7893A6', '#A3BBCB'], mist: '#DCEEF7', shade: ['#22324A', .42, .26], snow: ['#FFFFFF', '#F1F6FB', '#D9E4EF'], ledgeL: ['#E6ECF2', .3], ledgeD: ['#2A3340', .3],
+        gully: ['#1E2836', .3], spur: ['#FFFFFF', .5], ridge: ['#FFFFFF', .45], ground: '#3A5D34', pines: '#1D3B25', trail: '#4A525C', me: '#5E9400', meBack: '#3F6A00',
+        start: '#1D2228', goal: '#15171A', pole: '#2A2F36', campOn: '#15171A', campOff: '#3D444D', triOff: '#E8ECEF', triOffS: '#59616B', meShadow: .25 }
+    };
+    const mtPal = () => MT_PAL[document.documentElement.classList.contains('light') ? 'day' : 'night'];
     function mtBuild() {
       const svg = $('mtSvg');
       if (svg.dataset.built) return;
       svg.dataset.built = '1';
+      const P = mtPal(), day = P === MT_PAL.day;
       let stars = '';
       for (let i = 0; i < 70; i++) stars += `<circle cx="${(i * 97 + 13) % 560 - 40}" cy="${(i * 37 + 11) % 380 - 20}" r="${i % 6 ? .7 : 1.3}" fill="#F2F3F0" opacity="${i % 3 ? .25 : .5}"/>`;
       const camps = MT_CAMPS.map(c => { const [x, y] = mtAt(c / 100);
         return `<g class="mt-camp" data-c="${c}"><path d="M${x - 8} ${y + 3}L${x} ${y - 10}L${x + 8} ${y + 3}Z" stroke-width="1.4"/><text x="${x}" y="${y + 22}" text-anchor="middle" font-size="14" font-weight="700" font-family="Barlow Condensed, Arial Narrow, sans-serif">${c}%</text></g>`; }).join('');
       const [fx, fy] = MT_TRAIL[MT_TRAIL.length - 1];
+      // днём вместо звёзд — облака: несколько мягких овалов разной ширины
+      let clouds = '';
+      if (day) [[40, 70, 1], [250, 150, .8], [-20, 250, .7], [420, 40, .9]].forEach(([x, y, k]) => {
+        clouds += `<g opacity="${(.55 + k * .35).toFixed(2)}"><ellipse cx="${x}" cy="${y}" rx="${46 * k}" ry="${12 * k}"/><ellipse cx="${x - 16 * k}" cy="${y - 8 * k}" rx="${22 * k}" ry="${12 * k}"/><ellipse cx="${x + 12 * k}" cy="${y - 12 * k}" rx="${26 * k}" ry="${15 * k}"/></g>`;
+      });
       const rock = mtRock(), far = mtRange(420, 170, 11, 5), mid = mtRange(560, 120, 23, 5);
       svg.innerHTML = `<defs>
-          <linearGradient id="mtSky" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="700"><stop offset="0" stop-color="#121621"/><stop offset=".55" stop-color="#1C2333"/><stop offset="1" stop-color="#15171C"/></linearGradient>
-          <linearGradient id="mtLit" gradientUnits="userSpaceOnUse" x1="0" y1="210" x2="0" y2="1180"><stop offset="0" stop-color="#6B7486"/><stop offset=".35" stop-color="#4B5261"/><stop offset=".7" stop-color="#30343D"/><stop offset="1" stop-color="#1D2026"/></linearGradient>
-          <linearGradient id="mtFar" gradientUnits="userSpaceOnUse" x1="0" y1="230" x2="0" y2="700"><stop offset="0" stop-color="#323B4F"/><stop offset="1" stop-color="#1A1E27"/></linearGradient>
-          <linearGradient id="mtMid" gradientUnits="userSpaceOnUse" x1="0" y1="430" x2="0" y2="820"><stop offset="0" stop-color="#2A303C"/><stop offset="1" stop-color="#16181D"/></linearGradient>
-          <linearGradient id="mtMist" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1C2333" stop-opacity="0"/><stop offset="1" stop-color="#1C2333" stop-opacity=".85"/></linearGradient>
-          <radialGradient id="mtMoon"><stop offset="0" stop-color="#F2F3F0" stop-opacity=".22"/><stop offset="1" stop-color="#F2F3F0" stop-opacity="0"/></radialGradient>
-          <linearGradient id="mtShade" x1=".8" y1="0" x2=".2" y2="1"><stop offset="0" stop-color="#070A12" stop-opacity=".55"/><stop offset=".55" stop-color="#070A12" stop-opacity=".38"/><stop offset="1" stop-color="#070A12" stop-opacity=".05"/></linearGradient>
-          <linearGradient id="mtSnow" gradientUnits="userSpaceOnUse" x1="0" y1="210" x2="0" y2="720"><stop offset="0" stop-color="#F4F7FB"/><stop offset=".6" stop-color="#DCE3EC"/><stop offset="1" stop-color="#B9C3D1"/></linearGradient>
+          <linearGradient id="mtSky" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="700"><stop offset="0" stop-color="${P.sky[0]}"/><stop offset=".55" stop-color="${P.sky[1]}"/><stop offset="1" stop-color="${P.sky[2]}"/></linearGradient>
+          <linearGradient id="mtLit" gradientUnits="userSpaceOnUse" x1="0" y1="210" x2="0" y2="1180"><stop offset="0" stop-color="${P.lit[0]}"/><stop offset=".35" stop-color="${P.lit[1]}"/><stop offset=".7" stop-color="${P.lit[2]}"/><stop offset="1" stop-color="${P.lit[3]}"/></linearGradient>
+          <linearGradient id="mtFar" gradientUnits="userSpaceOnUse" x1="0" y1="230" x2="0" y2="700"><stop offset="0" stop-color="${P.far[0]}"/><stop offset="1" stop-color="${P.far[1]}"/></linearGradient>
+          <linearGradient id="mtMid" gradientUnits="userSpaceOnUse" x1="0" y1="430" x2="0" y2="820"><stop offset="0" stop-color="${P.mid[0]}"/><stop offset="1" stop-color="${P.mid[1]}"/></linearGradient>
+          <linearGradient id="mtMist" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${P.mist}" stop-opacity="0"/><stop offset="1" stop-color="${P.mist}" stop-opacity=".85"/></linearGradient>
+          <radialGradient id="mtMoon"><stop offset="0" stop-color="${day ? '#FFF1B8' : '#F2F3F0'}" stop-opacity="${day ? .6 : .22}"/><stop offset="1" stop-color="${day ? '#FFF1B8' : '#F2F3F0'}" stop-opacity="0"/></radialGradient>
+          <linearGradient id="mtShade" x1=".8" y1="0" x2=".2" y2="1"><stop offset="0" stop-color="${P.shade[0]}" stop-opacity="${P.shade[1]}"/><stop offset=".55" stop-color="${P.shade[0]}" stop-opacity="${P.shade[2]}"/><stop offset="1" stop-color="${P.shade[0]}" stop-opacity=".05"/></linearGradient>
+          <linearGradient id="mtSnow" gradientUnits="userSpaceOnUse" x1="0" y1="210" x2="0" y2="720"><stop offset="0" stop-color="${P.snow[0]}"/><stop offset=".6" stop-color="${P.snow[1]}"/><stop offset="1" stop-color="${P.snow[2]}"/></linearGradient>
           <clipPath id="mtClip"><path d="${MT_SHAPE}"/></clipPath>
           <clipPath id="mtFarClip"><path d="${far.d}"/></clipPath>
         </defs>
-        <g id="mtSkyG"><rect x="-600" y="-900" width="1800" height="3200" fill="url(#mtSky)"/>${stars}
-          <circle cx="330" cy="90" r="50" fill="url(#mtMoon)"/><circle cx="330" cy="90" r="14" fill="#E9ECEF" opacity=".85"/></g>
+        <g id="mtSkyG"><rect x="-600" y="-900" width="1800" height="3200" fill="url(#mtSky)"/>${day ? `<circle cx="330" cy="90" r="70" fill="url(#mtMoon)"/><circle cx="330" cy="90" r="17" fill="#FFF4CF"/><g fill="#FFFFFF">${clouds}</g>` : `${stars}
+          <circle cx="330" cy="90" r="50" fill="url(#mtMoon)"/><circle cx="330" cy="90" r="14" fill="#E9ECEF" opacity=".85"/>`}</g>
         <g id="mtFarG"><path d="${far.d}" fill="url(#mtFar)"/>
-          <path d="${mtRangeSnow(far.ridge, 330)}" fill="#8C97AB" opacity=".38" clip-path="url(#mtFarClip)"/>
+          <path d="${mtRangeSnow(far.ridge, 330)}" fill="${P.farSnow[0]}" opacity="${P.farSnow[1]}" clip-path="url(#mtFarClip)"/>
           <rect x="-600" y="380" width="2400" height="260" fill="url(#mtMist)"/></g>
         <g id="mtMidG"><path d="${mid.d}" fill="url(#mtMid)"/><rect x="-600" y="560" width="2400" height="240" fill="url(#mtMist)" opacity=".7"/></g>
         <path d="${MT_SHAPE}" fill="url(#mtLit)"/>
         <g clip-path="url(#mtClip)">
-          <path d="${rock.ledgeL}" fill="none" stroke="#8B95A7" stroke-width="1" opacity=".22" stroke-linecap="round"/>
-          <path d="${rock.ledgeD}" fill="none" stroke="#0C0E13" stroke-width="1.6" opacity=".4" stroke-linecap="round"/>
+          <path d="${rock.ledgeL}" fill="none" stroke="${P.ledgeL[0]}" stroke-width="1" opacity="${P.ledgeL[1]}" stroke-linecap="round"/>
+          <path d="${rock.ledgeD}" fill="none" stroke="${P.ledgeD[0]}" stroke-width="1.6" opacity="${P.ledgeD[1]}" stroke-linecap="round"/>
           <path d="${rock.snow}" fill="url(#mtSnow)"/>
           <g fill="url(#mtShade)">${rock.shade}</g>
-          <path d="${rock.gully}" fill="none" stroke="#06080D" stroke-width="2" opacity=".35" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="${rock.lit}" fill="none" stroke="#C3CCDA" stroke-width="1.3" opacity=".35" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="${rock.gully}" fill="none" stroke="${P.gully[0]}" stroke-width="2" opacity="${P.gully[1]}" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="${rock.lit}" fill="none" stroke="${P.spur[0]}" stroke-width="1.3" opacity="${P.spur[1]}" stroke-linecap="round" stroke-linejoin="round"/>
         </g>
-        <path d="${mtD(MT_RIDGE)}" fill="none" stroke="#C9D2DF" stroke-width="1.2" opacity=".28" stroke-linejoin="round"/>
-        <path d="M-600 1700V1170Q-200 1156 100 1168Q400 1180 700 1166Q1000 1154 1300 1170Q1600 1180 2200 1164V1700Z" fill="#101216"/>
-        <path d="${mtPines()}" fill="#0B0C0F"/>
-        <path d="${mtD(MT_TRAIL)}" fill="none" stroke="#6A707A" stroke-width="3" stroke-dasharray="1 7" stroke-linecap="round" stroke-linejoin="round"/>
-        <path id="mtDone" d="" fill="none" stroke="#C6FF3D" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="${mtD(MT_RIDGE)}" fill="none" stroke="${P.ridge[0]}" stroke-width="1.2" opacity="${P.ridge[1]}" stroke-linejoin="round"/>
+        <path d="M-600 1700V1170Q-200 1156 100 1168Q400 1180 700 1166Q1000 1154 1300 1170Q1600 1180 2200 1164V1700Z" fill="${P.ground}"/>
+        <path d="${mtPines()}" fill="${P.pines}"/>
+        <path d="${mtD(MT_TRAIL)}" fill="none" stroke="${P.trail}" stroke-width="3" stroke-dasharray="1 7" stroke-linecap="round" stroke-linejoin="round"/>
+        <path id="mtDone" d="" fill="none" stroke="${P.me}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
         ${camps}
-        <text id="mtStartT" x="${MT_TRAIL[0][0] - 4}" y="${MT_TRAIL[0][1] + 22}" font-size="13" font-weight="600" fill="#9A9DA3" font-family="Golos Text, system-ui, sans-serif"></text>
-        <line x1="${fx}" y1="${fy}" x2="${fx}" y2="${fy - 24}" stroke="#F2F3F0" stroke-width="1.6"/>
+        <text id="mtStartT" x="${MT_TRAIL[0][0] - 4}" y="${MT_TRAIL[0][1] + 22}" font-size="13" font-weight="600" fill="${P.start}" font-family="Golos Text, system-ui, sans-serif"></text>
+        <line x1="${fx}" y1="${fy}" x2="${fx}" y2="${fy - 24}" stroke="${P.pole}" stroke-width="1.6"/>
         <path id="mtFlag" d="M${fx} ${fy - 24}L${fx + 18} ${fy - 19}L${fx} ${fy - 14}Z" fill="#F2B53A"/>
-        <text id="mtGoalT" x="${fx + 24}" y="${fy - 13}" font-size="13" font-weight="600" fill="#F2F3F0" font-family="Golos Text, system-ui, sans-serif"></text>
+        <text id="mtGoalT" x="${fx + 24}" y="${fy - 13}" font-size="13" font-weight="600" fill="${P.goal}" font-family="Golos Text, system-ui, sans-serif"></text>
         <g id="mtMe">
-          <ellipse cx="0" cy="1" rx="14" ry="3.5" fill="#000" opacity=".4"/>
+          <ellipse cx="0" cy="1" rx="14" ry="3.5" fill="#000" opacity="${P.meShadow}"/>
           <g id="mtBody">
-            <line id="mtLegB" x1="0" y1="-10" x2="0" y2="0" stroke="#8FB82C" stroke-width="3.4" stroke-linecap="round"/>
+            <line id="mtLegB" x1="0" y1="-10" x2="0" y2="0" stroke="${P.meBack}" stroke-width="3.4" stroke-linecap="round"/>
             <rect x="-8.5" y="-22" width="6.5" height="10" rx="2" fill="#9AA0AA"/>
-            <line x1="0" y1="-10" x2="1.5" y2="-21" stroke="#C6FF3D" stroke-width="4.4" stroke-linecap="round"/>
-            <line id="mtLegF" x1="0" y1="-10" x2="0" y2="0" stroke="#C6FF3D" stroke-width="3.4" stroke-linecap="round"/>
-            <line id="mtArm" x1="1.5" y1="-18.5" x2="6.5" y2="-12.5" stroke="#C6FF3D" stroke-width="2.8" stroke-linecap="round"/>
+            <line x1="0" y1="-10" x2="1.5" y2="-21" stroke="${P.me}" stroke-width="4.4" stroke-linecap="round"/>
+            <line id="mtLegF" x1="0" y1="-10" x2="0" y2="0" stroke="${P.me}" stroke-width="3.4" stroke-linecap="round"/>
+            <line id="mtArm" x1="1.5" y1="-18.5" x2="6.5" y2="-12.5" stroke="${P.me}" stroke-width="2.8" stroke-linecap="round"/>
             <line id="mtPole" x1="6.5" y1="-14" x2="8.5" y2="0.5" stroke="#E9ECEF" stroke-width="1.3" stroke-linecap="round"/>
-            <circle cx="2.6" cy="-26" r="4.3" fill="#C6FF3D"/>
+            <circle cx="2.6" cy="-26" r="4.3" fill="${P.me}"/>
             <path d="M-1.6 -27.5Q2.6 -32.5 6.8 -27.5Z" fill="#F2B53A"/>
           </g>
         </g>`;
-      mtInitDrag(svg);
+      if (!svg.dataset.drag) { svg.dataset.drag = '1'; mtInitDrag(svg); }
     }
     // камера: кусок горы размером с экран; дальние хребты сдвигаются медленнее (глубина)
     function mtCamera(x, y) {
@@ -2230,8 +2277,9 @@
       if (MT.follow) mtCamera(x - MT.visW * .42, y - MT.visH * .55);
       document.querySelectorAll('.mt-camp').forEach(g => {
         const on = reached(+g.dataset.c, t), tri = g.firstElementChild, txt = g.lastElementChild;
-        tri.setAttribute('fill', on ? '#C6FF3D' : '#24262A'); tri.setAttribute('stroke', on ? '#C6FF3D' : '#5A5F68');
-        txt.setAttribute('fill', on ? '#F2F3F0' : '#8A8D94');
+        const P = mtPal();
+        tri.setAttribute('fill', on ? P.me : P.triOff); tri.setAttribute('stroke', on ? P.me : P.triOffS);
+        txt.setAttribute('fill', on ? P.campOn : P.campOff);
       });
     }
     const fmt1 = v => fmt(parseFloat((+v).toFixed(1)));
