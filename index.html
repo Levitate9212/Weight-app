@@ -181,6 +181,9 @@
     .st-tile .v small { font-size: 17px; margin-left: 2px; }
     .st-tile .l { font-size: 12.5px; font-weight: 600; opacity: .72; margin-top: 3px; }
     .st-tile.tot { background: var(--panel); color: var(--ink); }
+    .st-tile.unk { background: var(--panel2); color: var(--ink); } .st-tile.unk .si, .st-tile.unk .l { color: var(--muted); opacity: 1; }
+    .st-tile.wide { grid-column: 1 / -1; min-height: 0; flex-direction: row; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+    .st-tile.wide .v { margin-top: 0; padding-top: 0; } .st-tile.wide .st-k { flex-basis: 100%; }
     .st-tile.tot .v { color: var(--volt); } .st-tile.tot .v small, .st-tile.tot .l { color: var(--muted); opacity: 1; }
     .st-tile.wait { background: var(--panel); }
     .st-tile.wait::after, .st-coach.wait::after { content: ""; position: absolute; left: 16px; right: 16px; top: 18px; height: 12px; border-radius: 6px;
@@ -1948,7 +1951,8 @@
       walk: '<circle cx="12.5" cy="3.8" r="2"/><path d="M12.5 7.5l-1 6 3 3.5v4.5M11.5 13.5 9 17l-1.5 4M8 11.5l4-3.5 3.5 3"/>',
       bike: '<circle cx="5.5" cy="16.5" r="3.6"/><circle cx="18.5" cy="16.5" r="3.6"/><path d="M5.5 16.5 9.5 9.5h6l3 7M9.5 9.5l3 7 3-7M8 7.5h3M15.5 9.5 14.5 6.5h2"/>',
       ski: '<circle cx="15" cy="4" r="2"/><path d="M13.5 7.5 10 12l3 3-2 4M7 10l4-2.5 3 3 3 .5M3 20.5l18-3M6 6l-1 12"/>',
-      gym: '<path d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12"/>'
+      gym: '<path d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12"/>',
+      q: '<circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.4 2.4c-.6.3-1 .9-1 1.6v.5M12 16.9v.2"/>'
     };
     const ST_SPORTS = [[/^бег/, '#FF7A3D', 'run'], [/^плав/, '#3DC8FF', 'swim'], [/^вело/, '#B48CFF', 'bike'], [/^ходьб|^прогул/, '#9BE15D', 'walk'], [/^лыж/, '#7FE3E0', 'ski']];
     const ST_SPARE = ['#FFC93D', '#FF7FB2', '#4DE3B5', '#8FB0FF', '#FFA98F'];
@@ -1963,6 +1967,8 @@
     const stMin = m => m >= 60 ? `${Math.floor(m / 60)} ч ${String(m % 60).padStart(2, '0')} мин` : `${m} мин`;
     const stWo = w => [w.sport, w.km ? stKm(w.km) + ' км' : '', !w.km && w.min ? w.min + ' мин' : ''].filter(Boolean).join(' ');
     const stWord = (n, a, b, c) => `${n} ${plural(n, a, b, c)}`;
+    const ST_W = ['тренировка', 'тренировки', 'тренировок'], ST_Z = ['замер', 'замера', 'замеров'], ST_M = ['медаль', 'медали', 'медалей'];
+    const stChip = (n, f) => `<span class="st-chip"><b>${n}</b>${typeof n === 'number' ? plural(n, ...f) : f[2]}</span>`;
     // плитки видов спорта: километры каждого вида отдельно, сколько раз и время; последняя — всего
     function stTiles(dist, workouts, wait) {
       if (wait) return `<div class="st-tiles"><div class="st-tile wait"></div><div class="st-tile wait"></div></div>`;
@@ -1973,13 +1979,13 @@
         const m = stSport(k), name = k === 'тренировка' ? 'Тренировка' : stCap(k);
         const v = s.km ? `${stKm(s.km)}<small>км</small>` : s.min >= 60 ? `${Math.floor(s.min / 60)}<small>ч</small> ${s.min % 60}<small>мин</small>` : s.min ? `${s.min}<small>мин</small>` : `${s.n}<small>${plural(s.n, 'раз', 'раза', 'раз')}</small>`;
         const l = [name, s.km && s.min ? stMin(s.min) : ''].filter(Boolean).join(' · ');
-        return `<div class="st-tile" style="background:${m.c}">${stIcon(m.ic)}<span class="n">×${s.n}</span><div class="v">${v}</div><div class="l">${esc(l)}</div></div>`;
+        return `<div class="st-tile" style="background:${m.c}">${stIcon(m.ic)}${s.km || s.min ? `<span class="n">×${s.n}</span>` : ''}<div class="v">${v}</div><div class="l">${esc(l)}</div></div>`;
       });
       // тренировки, вид которых не удалось узнать, — отдельной плиткой, чтобы плитки сходились со «всего»
       const rest = workouts - sp.reduce((a, [, s]) => a + s.n, 0);
-      if (rest > 0) { const m = stSport('тренировка'); tiles.push(`<div class="st-tile" style="background:${m.c}">${stIcon(m.ic)}<span class="n">×${rest}</span><div class="v">${rest}<small>${plural(rest, 'раз', 'раза', 'раз')}</small></div><div class="l">Вид не указан</div></div>`); }
+      if (rest > 0) { tiles.push(`<div class="st-tile unk">${stIcon('q')}<div class="v">${rest}<small>${plural(rest, 'раз', 'раза', 'раз')}</small></div><div class="l">Вид не указан</div></div>`); }
       const km = dist && dist.km;
-      tiles.push(`<div class="st-tile tot"><p class="st-k">Всего</p><div class="v">${km ? `${stKm(km)}<small>км</small>` : workouts}</div><div class="l">${km ? stWord(workouts, 'тренировка', 'тренировки', 'тренировок') : plural(workouts, 'тренировка', 'тренировки', 'тренировок')}</div></div>`);
+      tiles.push(`<div class="st-tile tot${tiles.length % 2 ? '' : ' wide'}"><p class="st-k">Всего</p><div class="v">${km ? `${stKm(km)}<small>км</small>` : workouts}</div><div class="l">${km ? stWord(workouts, 'тренировка', 'тренировки', 'тренировок') : plural(workouts, 'тренировка', 'тренировки', 'тренировок')}</div></div>`);
       return `<div class="st-tiles">${tiles.join('')}</div>`;
     }
     const stChange = (c, cls) => `<div class="st-big ${cls(c)}">${stKg(c)}<small>кг</small></div>`;
@@ -2037,11 +2043,11 @@
             <p class="st-k">${b.ended ? 'Итоги месяца' : 'Месяц идёт'} · ${esc(u.name || '')}</p>
             <div class="st-month">${ST_MONTHS[b.m]}</div>
             ${stChange(b.change, cls)}<p class="st-sub">${stRange(b.from, b.to)}${b.ended ? '' : ' · месяц идёт'}${b.ended && b.best ? ` · лучшая неделя ${b.best.i + 1}-я` : ''}</p>
-            <div class="st-chips"><span class="st-chip"><b>${b.weighIns}</b>замеров</span><span class="st-chip"><b>${sum ? sum.workouts : dots}</b>тренировок</span><span class="st-chip"><b>${b.medals}</b>медалей</span>${b.ended && b.path ? `<span class="st-chip"><b>${b.path[0]}% → ${b.path[1]}%</b>путь к цели</span>` : ''}</div>
+            <div class="st-chips">${stChip(b.weighIns, ST_Z)}${stChip(sum ? sum.workouts : dots, ST_W)}${stChip(b.medals, ST_M)}${b.ended && b.path ? `<span class="st-chip"><b>${b.path[0]}% → ${b.path[1]}%</b>путь к цели</span>` : ''}</div>
             ${stCoach(ph && (b.ended ? ph.final : ph.cover) || '', wait)}</div>
           ${failed ? '' : stTiles(sum && sum.distance, sum ? sum.workouts : 0, wait)}
           ${rows ? `<div class="st-box"><p class="st-k">Недели</p>${rows}</div>` : ''}
-          ${b.ended ? `<button class="st-close" onclick="closeStory()">Вперёд, в ${ST_MONTHS[(b.m + 1) % 12]}</button>` : ''}`;
+          <button class="st-close" onclick="closeStory()">${b.ended ? `Вперёд, в ${ST_MONTHS[(b.m + 1) % 12]}` : 'Закрыть'}</button>`;
       } });
       // итог прошлого месяца — первую неделю нового месяца
       const pv = ST.prev;
@@ -2052,7 +2058,7 @@
             <p class="st-k">Итог ${ST_GEN[pm]}</p>
             <div class="st-month">${ST_MONTHS[pm]}</div>
             ${stChange(pv.summary.change, cls)}<p class="st-sub">${pv.summary.from ? stRange(new Date(pv.summary.from + 'T12:00:00'), new Date(pv.summary.to + 'T12:00:00')) : 'за ' + ST_MONTHS[pm]}</p>
-            <div class="st-chips"><span class="st-chip"><b>${pv.summary.weighIns}</b>замеров</span><span class="st-chip"><b>${pv.summary.workouts}</b>тренировок</span><span class="st-chip"><b>${pv.summary.medals || 0}</b>медалей</span></div>
+            <div class="st-chips">${stChip(pv.summary.weighIns, ST_Z)}${stChip(pv.summary.workouts, ST_W)}${stChip(pv.summary.medals || 0, ST_M)}</div>
             ${stCoach(pv.phrases && pv.phrases.final)}</div>
           ${stTiles(pv.summary.distance, pv.summary.workouts)}
           <button class="st-close" onclick="closeStory()">Закрыть</button>` });
@@ -2077,7 +2083,7 @@
         <div class="huge${w.change == null ? ' sm' : ''}">${w.change == null ? 'Без замеров' : stKg(w.change)}</div>
         ${a != null ? `<div class="unit">КГ · ${fmt(a)} → ${fmt(z)}</div>` : ''}
         ${spark}
-        <div class="stats"><div><b>${w.ws.length}/7</b><span>замеров</span></div><div><b>${s ? s.workouts : dots}</b><span>тренировки</span></div>${s && s.distance.km ? `<div><b>${stKm(s.distance.km)}</b><span>км</span></div>` : ''}</div>
+        <div class="stats"><div><b>${w.ws.length}/7</b><span>замеров</span></div><div><b>${s ? s.workouts : dots}</b><span>${s ? plural(s.workouts, ...ST_W) : ST_W[2]}</span></div>${s && s.distance.km ? `<div><b>${stKm(s.distance.km)}</b><span>км</span></div>` : ''}</div>
         <div class="say">${s && s.phrases ? esc(s.phrases.cover) : ''}</div>
         <div class="hint">Нажми, чтобы открыть неделю</div>`;
     }
