@@ -146,7 +146,7 @@
     .st-chart text { fill: var(--muted); font-size: 11px; font-family: var(--text); }
     .st-medals { display: flex; gap: 10px; flex-wrap: wrap; }
     .st-medals .md { width: 76px; text-align: center; font-size: 11.5px; color: var(--muted); line-height: 1.2; }
-    .st-medals svg { width: 76px; height: 76px; display: block; margin-bottom: 4px; }
+    .st-medals svg, .st-medals img { width: 76px; height: 76px; display: block; margin-bottom: 4px; }
     .st-coach { position: relative; background: var(--panel); border-radius: 16px; padding: 14px 16px 14px 46px; font-size: 16px; line-height: 1.4; min-height: 52px; }
     .st-coach::before { content: ""; position: absolute; left: 14px; top: 15px; width: 20px; height: 20px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #E9FF9E, var(--volt) 60%, #8FBF1A); }
     .st-coach.wait { color: transparent; }
@@ -296,15 +296,17 @@
     .m-sec h3 small { font-family: var(--text); font-weight: 500; font-size: 13px; color: var(--muted); }
     .m-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 6px; }
     .m-tile { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 4px; }
-    .m-tile svg { width: 100%; max-width: 104px; aspect-ratio: 1; filter: drop-shadow(0 5px 7px rgba(23,33,43,.22)); transition: transform .15s ease; }
-    .m-tile:active svg { transform: scale(.94); }
-    /* блик от наклона телефона на полученных медалях витрины (включается, только когда есть данные датчика) */
+    .m-tile .mw > svg, .m-tile .mw > img { width: 100%; aspect-ratio: 1; filter: drop-shadow(0 5px 7px rgba(23,33,43,.22)); transition: transform .15s ease; }
+    .m-tile:active .mw > svg, .m-tile:active .mw > img { transform: scale(.94); }
+    /* блик от наклона телефона на полученных медалях витрины (включается, только когда есть данные датчика).
+       Полоса блика — отдельный слой, который только сдвигается: сама медаль при наклоне не перерисовывается */
     .m-tile .mw { position: relative; display: block; width: 100%; max-width: 104px; }
-    .m-tile .mw svg { max-width: none; }
-    .tilt-on .m-tile:not(.locked) .mw::after { content: ""; position: absolute; inset: 7%; border-radius: 50%; pointer-events: none;
+    .m-tile .gl { display: none; position: absolute; inset: 7%; border-radius: 50%; overflow: hidden; pointer-events: none; }
+    .tilt-on .m-tile:not(.locked) .gl { display: block; }
+    .m-tile .gl::before { content: ""; position: absolute; left: -80%; top: -80%; width: 260%; height: 260%; will-change: transform;
       background: linear-gradient(115deg, transparent 38%, rgba(255,255,255,.34) 48%, rgba(255,255,255,.08) 53%, transparent 62%);
-      background-size: 260% 260%; background-position: calc(50% - var(--tiltX, 0) * 42%) calc(50% - var(--tiltY, 0) * 42%); }
-    .m-tile.locked svg { opacity: .8; filter: none; }
+      transform: translate3d(calc(var(--tiltX, 0) * 25.85%), calc(var(--tiltY, 0) * 25.85%), 0); }
+    .m-tile.locked .mw > svg, .m-tile.locked .mw > img { opacity: .8; filter: none; }
     .m-tile b { font-size: 13.5px; line-height: 1.15; }
     .m-tile small { font-size: 12px; color: var(--muted); }
     .m-tile .mini { width: 74px; height: 5px; border-radius: 3px; background: var(--rule); overflow: hidden; }
@@ -318,6 +320,7 @@
     .coin .face, .coin .edge { position: absolute; left: 50%; top: 50%; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
     .coin .face { width: 240px; height: 240px; margin: -120px 0 0 -120px; border-radius: 50%; overflow: hidden; }
     .coin .face svg { width: 100%; height: 100%; display: block; }
+    .coin .face img { position: absolute; left: -4px; top: -4px; width: 248px; height: 248px; display: block; }
     .coin .edge { backface-visibility: visible; -webkit-backface-visibility: visible; }
     .sheen-mask { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; pointer-events: none; }
     /* лучистый ободок: лучи не обрезаем кругом, блик — только внутри */
@@ -325,9 +328,9 @@
     .coin .face.grand svg { overflow: visible; }
     .coin .face.grand .sheen-mask { inset: 12px; }
     /* по лучам особых медалей бежит отблеск: лучи вспыхивают по очереди, вслед за наклоном и поворотом */
-    .ray-glint { position: absolute; inset: -4px; pointer-events: none;
-      background: conic-gradient(from var(--ga, 0deg), rgba(255,246,214,.8), rgba(255,246,214,0) 55deg, rgba(255,246,214,0) 305deg, rgba(255,246,214,.8));
-      -webkit-mask: radial-gradient(circle, transparent 107px, #000 109px); mask: radial-gradient(circle, transparent 107px, #000 109px); }
+    /* отблеск заранее нарисован по форме лучей и только поворачивается (CSS-маска пересчитывалась на каждом кадре вращения) */
+    .ray-glint { position: absolute; left: -4px; top: -4px; width: 248px; height: 248px; pointer-events: none; will-change: transform; }
+    .ray-glint canvas { position: absolute; inset: 0; width: 100%; height: 100%; visibility: hidden; }
     .sheen { position: absolute; top: 0; bottom: 0; left: -100%; width: 300%; will-change: transform;
       background: linear-gradient(110deg, transparent 38%, rgba(255,255,255,.28) 48%, rgba(255,255,255,.08) 52%, transparent 60%); }
     .coin-shadow { position: absolute; left: 50%; bottom: 4%; width: 170px; height: 22px; margin-left: -85px; border-radius: 50%;
@@ -894,6 +897,7 @@
       globalData = response;
       if (!globalData[activeUserId]) activeUserId = String(Object.keys(globalData)[0]);
       medalCache = {};
+      MedalRaster.reset();
       renderUserTabs();
       $('dashboard').classList.remove('hidden');
       chartReveal = true;
@@ -1532,11 +1536,128 @@
       const art = m.art && MedalArt.ART[m.art] ? MedalArt.ART[m.art] : {};
       return { label: m.title, ...style, ...art, big: m.big || '', caption: m.caption || '', band: false };
     }
+    // у одного ключа у братьев может быть разная надпись (например, «Цель взята» со своим весом)
+    const medalKey = m => [m.key, m.status, m.big, m.caption, m.title].join('|');
     function medalSVG(m) {
-      const k = m.key + ':' + m.status;
+      const k = medalKey(m);
       if (!medalCache[k]) medalCache[k] = MedalArt.medal(medalOpts(m));
       return medalCache[k];
     }
+    // Медаль для витрины и сторис: готовая картинка, если уже нарисована, иначе пока живой SVG
+    function medalPic(m) {
+      const url = MedalRaster.get(medalKey(m));
+      return url ? `<img src="${url}" alt="${esc(m.title)}" draggable="false">` : medalSVG(m);
+    }
+
+    // =====================================================================
+    // МЕДАЛИ КАРТИНКАМИ. Рисунок медали — большой SVG: градиенты, тени-фильтры,
+    // сотни штрихов. Живьём телефон перерисовывал его при каждой прокрутке,
+    // наклоне и повороте монеты — отсюда лаги. Теперь каждая медаль один раз
+    // рисуется в картинку под экран телефона, и дальше показывается готовая.
+    // Рисунок тот же самый: шрифт медалей встраивается в картинку.
+    // Если что-то не вышло (нет сети за шрифтом и т.п.) — остаётся живой SVG, как раньше.
+    // =====================================================================
+    const MedalRaster = (function () {
+      const FAMILY = 'Barlow Condensed';
+      const CHARS = 'АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯабвгдеёжзийклмнопрстуфхцчшщъыьэюя' +
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,:;!?%+-–—×·/()«»"\'№';
+      const dpr = Math.min(3, Math.max(2, window.devicePixelRatio || 2));
+      const urls = {};                // ключ → адрес готовой картинки
+      let fontP = null, gen = 0;
+
+      // Шрифт для картинок: только нужные буквы, три начертания, прямо внутри SVG
+      function fontCss() {
+        if (!fontP) fontP = (async () => {
+          const css = await (await fetch('https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;1,800&text=' + encodeURIComponent(CHARS))).text();
+          const found = css.match(/url\((https:[^)]+)\)\s*format\('([a-z0-9]+)'\)/g) || [];
+          if (!found.length) throw new Error('font css');
+          let out = css;
+          for (const item of found) {
+            const [, u, fmt] = item.match(/url\((https:[^)]+)\)\s*format\('([a-z0-9]+)'\)/);
+            const b = new Uint8Array(await (await fetch(u)).arrayBuffer());
+            let bin = '';
+            for (let i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000));
+            out = out.split(u).join(`data:font/${fmt === 'truetype' ? 'ttf' : fmt};base64,${btoa(bin)}`);
+          }
+          return out.replace(/\/\*[^*]*\*\//g, '');
+        })().catch(() => null);
+        return fontP;
+      }
+      // SVG разбирается так же, как на странице (повторные атрибуты и т.п. прощаются), и сохраняется строгим XML для картинки
+      const toImg = (svg, px, css) => new Promise((res, rej) => {
+        const t = document.createElement('template');
+        t.innerHTML = svg.trim();
+        const el = t.content.firstElementChild;
+        el.setAttribute('width', px); el.setAttribute('height', px);
+        const st = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+        st.textContent = css;
+        el.insertBefore(st, el.firstChild);
+        const s = new XMLSerializer().serializeToString(el);
+        const img = new Image();
+        img.onload = () => res(img); img.onerror = rej;
+        img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s);
+      });
+      // Проверка, что шрифт внутри картинки уже подхватился: строка цифр шрифтом медалей
+      // заметно уже, чем запасным моноширинным
+      async function fontReady(css) {
+        const w = 600, h = 80, txt = '1234567890';
+        await document.fonts.load(`800 60px "${FAMILY}"`);
+        if (!document.fonts.check(`800 60px "${FAMILY}"`)) return null;
+        const c = document.createElement('canvas'); c.width = w; c.height = h;
+        const g = c.getContext('2d');
+        g.font = `800 60px "${FAMILY}"`;
+        const want = g.measureText(txt).width;
+        const probe = await toImg(`<svg viewBox="0 0 ${w} ${h}"><text x="0" y="60" font-size="60" font-weight="800" font-family="${FAMILY}, monospace">${txt}</text></svg>`, w, css);
+        return () => {
+          g.clearRect(0, 0, w, h); g.drawImage(probe, 0, 0, w, h);
+          let d;
+          try { d = g.getImageData(0, 0, w, h).data; } catch (e) { return null; }   // браузер не даёт читать холст
+
+          let right = 0;
+          for (let x = w - 1; x >= 0 && !right; x--) for (let y = 0; y < h; y++) if (d[(y * w + x) * 4 + 3] > 40) { right = x; break; }
+          return Math.abs(right - want) < 8;
+        };
+      }
+      const wait = ms => new Promise(r => setTimeout(r, ms));
+      const idle = () => new Promise(r => window.requestIdleCallback ? requestIdleCallback(r, { timeout: 600 }) : setTimeout(r, 30));
+
+      // Нарисовать набор медалей: [{ key, svg, size }] (size — сторона в CSS-пикселях).
+      // Возвращает { key: адрес } для того, что получилось.
+      async function render(list) {
+        const my = gen;
+        const css = await fontCss();
+        if (!css) return {};
+        const check = await fontReady(css).catch(() => null);
+        if (!check) return {};
+        const done = {};
+        const jobs = [];
+        for (const it of list) {
+          if (urls[it.key]) { done[it.key] = urls[it.key]; continue; }
+          const px = Math.round(it.size * dpr);
+          try { jobs.push({ it, px, img: await toImg(it.svg, px, css) }); } catch (e) {}
+        }
+        // Safari подгружает шрифт внутри картинки не сразу: ждём, пока проба нарисуется нужным шрифтом
+        let ok = false;
+        for (let i = 0; i < 25 && (ok = check()) === false; i++) await wait(80);
+        if (!ok) return done;
+        for (const j of jobs) {
+          await idle();
+          if (my !== gen) return {};
+          try {
+            const c = document.createElement('canvas'); c.width = c.height = j.px;
+            c.getContext('2d').drawImage(j.img, 0, 0, j.px, j.px);
+            const blob = await new Promise(r => c.toBlob(r));
+            if (!blob || my !== gen) continue;
+            done[j.it.key] = urls[j.it.key] = URL.createObjectURL(blob);
+          } catch (e) { return done; }          // браузер не дал прочитать холст — остаёмся на SVG
+        }
+        return done;
+      }
+      // Сбросить всё нарисованное (новые данные с сервера)
+      function reset() { gen++; Object.keys(urls).forEach(k => { URL.revokeObjectURL(urls[k]); delete urls[k]; }); }
+      function drop(key) { if (urls[key]) { URL.revokeObjectURL(urls[key]); delete urls[key]; } }
+      return { render, reset, drop, get: k => urls[k] };
+    })();
 
     // Экран достижений собирается заранее, в паузе после открытия главного экрана,
     // и переиспользуется, пока не сменились данные или человек — открывается мгновенно
@@ -1590,11 +1711,27 @@
           if (m.status === 'earned') sub = `<small>${dayMonth(m.date)}</small>`;
           else if (m.status === 'next') sub = `<span class="mini"><i style="width:${Math.round(m.progress * 100)}%"></i></span><small>${m.progressText}</small>`;
           else sub = `<small>${m.hidden ? 'секрет' : 'впереди'}</small>`;
-          b.innerHTML = `<span class="mw">${medalSVG(m)}</span><b>${m.title}</b>` + sub;
+          b.innerHTML = `<span class="mw" data-k="${esc(medalKey(m))}">${medalPic(m)}<i class="gl"></i></span><b>${m.title}</b>` + sub;
           b.onclick = () => m.status === 'earned' ? openCoin(m) : openMedalSheet(m);
           grid.appendChild(b);
         });
         box.appendChild(sec);
+      });
+      rasterTiles(u);
+    }
+    // Нарисовать медали витрины картинками и тихо подменить ими живые SVG
+    function rasterTiles(u) {
+      const seen = {}, list = [];
+      u.medals.catalog.forEach(m => { const k = medalKey(m); if (!seen[k]) { seen[k] = 1; list.push({ key: k, svg: medalSVG(m), size: 104 }); } });
+      MedalRaster.render(list).then(done => {
+        if (achBuiltFor !== u) return;
+        document.querySelectorAll('#achSections .mw[data-k]').forEach(el => {
+          const url = done[el.dataset.k], old = el.firstElementChild;
+          if (!url || !old || old.tagName.toLowerCase() !== 'svg') return;
+          const img = new Image();
+          img.alt = old.getAttribute('aria-label') || ''; img.draggable = false; img.src = url;
+          img.decode().then(() => { if (old.parentNode === el) el.replaceChild(img, old); }).catch(() => {});
+        });
       });
     }
     function closeAchScreen() {
@@ -1697,7 +1834,7 @@
         <div><div class="st-big ${cls(w.change)}">${stKg(w.change)} <small>кг</small></div><p class="st-sub">${w.ws.length ? 'за неделю' : 'на этой неделе замеров не было'}</p></div>
         ${stChart(w)}
         <div class="st-chips"><span class="st-chip"><b>${w.ws.length}/${w.days}</b>замеров</span><span class="st-chip"><b>${wo(w.i) == null ? dots : wo(w.i)}</b>тренировок</span>${w.medals.length ? '' : '<span class="st-chip"><b>0</b>медалей</span>'}</div>
-        ${w.medals.length ? `<div class="st-medals">${w.medals.slice(0, 4).map(md => `<div class="md">${medalSVG(md)}${esc(md.title)}</div>`).join('')}</div>` : ''}
+        ${w.medals.length ? `<div class="st-medals">${w.medals.slice(0, 4).map(md => `<div class="md">${medalPic(md)}${esc(md.title)}</div>`).join('')}</div>` : ''}
         ${stCoach(ph && ph.weeks && ph.weeks[w.i])}`));
       pages.push(() => `
         <p class="st-k">Итог ${ST_GEN[b.m].replace(/я$/, 'я')}</p>
@@ -2027,7 +2164,7 @@
       Tilt.x += (Tilt.tx - Tilt.x) * 0.18; Tilt.y += (Tilt.ty - Tilt.y) * 0.18;
       if (Math.abs(Tilt.x - Tilt.wx) > 0.004 || Math.abs(Tilt.y - Tilt.wy) > 0.004) {
         Tilt.wx = Tilt.x; Tilt.wy = Tilt.y;
-        const st = document.documentElement.style;
+        const st = $('achScreen').style;          // только витрина, а не весь документ
         st.setProperty('--tiltX', Tilt.x.toFixed(3)); st.setProperty('--tiltY', Tilt.y.toFixed(3));
       }
       Tilt.raf = requestAnimationFrame(tiltLoop);
@@ -2083,9 +2220,46 @@
     }
 
     const C = { scale: 1, landed: null, angle: 0, vel: 0, tilt: 0, dragging: false, lastX: 0, startY: 0, lastT: 0, mode: 'idle', tween: null, base: 0, idleT0: 0, raf: 0, sheens: null };
-    // контур звезды особых медалей (24 луча, как burst(24) в MedalArt) в пикселях блока 248×248
-    const STAR_CLIP = [...Array(48)].map((_, i) => { const a = i * Math.PI / 24, r = i % 2 ? 110 : 122.5;
-      return `${(124 + r * Math.sin(a)).toFixed(1)}px ${(124 - r * Math.cos(a)).toFixed(1)}px`; }).join(',');
+    // лучи особых медалей (24 луча, как burst(24) в MedalArt) в блоке 248×248: звезда минус круг поля
+    const STAR_RING = 'M' + [...Array(48)].map((_, i) => { const a = i * Math.PI / 24, r = i % 2 ? 110 : 122.5;
+      return `${(124 + r * Math.sin(a)).toFixed(1)} ${(124 - r * Math.cos(a)).toFixed(1)}`; }).join('L') + 'Z M16 124a108 108 0 1 0 216 0a108 108 0 1 0 -216 0Z';
+    // отблеск на лучах: светлый сектор ±55° вокруг угла deg (0° — вверх), только внутри лучей
+    function drawGlint(cv, deg) {
+      const g = cv.getContext('2d'), k = cv.width / 248;
+      if (!g.createConicGradient) return;
+      g.setTransform(k, 0, 0, k, 0, 0);
+      g.globalCompositeOperation = 'source-over';
+      g.clearRect(0, 0, 248, 248);
+      const cg = g.createConicGradient((deg - 90) * Math.PI / 180, 124, 124);
+      cg.addColorStop(0, 'rgba(255,246,214,.8)'); cg.addColorStop(55 / 360, 'rgba(255,246,214,0)');
+      cg.addColorStop(305 / 360, 'rgba(255,246,214,0)'); cg.addColorStop(1, 'rgba(255,246,214,.8)');
+      g.fillStyle = cg; g.fillRect(0, 0, 248, 248);
+      g.globalCompositeOperation = 'destination-in';
+      g.fillStyle = '#000'; g.fill(drawGlint.ring || (drawGlint.ring = new Path2D(STAR_RING)), 'evenodd');
+    }
+    // Звезда повторяется через каждые 15°: поворот на 15°·n её не меняет. Поэтому хватает
+    // нескольких готовых кадров отблеска внутри 15°, а остальное — простой поворот слоя.
+    const GLINT_STEPS = 8;
+    function buildGlint(box) {
+      if (!document.createElement('canvas').getContext('2d').createConicGradient) return;
+      const px = Math.round(248 * Math.min(2, window.devicePixelRatio || 1) * 1.2);
+      for (let i = 0; i < GLINT_STEPS; i++) {
+        const c = document.createElement('canvas'); c.width = c.height = px;
+        drawGlint(c, i * 15 / GLINT_STEPS);
+        box.appendChild(c);
+      }
+    }
+    function turnGlint(box, deg) {
+      let n = Math.floor(deg / 15), i = Math.round((deg - n * 15) / (15 / GLINT_STEPS));
+      if (i === GLINT_STEPS) { i = 0; n++; }
+      if (box.$n !== n) { box.$n = n; box.style.transform = `rotate(${n * 15}deg)`; }
+      if (box.$i !== i) {
+        const cs = box.children;
+        if (cs[box.$i]) cs[box.$i].style.visibility = '';
+        if (cs[i]) cs[i].style.visibility = 'visible';
+        box.$i = i;
+      }
+    }
     function buildCoin(m) {
       const coin = $('coin');
       coin.innerHTML = '';
@@ -2126,11 +2300,28 @@
         f.className = 'face' + (grand ? ' grand' : '');
         f.style.transform = back ? `rotateY(180deg) translateZ(${T / 2}px)` : `translateZ(${T / 2}px)`;
         f.innerHTML = svg.replace('viewBox="-4 -4 248 248"', 'viewBox="0 0 240 240"') + '<div class="sheen-mask"><div class="sheen"></div></div>' +
-          (grand ? `<div class="ray-glint" style="clip-path:polygon(${STAR_CLIP})"></div>` : '');
+          (grand ? '<div class="ray-glint"></div>' : '');
+        if (grand) buildGlint(f.querySelector('.ray-glint'));
         coin.appendChild(f);
+        return f;
       };
-      face(MedalArt.medal(medalOpts(m)), false);
-      face(coinBack(m), true);
+      const front = MedalArt.medal(medalOpts(m)), back = coinBack(m);
+      const faces = [face(front, false), face(back, true)];
+      // крупная монета тоже становится картинкой (с запасом под увеличение сцены)
+      const keys = ['coin|' + medalKey(m), 'coinback|' + activeUserId + '|' + medalKey(m) + '|' + m.date];
+      (C.rasterKeys || []).forEach(k => keys.indexOf(k) === -1 && MedalRaster.drop(k));
+      C.rasterKeys = keys;
+      const token = C.build = {};
+      MedalRaster.render([{ key: keys[0], svg: front, size: 300 }, { key: keys[1], svg: back, size: 300 }]).then(done => {
+        if (C.build !== token) return;
+        faces.forEach((f, i) => {
+          const url = done[keys[i]], old = f.querySelector('svg');
+          if (!url || !old) return;
+          const img = new Image();
+          img.alt = ''; img.draggable = false; img.src = url;
+          img.decode().then(() => { if (C.build === token && old.parentNode === f) f.replaceChild(img, old); }).catch(() => {});
+        });
+      });
       // свечение за монетой — в цвет медали
       const o = medalOpts(m), f = (grand && o.grandField) || o.field;
       const col = grand ? '#F2B53A' : (f && f.enamel) || (MedalArt.M[o.rim] || MedalArt.M.gunmetal).mid;
@@ -2161,8 +2352,8 @@
       if (!C.sheens) { C.sheens = $('coin').querySelectorAll('.sheen'); C.glints = $('coin').querySelectorAll('.ray-glint'); }
       C.sheens.forEach(el => { el.style.transform = `translateX(${shift})`; });
       if (C.glints.length) {
-        const ga = (C.angle * 0.6 + Tilt.x * 140 + Tilt.y * 70 + 300).toFixed(1) + 'deg';
-        C.glints.forEach(el => el.style.setProperty('--ga', ga));
+        const ga = C.angle * 0.6 + Tilt.x * 140 + Tilt.y * 70 + 300;
+        C.glints.forEach(el => turnGlint(el, ga));
       }
     }
     function coinLoop(t) {
