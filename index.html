@@ -2781,13 +2781,17 @@
         ? `До лагеря ${next}%: <b>${fmt1((next / 100 - t) * total)} кг</b>`
         : `До вершины: <b>${fmt1((1 - t) * total)} кг</b>`;
     }
-    // нажали на человечка или имя: его имя выделяется, сверху — его цифры; ещё раз или на себя — снова свои
+    // нажали на человечка или имя: его имя выделяется, сверху его цифры, у старта и флага — его вес и цель; ещё раз или на себя — снова свои
     function mtSelect(o) {
       if (!MT.me || !MT.last) return;
       const [, start, goal, current] = MT.last;
       MT.sel = o && o !== MT.me && o !== MT.sel ? o : null;
-      if (MT.sel) { const e = o.entries || []; mtStats(o.start || (e[0] && e[0].weight), o.target, e.length ? e[e.length - 1].weight : null, false); }
+      let st = start, gl = goal;
+      if (MT.sel) { const e = o.entries || []; st = o.start || (e[0] && e[0].weight); gl = o.target; mtStats(st, gl, e.length ? e[e.length - 1].weight : null, false); }
       else mtStats(start, goal, current, true);
+      // старт и цель у флага — тоже того, кого выбрали
+      $('mtStartT').textContent = st ? `старт ${fmt1(st)} кг` : '';
+      $('mtGoalT').textContent = gl ? `цель ${fmt1(gl)}` : '';
       document.querySelectorAll('#mtOthers [data-mu]').forEach(g => {
         const p = g.querySelector('.mt-pill'), on = MT.others[+g.dataset.mu] === MT.sel;
         mtPill(p, p.dataset.name, p.dataset.col, +p.dataset.lift, on);
