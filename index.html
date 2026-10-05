@@ -205,6 +205,7 @@
     .st-wo-m { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
     .st-wo-m div { background: var(--panel2); border-radius: 12px; padding: 8px 10px; font-size: 11.5px; color: var(--muted); line-height: 1.25; }
     .st-wo-m b { display: block; font-family: var(--num); font-size: 19px; color: var(--ink); font-weight: 800; }
+    .st-wo-m div.no b { color: var(--muted); opacity: .6; }
     .st-wo-r { margin-top: 10px; } .st-wo-r summary { cursor: pointer; font-weight: 700; font-size: 14px; color: var(--volt); list-style: none; }
     .st-wo-r summary::-webkit-details-marker { display: none; } .st-wo-r summary::after { content: " ›"; } .st-wo-r[open] summary::after { content: " ⌄"; }
     .st-wo-r p { margin-top: 8px; font-size: 14.5px; line-height: 1.45; white-space: pre-line; }
@@ -2087,13 +2088,21 @@
       return `<div class="st-tiles">${tiles.join('')}</div>`;
     }
     // карточка одной тренировки (с октября): вид, когда, все показатели со скрина и разбор тренера
-    const ST_WO_M = [['km', 'км', v => stKm(v)], ['min', 'время', v => v >= 60 ? `${Math.floor(v / 60)}:${String(Math.round(v % 60)).padStart(2, '0')}` : `${Math.round(v)} мин`],
-      ['pace', 'темп /км', v => v], ['speed', 'км/ч', v => fmt(v)], ['hr', 'пульс', v => v], ['hrMax', 'пульс макс', v => v], ['kcal', 'ккал', v => v],
-      ['elev', 'набор, м', v => v], ['steps', 'шаги', v => Number(v).toLocaleString('ru-RU')], ['cadence', 'каденс', v => v], ['te', 'эффект', v => fmt(v)]];
+    const ST_WO_M = {
+      km: ['км', v => stKm(v)], min: ['время', v => v >= 60 ? `${Math.floor(v / 60)}:${String(Math.round(v % 60)).padStart(2, '0')}` : `${Math.round(v)} мин`],
+      pace: ['темп /км', v => v], pace100: ['темп /100 м', v => v], speed: ['км/ч', v => fmt(v)], hr: ['пульс ср.', v => v], kcal: ['ккал', v => v],
+      elev: ['набор, м', v => v], cadence: ['каденс', v => v], swim: ['метров', v => Math.round(v * 1000).toLocaleString('ru-RU')]
+    };
+    // какие цифры у какого вида и в каком порядке (решение Вадима 05.10); нет цифры — «—», каденс — только если есть
+    const ST_WO_SETS = [[/^(бег|ходьб|прогул|лыж)/, ['km', 'min', 'pace', 'hr', 'kcal', 'cadence']], [/лестниц/, ['km', 'min', 'hr', 'elev', 'kcal']],
+      [/^вело/, ['km', 'min', 'speed', 'hr', 'kcal']], [/^плав/, ['swim', 'min', 'pace100', 'kcal']], [/./, ['min', 'hr', 'kcal']]];
+    const ST_WO_ANY = ['km', 'min', 'pace', 'speed', 'hr', 'kcal'];
     function stWoCard(w) {
       const known = w.sport && w.sport !== 'тренировка', m = known ? stSport(w.sport) : null, d = new Date(w.at);
       const when = isNaN(d) ? '' : `${ST_DAYS[(d.getDay() + 6) % 7].toLowerCase()}, ${d.getDate()} ${ST_GEN[d.getMonth()].slice(0, 3)} · ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-      const met = ST_WO_M.filter(([k]) => w[k] != null && w[k] !== '').map(([k, l, f]) => `<div><b>${esc(String(f(w[k])))}</b>${l}</div>`).join('');
+      const set = known ? ST_WO_SETS.find(([re]) => re.test(w.sport))[1] : ST_WO_ANY.filter(k => w[k] != null && w[k] !== '');
+      const val = k => w[k === 'swim' ? 'km' : k], has = k => val(k) != null && val(k) !== '';
+      const met = set.filter(k => k !== 'cadence' || has(k)).map(k => `<div${has(k) ? '' : ' class="no"'}><b>${has(k) ? esc(String(ST_WO_M[k][1](val(k)))) : '—'}</b>${ST_WO_M[k][0]}</div>`).join('');
       return `<div class="st-wo"><div class="st-wo-h"><i style="background:${m ? m.c : 'var(--panel2)'}">${stIcon(m ? m.ic : 'q', '')}</i><div><b>${known ? esc(stCap(w.sport)) : 'Вид не указан'}</b><span>${when}</span></div></div>
         ${met ? `<div class="st-wo-m">${met}</div>` : ''}
         ${w.review ? `<details class="st-wo-r"><summary>Разбор тренера</summary><p>${esc(w.review)}</p></details>` : ''}</div>`;
