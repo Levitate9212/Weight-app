@@ -34,20 +34,20 @@
       --text:    'Golos Text', system-ui, -apple-system, sans-serif;
       color-scheme: dark;
     }
-    /* светлый режим телефона: тот же стиль на светлом фоне; лайм темнее, чтобы читался на белом */
+    /* светлый режим телефона: «тёплый песок» — кремовый фон, мягкий лайм; зелень темнее, чтобы читалась на светлом */
     html.light {
-      --bg:      #F2F3EF;
-      --panel:   #FFFFFF;
-      --panel2:  #E8E9E4;
-      --ink:     #15171A;
-      --muted:   #6C7078;
-      --rule:    #E1E2DD;
-      --volt:    #6BA300;
-      --volt-dim: rgba(107, 163, 0, .12);
+      --bg:      #F4F1EA;
+      --panel:   #FFFDF8;
+      --panel2:  #ECE7DC;
+      --ink:     #26231E;
+      --muted:   #857D70;
+      --rule:    #E6E0D4;
+      --volt:    #64951C;
+      --volt-dim: rgba(100, 149, 28, .12);
       --volt-ink:#121315;
-      --down:    #5E9400;
+      --down:    #5E8F1A;
       --up:      #E0503A;
-      --lime-btn:#C6FF3D;
+      --lime-btn:#D3E88F;
       color-scheme: light;
     }
     html.light #story { background: var(--bg); }
@@ -150,7 +150,7 @@
     .st-tabs::-webkit-scrollbar { display: none; }
     .st-tabs button { flex: none; padding: 8px 13px; border-radius: 12px; background: var(--panel); color: var(--muted); font-size: 13px; font-weight: 600; white-space: nowrap; }
     .st-tabs button.on { background: var(--volt); color: var(--volt-ink); }
-    html.light .st-tabs button.on { background: #C6FF3D; }
+    html.light .st-tabs button.on { background: var(--lime-btn); }
     /* карточка: всё видно сразу, листается вниз */
     .st-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin: 0 -16px; padding: 0 16px 8px; scrollbar-width: none; touch-action: pan-y; }
     .st-scroll::-webkit-scrollbar { display: none; }
@@ -193,7 +193,7 @@
     .st-tile.wait { background: var(--panel); }
     .st-tile.wait::after, .st-coach.wait::after { content: ""; position: absolute; left: 16px; right: 16px; top: 18px; height: 12px; border-radius: 6px;
       background: linear-gradient(90deg, var(--panel2), #34373D, var(--panel2)); background-size: 200% 100%; animation: stShim 1.2s linear infinite; }
-    html.light .st-tile.wait::after, html.light .st-coach.wait::after { background-image: linear-gradient(90deg, var(--panel2), #F6F7F3, var(--panel2)); }
+    html.light .st-tile.wait::after, html.light .st-coach.wait::after { background-image: linear-gradient(90deg, var(--panel2), var(--panel), var(--panel2)); }
     @keyframes stShim { to { background-position: -200% 0; } }
     .st-week7 { display: flex; justify-content: space-between; }
     .st-week7 i.pl::after { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--volt); }
@@ -250,6 +250,10 @@
     html:not(.light) .st-poster { background: radial-gradient(120% 70% at 85% 0%, rgba(189,235,91,.22), rgba(189,235,91,0) 60%), linear-gradient(170deg, #22311F 0%, #1A2621 50%, var(--story-bg) 100%); color: var(--ink); }
     html:not(.light) .st-poster .bar { background: rgba(255,255,255,.14); } html:not(.light) .st-poster .bar b { background: var(--volt); }
     html:not(.light) .st-poster .st-head .t, html:not(.light) .st-poster .st-k { color: var(--muted); }
+    /* светлая обложка тоже мягкая: светло-оливковый перелив в кремовый вместо яркого лайма */
+    html.light .st-poster { background: radial-gradient(120% 70% at 85% 0%, rgba(211,232,143,.6), rgba(255,255,255,0) 60%), linear-gradient(170deg, #ECF0D2 0%, var(--bg) 100%); color: var(--ink); }
+    html.light .st-poster .bar { background: rgba(0,0,0,.1); } html.light .st-poster .bar b { background: var(--volt); }
+    html.light .st-poster .st-head .t, html.light .st-poster .st-k { color: var(--muted); }
     html:not(.light) .st-poster .st-x { color: var(--ink); }
     html:not(.light) .st-poster .huge { color: var(--volt); }
     html:not(.light) .st-poster svg.sp path, html:not(.light) .st-poster svg.sp circle { stroke: var(--volt); }
