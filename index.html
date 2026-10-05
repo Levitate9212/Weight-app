@@ -244,6 +244,8 @@
     .st-poster.off { display: none; }
     .st-poster .bar { height: 3px; border-radius: 2px; background: rgba(0,0,0,.18); overflow: hidden; }
     .st-poster .bar b { display: block; height: 100%; width: 0; background: #121315; }
+    .st-poster .bar.wait { animation: stBarWait 1.1s ease-in-out infinite alternate; }
+    @keyframes stBarWait { from { opacity: 1; } to { opacity: .35; } }
     .st-poster .st-head { margin: 10px -2px 0; } .st-poster .st-head .t { color: rgba(18,19,21,.7); font-size: 14px; }
     .st-poster .st-k { color: rgba(18,19,21,.6); margin-top: auto; }
     /* тёмная тема: обложка не слепит — тёмный фон с мягким зелёным отсветом, лайм только в цифрах */
@@ -1916,8 +1918,8 @@
     // =====================================================================
     const ST_MONTHS = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
     const ST_GEN = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
-    const ST = { u: null, views: [], i: 0, timer: 0, posterT0: 0, posterOn: false, srv: null, prev: null, req: 0 };
-    const ST_POSTER = 4500;
+    const ST = { u: null, views: [], i: 0, timer: 0, posterT0: 0, posterOpen: 0, posterOn: false, srv: null, prev: null, req: 0 };
+    const ST_POSTER = 4500, ST_POSTER_WAIT = 12000;
     function stDay(ts) { const d = new Date(ts); if (d.getHours() < 4) d.setDate(d.getDate() - 1); d.setHours(0, 0, 0, 0); return d; }
     const stKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     // последнее закончившееся воскресенье (сегодняшнее ещё идёт)
@@ -2179,7 +2181,7 @@
       const el = $('stPoster');
       if (!v || !v.week) { el.className = 'st-poster off'; return; }
       el.className = 'st-poster'; el.innerHTML = stPosterHtml(v, b); void el.offsetWidth; el.classList.add('in');
-      ST.posterT0 = performance.now(); ST.posterOn = true;
+      ST.posterT0 = ST.posterOpen = performance.now(); ST.posterOn = true;
       cancelAnimationFrame(ST.timer); ST.timer = requestAnimationFrame(stTick);
     }
     function stPosterHide() {
@@ -2189,6 +2191,10 @@
     }
     function stTick(now) {
       if (!ST.posterOn) return;
+      // пока сервер не прислал тренировки и км — обложка ждёт, полоска не бежит (но не дольше 12 с)
+      const wait = !ST.srv && now - ST.posterOpen < ST_POSTER_WAIT, bw = $('stPosterBar');
+      if (bw) bw.parentNode.classList.toggle('wait', wait);
+      if (wait) { ST.posterT0 = now; ST.timer = requestAnimationFrame(stTick); return; }
       const k = Math.min(1, (now - ST.posterT0) / ST_POSTER), bar = $('stPosterBar');
       if (bar) bar.style.width = (k * 100).toFixed(1) + '%';
       if (k >= 1) stPosterHide(); else ST.timer = requestAnimationFrame(stTick);
