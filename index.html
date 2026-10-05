@@ -2570,11 +2570,13 @@
       }
       return ['', 0];
     }
-    // Подпись над горой — только о своей погоде (того, кто открыл приложение); причину чужой погоды не пишем
+    // Подпись над горой — погода того, кого выбрали на горе (по умолчанию своя). У чужих только вид погоды:
+    // причину (сон, готовность) сервер другим не отдаёт
     function mtWxCaption() {
-      const me = Object.values(globalData || {}).find(o => o && o.isMe), w = me && me.weather;
+      const me = Object.values(globalData || {}).find(o => o && o.isMe), who = MT.sel || me, w = who && who.weather;
       const el = $('mtWx');
       if (!w || !w.kind) { el.innerHTML = ''; return; }
+      const mine = who === me;
       const day = mtPal() === MT_PAL.day, h = v => fmt1(v) + ' ч';
       const glow = w.sky === 'glow', good = w.sleep != null ? 'неделя без пропусков и хороший сон' : 'неделя без пропусков';
       const txt = {
@@ -2585,6 +2587,10 @@
         cloudy: w.sleep != null && w.sleep < 7 ? `Облачно: сон ${h(w.sleep)}` : `Облачно: готовность ${w.ready}`,
         clear: glow ? `${day ? 'Радуга' : 'Сияние'}: ${good}` : w.back ? 'Ясно: с возвращением' : w.sleep != null ? `Ясно: сон ${h(w.sleep)}` : 'Ясно'
       }[w.kind] || '';
+      const theirs = {
+        snow: 'тихий снег', cloud: 'в облаке', fog: 'туман', rain: 'дождик', cloudy: 'облачно',
+        clear: glow ? (day ? 'радуга' : 'сияние') : 'ясно'
+      }[w.kind] || '';
       const ic = {
         snow: '<path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9"/>',
         cloud: '<path d="M7 18h10a4 4 0 0 0 .5-8A6 6 0 0 0 6 11a3.5 3.5 0 0 0 1 7z"/>',
@@ -2594,7 +2600,7 @@
         clear: glow ? (day ? '<path d="M3 18a9 9 0 0 1 18 0M6.5 18a5.5 5.5 0 0 1 11 0"/>' : '<path d="M3 15c3-6 6 2 9-4s6 0 9-5M3 20c3-5 6 1 9-3s6 0 9-4"/>') : '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'
       }[w.kind] || '';
       el.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ic}</svg><span></span>`;
-      el.querySelector('span').textContent = txt;
+      el.querySelector('span').textContent = mine ? txt : `${who.name || ''}: ${theirs}`;
       // небо: сияние или радуга общие; падающая звезда — ночью у того, у кого ясно
       const sky = $('mtGlowG'); if (sky) sky.style.display = glow ? '' : 'none';
       const sh = $('mtShootG'); if (sh) sh.style.display = w.kind === 'clear' && !glow ? '' : 'none';
@@ -2697,6 +2703,7 @@
         <text id="mtGoalT" x="${fx + 24}" y="${fy - 13}" font-size="13" font-weight="600" fill="${P.goal}" font-family="Golos Text, system-ui, sans-serif"></text>
         <g id="mtOthers"></g>
         <g id="mtMe" data-mu="me">
+          <rect x="-26" y="-64" width="52" height="70" fill="transparent"/>
           <ellipse cx="0" cy="1" rx="14" ry="3.5" fill="#000" opacity="${P.meShadow}"/>
           <g id="mtBody">
             <line id="mtLegB" x1="0" y1="-10" x2="0" y2="0" stroke="${P.meBack}" stroke-width="3.4" stroke-linecap="round"/>
@@ -2860,7 +2867,7 @@
         const [x, y] = spot(tt), lift = taken.filter(([a, b]) => Math.abs(a - x) < 80 && Math.abs(b - y) < 30).length * 24;
         taken.push([x, y]);
         const [wx, wl] = mtWxSvg(o.weather && o.weather.kind);
-        html += `<g data-mu="${i}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)})">${mtFigure(P.other, P.otherBack, mtWeighedToday(o))}${wx}<g class="mt-pill"></g></g>`;
+        html += `<g data-mu="${i}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)})"><rect x="-26" y="-64" width="52" height="70" fill="transparent"/>${mtFigure(P.other, P.otherBack, mtWeighedToday(o))}${wx}<g class="mt-pill"></g></g>`;
         return lift + wl;
       });
       $('mtOthers').innerHTML = html;
@@ -2870,8 +2877,8 @@
       const [myWx, myLift] = mtWxSvg(t != null && u.weather && u.weather.kind);
       $('mtMeWx').innerHTML = myWx;
       mtPill($('mtMePill'), others.length && t != null ? (u.name || '') : '', P.me, myLift);
-      mtWxCaption();
       MT.me = u; MT.sel = null;
+      mtWxCaption();
       $('mtTorch').innerHTML = mtTorch(mtWeighedToday(u));
     }
     const fmt1 = v => fmt(parseFloat((+v).toFixed(1)));
@@ -2908,6 +2915,7 @@
         mtPill(p, p.dataset.name, p.dataset.col, +p.dataset.lift, on);
         if (on) g.parentNode.appendChild(g);
       });
+      mtWxCaption();
       safeHaptic('selection');
     }
     function renderMountain(u, start, goal, current) {
