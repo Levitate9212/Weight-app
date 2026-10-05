@@ -2612,12 +2612,10 @@
       }
       return ['', 0];
     }
-    // Погода над горой: у каждого строка «имя · погода — из-за чего». Свою причину видно с цифрами (сон, готовность),
-    // у других — только короткая причина от сервера, без цифр. Выбранный на горе — ярче.
+    // Погода над горой: «погода — из-за чего» того, кто выбран. Свою причину видно с цифрами (сон, готовность),
+    // у других — только короткая причина от сервера, без цифр.
     function mtWxCaption() {
-      const el = $('mtWx'), all = Object.values(globalData || {}).filter(o => o && o.weather && o.weather.kind);
-      const me = all.find(o => o.isMe), who = MT.sel || me;
-      if (!all.length) { el.innerHTML = ''; return; }
+      const el = $('mtWx'), me = Object.values(globalData || {}).find(o => o && o.isMe), who = MT.sel || me;
       const day = mtPal() === MT_PAL.day, h = v => fmt1(v) + ' ч';
       const ic = (w, glow) => ({
         snow: '<path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9"/>',
@@ -2636,12 +2634,11 @@
         cloudy: w.sleep != null && w.sleep < 7 ? `сон ${h(w.sleep)}` : `готовность ${w.ready}`,
         clear: w.back ? 'снова на тропе' : glow ? 'неделя без пропусков' : w.sleep != null ? `сон ${h(w.sleep)}` : 'всё в норме'
       }[w.kind] || w.why || '');
-      const order = [me, ...(MT.others || []), ...all].filter((o, k, a) => o && all.includes(o) && a.indexOf(o) === k);
-      el.innerHTML = order.map(o => {
-        const w = o.weather, glow = w.sky === 'glow', why = o === me ? myWhy(w, glow) : w.why || '';
-        const name = order.length > 1 ? `<b>${esc(o.name || '')}</b> · ` : '';
-        return `<div class="${o === who ? 'on' : ''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ic(w, glow)}</svg><span>${name}${kind(w, glow)}${why ? ' — ' + esc(why) : ''}</span></div>`;
-      }).join('');
+      // одна строка — того, кто выбран на горе (без имени: и так видно, чья подпись выделена)
+      const o = who && who.weather && who.weather.kind ? who : null;
+      if (!o) { el.innerHTML = ''; return; }
+      const w = o.weather, glw = w.sky === 'glow', why = o === me ? myWhy(w, glw) : w.why || '';
+      el.innerHTML = `<div class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ic(w, glw)}</svg><span>${kind(w, glw)}${why ? ' — ' + esc(why) : ''}</span></div>`;
       // небо: сияние или радуга общие; падающая звезда — ночью у того, у кого ясно
       const ww = (who && who.weather) || {}, glow = ww.sky === 'glow';
       const sky = $('mtGlowG'); if (sky) sky.style.display = glow ? '' : 'none';
