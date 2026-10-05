@@ -2612,8 +2612,8 @@
       }
       return ['', 0];
     }
-    // Погода над горой: «погода — из-за чего» того, кто выбран. Свою причину видно с цифрами (сон, готовность),
-    // у других — только короткая причина от сервера, без цифр.
+    // Погода над горой: «погода — из-за чего» того, кто выбран, у всех одинаково — короткой причиной от сервера
+    // (без цифр). Своя причина с цифрами — только запасной вариант, если сервер старый и причины не прислал.
     function mtWxCaption() {
       const el = $('mtWx'), me = Object.values(globalData || {}).find(o => o && o.isMe), who = MT.sel || me;
       const day = mtPal() === MT_PAL.day, h = v => fmt1(v) + ' ч';
@@ -2637,7 +2637,7 @@
       // одна строка — того, кто выбран на горе (без имени: и так видно, чья подпись выделена)
       const o = who && who.weather && who.weather.kind ? who : null;
       if (!o) { el.innerHTML = ''; return; }
-      const w = o.weather, glw = w.sky === 'glow', why = o === me ? myWhy(w, glw) : w.why || '';
+      const w = o.weather, glw = w.sky === 'glow', why = w.why || (o === me ? myWhy(w, glw) : '');
       el.innerHTML = `<div class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ic(w, glw)}</svg><span>${kind(w, glw)}${why ? ' — ' + esc(why) : ''}</span></div>`;
       // небо: сияние или радуга общие; падающая звезда — ночью у того, у кого ясно
       const ww = (who && who.weather) || {}, glow = ww.sky === 'glow';
