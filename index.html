@@ -360,8 +360,11 @@
     @keyframes mtFogD { from { transform: translateX(-7px); } to { transform: translateX(7px); } }
     @keyframes mtGlowP { from { opacity: .6; } to { opacity: 1; } }
     @keyframes mtShoot { 0%, 90% { opacity: 0; transform: translate(0, 0); } 91% { opacity: 1; } 97% { opacity: 0; transform: translate(-150px, 70px); } 100% { opacity: 0; transform: translate(-150px, 70px); } }
-    .mt-wx { font-size: 13px; font-weight: 600; color: var(--ink); margin-top: 6px; display: flex; align-items: center; gap: 7px; }
+    .mt-wx { font-size: 13px; font-weight: 600; color: var(--ink); margin-top: 6px; display: flex; flex-direction: column; gap: 3px; }
     .mt-wx:empty { display: none; }
+    .mt-wx div { display: flex; align-items: center; gap: 7px; opacity: .72; transition: opacity .2s; }
+    .mt-wx div.on { opacity: 1; }
+    .mt-wx div b { font-weight: 700; }
     .mt-wx svg { width: 18px; height: 18px; flex: none; }
     html.light .mt-wx { color: #15171A; }
     @media (prefers-reduced-motion: reduce) { #mtSvg .mt-flame, #mtSvg .mt-drop, #mtSvg .mt-flake, #mtSvg .mt-fogd, #mtSvg .mt-glow, #mtSvg .mt-shoot { animation: none; } #mtSvg .mt-shoot { display: none; } }
@@ -719,7 +722,7 @@
         <div class="r"><div class="k">До вершины</div><div class="v" id="mtLeft">—</div></div>
       </div>
       <p class="mt-next" id="mtNext"></p>
-      <p class="mt-wx" id="mtWx"></p>
+      <div class="mt-wx" id="mtWx"></div>
     </div>
     <svg id="mtSvg" viewBox="0 560 410 650" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Гора: тропа от стартового веса к цели"></svg>
     <p class="mt-hint" id="mtHint">Гору можно двигать пальцем</p>
@@ -2021,11 +2024,13 @@
       let len = 0; pts.forEach((p, i) => { if (i) len += Math.hypot(p[0] - pts[i - 1][0], p[1] - pts[i - 1][1]); });
       const labels = [...Array(n)].map((_, k) => `<text x="${(16 + k / Math.max(1, n - 1) * 268).toFixed(1)}" y="118" text-anchor="middle">${ST_DAYS[k].toLowerCase()}</text>`).join('');
       const lastP = pts[pts.length - 1];
+      // подпись у точки — над ней; но если соседняя точка выше, линия приходит сверху, и подпись уходит под точку
+      const ly = (p, nb) => nb[1] < p[1] - 2 && p[1] + 19 <= 106 ? p[1] + 19 : p[1] - 10;
       return `<div class="st-chart"><svg viewBox="0 0 300 120">${labels}
         <polyline class="ln" points="${pts.map(p => p.map(v => v.toFixed(1)).join(',')).join(' ')}" style="--len:${len.toFixed(0)};stroke-dasharray:${len.toFixed(0)}"/>
         <circle cx="${lastP[0].toFixed(1)}" cy="${lastP[1].toFixed(1)}" r="5" fill="var(--volt)"/>
-        <text x="${pts[0][0].toFixed(1)}" y="${(pts[0][1] - 9).toFixed(1)}" text-anchor="start">${fmt(ws[0].w)}</text>
-        <text x="${lastP[0].toFixed(1)}" y="${(lastP[1] - 10).toFixed(1)}" text-anchor="end" style="fill:var(--ink);font-weight:600">${fmt(ws[ws.length - 1].w)}</text></svg></div>`;
+        <text x="${pts[0][0].toFixed(1)}" y="${ly(pts[0], pts[1]).toFixed(1)}" text-anchor="start">${fmt(ws[0].w)}</text>
+        <text x="${lastP[0].toFixed(1)}" y="${ly(lastP, pts[pts.length - 2]).toFixed(1)}" text-anchor="end" style="fill:var(--ink);font-weight:600">${fmt(ws[ws.length - 1].w)}</text></svg></div>`;
     }
     // виды спорта: свой цвет и значок; новый вид получает цвет из запасных и секундомер
     // значки видов спорта — цветные, в одном стиле с мячом: тёмный контур, яркая заливка
@@ -2100,7 +2105,7 @@
     // какие цифры у какого вида и в каком порядке (решение Вадима 05.10); нет цифры — «—»
     const ST_WO_SETS = [[/^(бег|ходьб|прогул)/, ['km', 'min', 'pace', 'hr', 'kcal', 'cadence']], [/лестниц/, ['km', 'min', 'hr', 'elev', 'kcal']],
       [/^лыж/, ['km', 'min', 'pace', 'hr', 'kcal', 'elev']],
-      [/^вело/, ['km', 'min', 'speed', 'hr', 'kcal']], [/^плав/, ['swim', 'min', 'pace100', 'kcal']], [/./, ['min', 'hr', 'kcal']]];
+      [/^вело/, ['km', 'min', 'speed', 'hr', 'kcal']], [/^плав/, ['swim', 'min', 'kcal']], [/./, ['min', 'hr', 'kcal']]];
     const ST_WO_ANY = ['km', 'min', 'pace', 'speed', 'hr', 'kcal'];
     function stWoCard(w) {
       const known = w.sport && w.sport !== 'тренировка', m = known ? stSport(w.sport) : null, d = new Date(w.at);
@@ -2607,40 +2612,37 @@
       }
       return ['', 0];
     }
-    // Подпись над горой — погода того, кого выбрали на горе (по умолчанию своя). У чужих только вид погоды:
-    // причину (сон, готовность) сервер другим не отдаёт
+    // Погода над горой: «погода — из-за чего» того, кто выбран. Свою причину видно с цифрами (сон, готовность),
+    // у других — только короткая причина от сервера, без цифр.
     function mtWxCaption() {
-      const me = Object.values(globalData || {}).find(o => o && o.isMe), who = MT.sel || me, w = who && who.weather;
-      const el = $('mtWx');
-      if (!w || !w.kind) { el.innerHTML = ''; return; }
-      const mine = who === me;
+      const el = $('mtWx'), me = Object.values(globalData || {}).find(o => o && o.isMe), who = MT.sel || me;
       const day = mtPal() === MT_PAL.day, h = v => fmt1(v) + ' ч';
-      const glow = w.sky === 'glow', good = w.sleep != null ? 'неделя без пропусков и хороший сон' : 'неделя без пропусков';
-      const txt = {
-        snow: 'Тихий снег: отдыхай, гора подождёт',
-        cloud: w.days != null ? `Ты в облаке: ${w.days} ${plural(w.days, 'день', 'дня', 'дней')} без замеров` : 'Ты в облаке: замеров пока нет',
-        fog: `Туман: сон ${h(w.sleep)}, выспись, и прояснится`,
-        rain: 'Дождик: день полегче, восстанавливайся',
-        cloudy: w.sleep != null && w.sleep < 7 ? `Облачно: сон ${h(w.sleep)}` : `Облачно: готовность ${w.ready}`,
-        clear: glow ? `${day ? 'Радуга' : 'Сияние'}: ${good}` : w.back ? 'Ясно: с возвращением' : w.sleep != null ? `Ясно: сон ${h(w.sleep)}` : 'Ясно'
-      }[w.kind] || '';
-      const theirs = {
-        snow: 'тихий снег', cloud: 'в облаке', fog: 'туман', rain: 'дождик', cloudy: 'облачно',
-        clear: glow ? (day ? 'радуга' : 'сияние') : 'ясно'
-      }[w.kind] || '';
-      const ic = {
+      const ic = (w, glow) => ({
         snow: '<path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9"/>',
         cloud: '<path d="M7 18h10a4 4 0 0 0 .5-8A6 6 0 0 0 6 11a3.5 3.5 0 0 0 1 7z"/>',
         fog: '<path d="M4 9h16M6 13h14M4 17h12"/>',
         rain: '<path d="M7 14h10a4 4 0 0 0 .5-8A6 6 0 0 0 6 7a3.5 3.5 0 0 0 1 7zM9 17l-1 3M13 17l-1 3M17 17l-1 3"/>',
         cloudy: '<path d="M7 18h10a4 4 0 0 0 .5-8A6 6 0 0 0 6 11a3.5 3.5 0 0 0 1 7z"/>',
         clear: glow ? (day ? '<path d="M3 18a9 9 0 0 1 18 0M6.5 18a5.5 5.5 0 0 1 11 0"/>' : '<path d="M3 15c3-6 6 2 9-4s6 0 9-5M3 20c3-5 6 1 9-3s6 0 9-4"/>') : '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'
-      }[w.kind] || '';
-      el.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ic}</svg><span></span>`;
-      el.querySelector('span').textContent = mine ? txt : `${who.name || ''}: ${theirs}`;
+      }[w.kind] || '');
+      const kind = (w, glow) => ({ snow: 'Снег', cloud: 'В облаке', fog: 'Туман', rain: 'Дождик', cloudy: 'Облачно', clear: glow ? (day ? 'Радуга' : 'Сияние') : 'Ясно' }[w.kind] || '');
+      const myWhy = (w, glow) => ({
+        snow: 'нездоровится, отдых',
+        cloud: w.days != null ? `${w.days} ${plural(w.days, 'день', 'дня', 'дней')} без замеров` : 'замеров пока нет',
+        fog: w.sleep != null ? `сон ${h(w.sleep)}` : 'мало сна',
+        rain: w.ready != null && w.ready < 40 ? `готовность ${w.ready}` : 'усталость',
+        cloudy: w.sleep != null && w.sleep < 7 ? `сон ${h(w.sleep)}` : `готовность ${w.ready}`,
+        clear: w.back ? 'снова на тропе' : glow ? 'неделя без пропусков' : w.sleep != null ? `сон ${h(w.sleep)}` : 'всё в норме'
+      }[w.kind] || w.why || '');
+      // одна строка — того, кто выбран на горе (без имени: и так видно, чья подпись выделена)
+      const o = who && who.weather && who.weather.kind ? who : null;
+      if (!o) { el.innerHTML = ''; return; }
+      const w = o.weather, glw = w.sky === 'glow', why = o === me ? myWhy(w, glw) : w.why || '';
+      el.innerHTML = `<div class="on"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ic(w, glw)}</svg><span>${kind(w, glw)}${why ? ' — ' + esc(why) : ''}</span></div>`;
       // небо: сияние или радуга общие; падающая звезда — ночью у того, у кого ясно
+      const ww = (who && who.weather) || {}, glow = ww.sky === 'glow';
       const sky = $('mtGlowG'); if (sky) sky.style.display = glow ? '' : 'none';
-      const sh = $('mtShootG'); if (sh) sh.style.display = w.kind === 'clear' && !glow ? '' : 'none';
+      const sh = $('mtShootG'); if (sh) sh.style.display = ww.kind === 'clear' && !glow ? '' : 'none';
     }
     function mtBuild() {
       const svg = $('mtSvg');
