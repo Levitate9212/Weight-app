@@ -2093,7 +2093,7 @@
       pace: ['темп /км', v => v], pace100: ['темп /100 м', v => v], speed: ['км/ч', v => fmt(v)], hr: ['пульс ср.', v => v], kcal: ['ккал', v => v],
       elev: ['набор, м', v => v], cadence: ['каденс', v => v], swim: ['метров', v => Math.round(v * 1000).toLocaleString('ru-RU')]
     };
-    // какие цифры у какого вида и в каком порядке (решение Вадима 05.10); нет цифры — «—», каденс — только если есть
+    // какие цифры у какого вида и в каком порядке (решение Вадима 05.10); нет цифры — «—»
     const ST_WO_SETS = [[/^(бег|ходьб|прогул|лыж)/, ['km', 'min', 'pace', 'hr', 'kcal', 'cadence']], [/лестниц/, ['km', 'min', 'hr', 'elev', 'kcal']],
       [/^вело/, ['km', 'min', 'speed', 'hr', 'kcal']], [/^плав/, ['swim', 'min', 'pace100', 'kcal']], [/./, ['min', 'hr', 'kcal']]];
     const ST_WO_ANY = ['km', 'min', 'pace', 'speed', 'hr', 'kcal'];
@@ -2102,7 +2102,7 @@
       const when = isNaN(d) ? '' : `${ST_DAYS[(d.getDay() + 6) % 7].toLowerCase()}, ${d.getDate()} ${ST_GEN[d.getMonth()].slice(0, 3)} · ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
       const set = known ? ST_WO_SETS.find(([re]) => re.test(w.sport))[1] : ST_WO_ANY.filter(k => w[k] != null && w[k] !== '');
       const val = k => w[k === 'swim' ? 'km' : k], has = k => val(k) != null && val(k) !== '';
-      const met = set.filter(k => k !== 'cadence' || has(k)).map(k => `<div${has(k) ? '' : ' class="no"'}><b>${has(k) ? esc(String(ST_WO_M[k][1](val(k)))) : '—'}</b>${ST_WO_M[k][0]}</div>`).join('');
+      const met = set.map(k => `<div${has(k) ? '' : ' class="no"'}><b>${has(k) ? esc(String(ST_WO_M[k][1](val(k)))) : '—'}</b>${ST_WO_M[k][0]}</div>`).join('');
       return `<div class="st-wo"><div class="st-wo-h"><i style="background:${m ? m.c : 'var(--panel2)'}">${stIcon(m ? m.ic : 'q', '')}</i><div><b>${known ? esc(stCap(w.sport)) : 'Вид не указан'}</b><span>${when}</span></div></div>
         ${met ? `<div class="st-wo-m">${met}</div>` : ''}
         ${w.review ? `<details class="st-wo-r"><summary>Разбор тренера</summary><p>${esc(w.review)}</p></details>` : ''}</div>`;
