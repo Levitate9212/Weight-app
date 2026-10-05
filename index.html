@@ -1760,7 +1760,11 @@
 
       // Нарисовать набор медалей: [{ key, svg, size }] (size — сторона в CSS-пикселях).
       // Возвращает { key: адрес } для того, что получилось.
-      async function render(list) {
+      // Пока вручают медаль, фоновая отрисовка витрины ждёт: иначе она съедает кадры и монета крутится рывками.
+      // Срочное (сама монета) рисуется сразу.
+      let paused = false;
+      const hold = async () => { for (let i = 0; paused && i < 150; i++) await wait(100); };
+      async function render(list, urgent) {
         const my = gen;
         const css = await fontCss();
         if (!css) return {};
@@ -1771,6 +1775,7 @@
         for (const it of list) {
           if (urls[it.key]) { done[it.key] = urls[it.key]; continue; }
           const px = Math.round(it.size * dpr);
+          if (!urgent) await hold();
           try { jobs.push({ it, px, img: await toImg(it.svg, px, css) }); } catch (e) {}
         }
         // Safari подгружает шрифт внутри картинки не сразу: ждём, пока проба нарисуется нужным шрифтом
@@ -1778,6 +1783,7 @@
         for (let i = 0; i < 25 && (ok = check()) === false; i++) await wait(80);
         if (!ok) return done;
         for (const j of jobs) {
+          if (!urgent) await hold();
           await idle();
           if (my !== gen) return {};
           try {
@@ -1793,7 +1799,7 @@
       // Сбросить всё нарисованное (новые данные с сервера)
       function reset() { gen++; Object.keys(urls).forEach(k => { URL.revokeObjectURL(urls[k]); delete urls[k]; }); }
       function drop(key) { if (urls[key]) { URL.revokeObjectURL(urls[key]); delete urls[key]; } }
-      return { render, reset, drop, get: k => urls[k] };
+      return { render, reset, drop, get: k => urls[k], pause: v => { paused = !!v; } };
     })();
 
     // Экран достижений собирается заранее, в паузе после открытия главного экрана,
@@ -3011,16 +3017,20 @@
       (C.rasterKeys || []).forEach(k => keys.indexOf(k) === -1 && MedalRaster.drop(k));
       C.rasterKeys = keys;
       const token = C.build = {};
-      MedalRaster.render([{ key: keys[0], svg: front, size: 300 }, { key: keys[1], svg: back, size: 300 }]).then(done => {
-        if (C.build !== token) return;
-        faces.forEach((f, i) => {
-          const url = done[keys[i]], old = f.querySelector('svg');
-          if (!url || !old) return;
-          const img = new Image();
-          img.alt = ''; img.draggable = false; img.src = url;
-          img.decode().then(() => { if (C.build === token && old.parentNode === f) f.replaceChild(img, old); }).catch(() => {});
-        });
-      });
+      // C.ready — обе стороны уже картинки: вручение ждёт его, иначе первые обороты крутят тяжёлый SVG и лагают
+      C.ready = Promise.race([
+        MedalRaster.render([{ key: keys[0], svg: front, size: 300 }, { key: keys[1], svg: back, size: 300 }], true).then(done => {
+          if (C.build !== token) return;
+          return Promise.all(faces.map((f, i) => {
+            const url = done[keys[i]], old = f.querySelector('svg');
+            if (!url || !old) return null;
+            const img = new Image();
+            img.alt = ''; img.draggable = false; img.src = url;
+            return img.decode().then(() => { if (C.build === token && old.parentNode === f) f.replaceChild(img, old); }).catch(() => {});
+          }));
+        }).catch(() => {}),
+        new Promise(r => setTimeout(r, 2500))
+      ]);
       // свечение за монетой — в цвет медали
       const o = medalOpts(m), f = (grand && o.grandField) || o.field;
       const col = grand ? '#F2B53A' : (f && f.enamel) || (MedalArt.M[o.rim] || MedalArt.M.gunmetal).mid;
@@ -3057,7 +3067,10 @@
     }
     function coinLoop(t) {
       if (C.mode === 'tween') {
-        const k = Math.max(0, Math.min(1, (t - C.tween.t0) / C.tween.dur)), e = 1 - Math.pow(1 - k, 3);
+        // время по кадрам: долгий кадр (сборка экрана, загрузка) не даёт монете перескочить
+        const tw = C.tween, dt = tw.last == null ? 0 : Math.min(t - tw.last, 34);
+        tw.last = t; if (t >= tw.t0) tw.el = (tw.el || 0) + dt;
+        const k = Math.max(0, Math.min(1, (tw.el || 0) / tw.dur)), e = 1 - Math.pow(1 - k, 3);
         C.angle = C.tween.from + (C.tween.to - C.tween.from) * e;
         if (C.tween.scaleFrom != null) {                    // вручение: вылетает из глубины с лёгким перелётом
           const b = 1 + 2.2 * Math.pow(k - 1, 3) + 1.2 * Math.pow(k - 1, 2);
@@ -3096,9 +3109,17 @@
       if (award) {
         $('cNext').textContent = award.more ? `Дальше · ещё ${award.more}` : 'Забрать';
         C.scale = .12;
-        C.tween = { from: -1080, to: 0, dur: 1700, t0: performance.now() + 250, scaleFrom: .12 };
-        setTimeout(() => safeHaptic('medium'), 250);
+        // монета вылетает, только когда её стороны готовы картинками; до этого её не видно
+        C.tween = { from: -1080, to: 0, dur: 1700, t0: Infinity, scaleFrom: .12 };
+        const stage = $('coinStage'), tw = C.tween;
+        stage.style.opacity = '0';
+        C.ready.then(() => requestAnimationFrame(() => {
+          if (C.tween !== tw) return;
+          stage.style.opacity = ''; tw.t0 = performance.now() + 120;
+          setTimeout(() => safeHaptic('medium'), 120);
+        }));
         C.landed = () => {
+          setTimeout(() => MedalRaster.pause(false), 600);   // монета встала — витрина дорисовывается дальше
           safeHaptic('success');
           $('coinBurst').classList.add('go');
           $('cInfo').classList.remove('wait');
@@ -3113,6 +3134,7 @@
       if (!C.tiltOn) { C.tiltOn = true; tiltStart(); }
     }
     function closeCoin() {
+      MedalRaster.pause(false);
       if (C.tiltOn) { C.tiltOn = false; tiltStop(); }
       $('coinView').classList.remove('open');
       $('confetti').innerHTML = '';
@@ -3168,7 +3190,10 @@
       saveSeen(seen.concat(fresh.map(m => m.key)));
       if (!fresh.length) return;
       awardQueue = fresh.map(m => Object.assign({}, m, { status: 'earned' }));
-      setTimeout(showNextAward, 600);
+      MedalRaster.pause(true);
+      // вручение — когда приложение догрузилось (график, экран медалей), а не посреди загрузки
+      const go = () => (window.requestIdleCallback ? requestIdleCallback(showNextAward, { timeout: 2000 }) : setTimeout(showNextAward, 300));
+      setTimeout(go, 900);
     }
     function showNextAward() {
       const burst = $('coinBurst');
@@ -3181,6 +3206,7 @@
       if (!m) { $('coinView').classList.remove('award-mode'); return; }
       const me = Object.keys(globalData).find(id => globalData[id].isMe);
       if (me && activeUserId !== String(me)) { activeUserId = String(me); renderUserTabs(); renderDashboard(); }
+      MedalRaster.pause(true);
       openCoin(m, { more: awardQueue.length });
     }
     document.addEventListener('DOMContentLoaded', () => {
