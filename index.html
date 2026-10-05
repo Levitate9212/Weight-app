@@ -288,6 +288,15 @@
     .cap { font-size: 11px; font-weight: 600; letter-spacing: .14em; color: var(--muted); text-transform: uppercase; }
     .big { display: flex; align-items: baseline; gap: 6px; line-height: .86; margin-top: 6px; white-space: nowrap; }
     .big b { font-family: var(--num); font-weight: 700; font-size: clamp(70px, 23vw, 92px); letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+    /* вес как табло: каждая цифра — барабан 0–9 (три круга), крутится вверх к своей цифре */
+    /* невидимая копия числа держит место и строку текста, барабаны лежат поверх неё */
+    .odo { position: relative; }
+    .odo .ghost { visibility: hidden; }
+    .odo .roll { position: absolute; left: 0; top: -.12em; display: flex; }
+    .odo .od { display: block; height: 1.1em; overflow: hidden; -webkit-mask-image: linear-gradient(transparent, #000 10%, #000 90%, transparent); mask-image: linear-gradient(transparent, #000 10%, #000 90%, transparent); }
+    .odo .odr { display: block; will-change: transform; }
+    .odo .odr .c { display: block; height: 1.3em; line-height: 1.3; }
+    .odo .sep { display: block; height: 1.1em; line-height: 1.3; margin-top: -.1em; }
     .big i { font-style: normal; font-family: var(--num); font-size: 22px; font-weight: 600; color: var(--muted); }
     .chg { text-align: right; padding-bottom: 6px; flex-shrink: 0; }
     #currDiffBadge { font-family: var(--num); font-size: 30px; font-weight: 600; line-height: 1; display: flex; align-items: center; gap: 3px; justify-content: flex-end; white-space: nowrap; }
@@ -2171,6 +2180,7 @@
     function stGo(i, anim = true) {
       i = Math.max(0, Math.min(ST.views.length - 1, i));
       const dir = i > ST.i ? 'in-r' : i < ST.i ? 'in-l' : '';
+      if (dir && anim) safeHaptic('selection');
       ST.i = i; stTabs();
       const pg = $('stPage');
       pg.innerHTML = `<div class="st-card${anim && dir ? ' ' + dir : ''}${anim ? ' draw' : ''}">${ST.views[i].html()}</div>`;
@@ -2829,11 +2839,16 @@
       // бывают по полсекунды, и раньше человечек стоял, а потом рывком догонял. Долгий кадр
       // засчитывается как обычный (не больше 34 мс). Старт — после короткой паузы, разгон и торможение плавные.
       const dur = 3200 + 6400 * Math.abs(t - from);
-      let el = -350, last = null;
+      let el = -350, last = null, prevT = from;
       const step = now => {
         el += last == null ? 0 : Math.min(now - last, 34); last = now;
         const k = Math.max(0, Math.min(1, el / dur)), e = k < .5 ? 2 * k * k : 1 - Math.pow(2 - 2 * k, 2) / 2;
-        mtDraw(from + (t - from) * e, reached, el > 0 && k < 1);
+        const cur = from + (t - from) * e;
+        // лёгкий щелчок, когда человечек проходит лагерь; на вершине — «успех»
+        if (MT_CAMPS.some(c => (prevT * 100 < c - 1e-6) !== (cur * 100 < c - 1e-6))) safeHaptic('soft');
+        if (k >= 1 && t >= 1 && from < 1) safeHaptic('success');
+        prevT = cur;
+        mtDraw(cur, reached, el > 0 && k < 1);
         if (k < 1) MT.raf = requestAnimationFrame(step);
       };
       MT.raf = requestAnimationFrame(step);
@@ -3382,7 +3397,7 @@
 
       $('currWeightLabel').textContent = past ? `Замер за ${target.dateStr}` : 'Текущий вес';
       renderStats(u);
-      countTo($('currWeight'), target.weight, intro ? start : null);
+      odoTo($('currWeight'), target.weight, intro ? start : null);
       renderAchievements(u);
       renderStoryRing(u);
       $('trendWeight').textContent = fmt(calculateSMA(all)[ti]);
@@ -3587,6 +3602,35 @@
         if (k < 1) el.$raf = requestAnimationFrame(step);
       };
       el.$raf = requestAnimationFrame(step);
+    }
+
+    // Вес как табло: каждая цифра — свой барабан и докручивается вверх до нужной.
+    // При открытии (from = стартовый вес) младшие цифры делают лишний круг, как настоящий счётчик.
+    function odoTo(el, value, from) {
+      const txt = fmt(value), prevTxt = from != null ? fmt(from) : (el.dataset.t || '');
+      el.dataset.t = txt;
+      if (calm() || !prevTxt || prevTxt === txt && from == null) { el.classList.remove('odo'); el.textContent = txt; return; }
+      const cells = [...'0123456789'].map(c => `<span class="c">${c}</span>`).join('').repeat(3);
+      // старые цифры выравниваем по правому краю (запятая к запятой), недостающие — нули
+      const pad = (a, n) => a.length >= n ? a : '0'.repeat(n - a.length) + a;
+      const [ni, nf = ''] = txt.split(','), [pi, pf = ''] = prevTxt.split(',');
+      const prevAligned = pad(pi, ni.length).slice(-ni.length) + (nf ? ',' + (pf + '0').slice(0, nf.length) : '');
+      el.classList.add('odo');
+      el.innerHTML = `<span class="ghost">${txt}</span><span class="roll">` + [...txt].map(ch => /\d/.test(ch) ? `<span class="od"><span class="odr">${cells}</span></span>` : `<span class="sep">${ch}</span>`).join('') + '</span>';
+      const rolls = [...el.querySelectorAll('.odr')], digits = [...txt].filter(c => /\d/.test(c)), prevD = [...prevAligned].filter(c => /\d/.test(c));
+      const intro = from != null, n = rolls.length, dur = intro ? 1100 : 520;
+      rolls.forEach((r, k) => {
+        const d = +digits[k], p = +(prevD[k] || 0), fromRight = n - 1 - k;
+        const loops = d === p && !intro ? 0 : intro ? (fromRight === 0 ? 2 : 1) : 1;
+        const end = d + (d > p || loops === 0 ? (loops ? loops - 1 : 0) * 10 : loops * 10);
+        r.style.transform = `translateY(${-.1 - p * 1.3}em)`;
+        r.style.transition = 'none';
+        if (end === p) return;
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          r.style.transition = `transform ${dur + fromRight * 90}ms cubic-bezier(.18,.8,.22,1) ${k * 40}ms`;
+          r.style.transform = `translateY(${-.1 - end * 1.3}em)`;
+        }));
+      });
     }
 
     // 30 сегментов пути к цели; при открытии загораются по очереди
