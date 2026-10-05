@@ -1061,6 +1061,7 @@
       if (!globalData[activeUserId]) activeUserId = String(Object.keys(globalData)[0]);
       medalCache = {};
       MedalRaster.reset();
+      for (const k in ST_CACHE) delete ST_CACHE[k]; // после обновления сторис тоже грузятся заново
       renderUserTabs();
       $('dashboard').classList.remove('hidden');
       chartReveal = true;
@@ -1918,7 +1919,7 @@
     // =====================================================================
     const ST_MONTHS = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
     const ST_GEN = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
-    const ST = { u: null, views: [], i: 0, timer: 0, posterT0: 0, posterOpen: 0, posterOn: false, srv: null, prev: null, req: 0 };
+    const ST = { u: null, views: [], i: 0, timer: 0, preT: 0, posterT0: 0, posterOpen: 0, posterOn: false, srv: null, prev: null, req: 0 };
     const ST_POSTER = 4500, ST_POSTER_WAIT = 12000;
     function stDay(ts) { const d = new Date(ts); if (d.getHours() < 4) d.setDate(d.getDate() - 1); d.setHours(0, 0, 0, 0); return d; }
     const stKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -1955,6 +1956,26 @@
       $('storyRingTxt').textContent = ST_MONTHS[mo.m].slice(0, 3);
       let seen = false; try { seen = localStorage.getItem(stSeenKey(u)) === '1'; } catch (e) {}
       ring.classList.toggle('seen', seen);
+      // данные сторис (тренировки, км, тексты тренера) грузим заранее в фоне, чтобы к нажатию всё было готово
+      clearTimeout(ST.preT);
+      ST.preT = setTimeout(() => stPrefetch(u), 1500);
+    }
+    // кэш запросов сторис: человек + месяц → ответ сервера; живёт 3 минуты, ошибка не кэшируется
+    const ST_CACHE = {}, ST_CACHE_MS = 180000;
+    function stFetch(u, ym) {
+      const uid = String(u.id || activeUserId), key = uid + '|' + ym, c = ST_CACHE[key];
+      if (c && performance.now() - c.t < ST_CACHE_MS) return c;
+      const e = ST_CACHE[key] = { t: performance.now(), j: null };
+      e.p = fetch(`${dataUrl()}&action=story&uid=${encodeURIComponent(uid)}&month=${ym}`).then(r => r.json())
+        .then(j => { if (!j || j.error) throw 0; e.j = j; return j; })
+        .catch(err => { if (ST_CACHE[key] === e) delete ST_CACHE[key]; throw err; });
+      return e;
+    }
+    function stPrefetch(u) {
+      if (!u || $('storyRing').classList.contains('hidden')) return;
+      const b = stBuild(u), pm = new Date(b.y, b.m, 0);
+      stFetch(u, stYm(b)).p.catch(() => {});
+      if (b.weeks.length <= 1) stFetch(u, stYm({ y: pm.getFullYear(), m: pm.getMonth() })).p.catch(() => {});
     }
     function stBuild(u) {
       const { y, m } = storyMonth(), losing = !u.target || u.target < (u.start || u.entries[0].weight);
@@ -2228,7 +2249,11 @@
       if (!u) return;
       safeHaptic('light');
       ST.u = u; ST.srv = null; ST.prev = null; ST.i = 0;
-      const b = stBuild(u);
+      const b = stBuild(u), pm = new Date(b.y, b.m, 0);
+      // что уже загружено в фоне — сразу в карточки, без «…»
+      const fCur = stFetch(u, stYm(b)), fPrev = b.weeks.length <= 1 ? stFetch(u, stYm({ y: pm.getFullYear(), m: pm.getMonth() })) : null;
+      if (fCur.j) ST.srv = fCur.j;
+      if (fPrev && fPrev.j) ST.prev = fPrev.j;
       ST.views = stViews(u, b);
       $('stTitle').innerHTML = `Итоги · <b>${ST_MONTHS[b.m]}</b>`;
       $('story').classList.add('open'); $('story').setAttribute('aria-hidden', 'false');
@@ -2240,16 +2265,14 @@
       try { localStorage.setItem(stSeenKey(u), '1'); } catch (e) {}
       $('storyRing').classList.add('seen');
       // сон, тренировки, километры и тексты тренера; первую неделю месяца — ещё итог прошлого
-      const req = ++ST.req, uid = encodeURIComponent(u.id || activeUserId);
-      const get = ym => fetch(`${dataUrl()}&action=story&uid=${uid}&month=${ym}`).then(r => r.json()).then(j => { if (!j || j.error) throw 0; return j; });
+      const req = ++ST.req;
       // прошлый месяц закончился неделю назад — пока в новом месяце одна неделя
-      const pm = new Date(b.y, b.m, 0);
-      if (b.weeks.length <= 1)
-        get(stYm({ y: pm.getFullYear(), m: pm.getMonth() })).then(j => {
+      if (fPrev && !fPrev.j)
+        fPrev.p.then(j => {
           if (req !== ST.req) return;
           ST.prev = j; stRebuild(u, b);
         }).catch(() => {});
-      get(stYm(b)).then(j => {
+      if (!fCur.j) fCur.p.then(j => {
         if (req !== ST.req) return;
         ST.srv = j; stRebuild(u, b);
       }).catch(() => {
