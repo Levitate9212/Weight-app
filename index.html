@@ -2105,7 +2105,7 @@
     // какие цифры у какого вида и в каком порядке (решение Вадима 05.10); нет цифры — «—»
     const ST_WO_SETS = [[/^(бег|ходьб|прогул)/, ['km', 'min', 'pace', 'hr', 'kcal', 'cadence']], [/лестниц/, ['km', 'min', 'hr', 'elev', 'kcal']],
       [/^лыж/, ['km', 'min', 'pace', 'hr', 'kcal', 'elev']],
-      [/^вело/, ['km', 'min', 'speed', 'hr', 'kcal']], [/^плав/, ['swim', 'min', 'pace100', 'kcal']], [/./, ['min', 'hr', 'kcal']]];
+      [/^вело/, ['km', 'min', 'speed', 'hr', 'kcal']], [/^плав/, ['swim', 'min', 'kcal']], [/./, ['min', 'hr', 'kcal']]];
     const ST_WO_ANY = ['km', 'min', 'pace', 'speed', 'hr', 'kcal'];
     function stWoCard(w) {
       const known = w.sport && w.sport !== 'тренировка', m = known ? stSport(w.sport) : null, d = new Date(w.at);
