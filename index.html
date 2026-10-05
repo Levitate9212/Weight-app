@@ -11,21 +11,24 @@
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;0,800;1,700;1,800&family=Golos+Text:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     /* =====================================================================
-       Стиль «Спорт-ночь»: графит, один лаймовый акцент, узкие жирные цифры.
+       Стиль «Спорт-ночь»: один лаймовый акцент, узкие жирные цифры.
        Тёмный или светлый — как в телефоне (светлый: html.light, цвета ниже).
+       Тёмный — мягкий сине-серый, как ночная тема Telegram, а не чёрный; лайм чуть приглушён.
        ===================================================================== */
     :root {
-      --bg:      #121315;   /* графит */
-      --panel:   #1B1C1F;   /* карточки */
-      --panel2:  #24262A;
-      --ink:     #F2F3F0;
-      --muted:   #83868D;
-      --rule:    #26282C;
-      --volt:    #C6FF3D;   /* лайм */
-      --volt-dim: rgba(198, 255, 61, .12);
+      --bg:      #17212B;   /* ночной сине-серый */
+      --panel:   #1F2B38;   /* карточки */
+      --panel2:  #293746;
+      --ink:     #E9EEF3;
+      --muted:   #8C9BAB;
+      --rule:    #2A3644;
+      --volt:    #BDEB5B;   /* лайм, мягче */
+      --volt-dim: rgba(189, 235, 91, .13);
       --volt-ink:#121315;
-      --down:    #C6FF3D;   /* вес ушёл */
-      --up:      #FF7A66;   /* вес прибавился */
+      --down:    #BDEB5B;   /* вес ушёл */
+      --up:      #FF8C7A;   /* вес прибавился */
+      --story-bg:#131C25;
+      --lime-btn:#BDEB5B;   /* кнопки и кружки в сторис */
       --num:     'Barlow Condensed', 'Arial Narrow', system-ui, sans-serif;
       --display: 'Golos Text', system-ui, -apple-system, sans-serif;
       --text:    'Golos Text', system-ui, -apple-system, sans-serif;
@@ -44,6 +47,7 @@
       --volt-ink:#121315;
       --down:    #5E9400;
       --up:      #E0503A;
+      --lime-btn:#C6FF3D;
       color-scheme: light;
     }
     html.light #story { background: var(--bg); }
@@ -133,7 +137,7 @@
     #storyRing.seen { background: var(--rule); }
     #storyRing span { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; background: var(--bg); border: 2px solid var(--bg);
       font-family: var(--text); font-size: 10.5px; font-weight: 700; text-transform: uppercase; color: var(--ink); letter-spacing: .02em; }
-    #story { position: fixed; inset: 0; z-index: 45; background: #0D0E10; color: var(--ink); display: flex; flex-direction: column;
+    #story { position: fixed; inset: 0; z-index: 45; background: var(--story-bg); color: var(--ink); display: flex; flex-direction: column;
       padding: calc(10px + env(safe-area-inset-top, 0px)) 16px calc(16px + env(safe-area-inset-bottom, 0px));
       opacity: 0; pointer-events: none; transform: scale(.96); transition: opacity .25s ease, transform .3s cubic-bezier(.3,.8,.3,1); user-select: none; -webkit-user-select: none; overflow: hidden; }
     #story.open { opacity: 1; pointer-events: auto; transform: none; }
@@ -225,14 +229,14 @@
     .st-verdict { font-size: 19px; line-height: 1.35; font-weight: 600; margin-top: 10px; }
     .st-plan { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
     .st-plan > div { display: flex; gap: 12px; align-items: center; font-size: 16px; font-weight: 600; line-height: 1.25; }
-    .st-plan > div span { flex: none; width: 28px; height: 28px; border-radius: 50%; background: #C6FF3D; color: #121315; display: grid; place-items: center; font-family: var(--num); font-weight: 800; }
+    .st-plan > div span { flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--lime-btn); color: #121315; display: grid; place-items: center; font-family: var(--num); font-weight: 800; }
     .st-wk { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-top: 1px solid var(--rule); width: 100%; text-align: left; color: inherit; }
     .st-wk:first-of-type { border-top: 0; }
     .st-wk span { font-size: 14px; } .st-wk small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
     .st-wk b { margin-left: auto; font-family: var(--num); font-size: 22px; font-weight: 700; }
     .st-wk b.down { color: var(--down); } .st-wk b.up { color: var(--up); }
     .st-wk em { font-style: normal; color: var(--muted); font-size: 18px; }
-    .st-close { height: 54px; border-radius: 18px; background: #C6FF3D; color: #121315; font-weight: 700; font-size: 16px; margin-top: 2px; flex: none; }
+    .st-close { height: 54px; border-radius: 18px; background: var(--lime-btn); color: #121315; font-weight: 700; font-size: 16px; margin-top: 2px; flex: none; }
     /* яркая обложка недели при открытии: тап или 4 секунды — и под ней карточка */
     .st-poster { position: absolute; inset: 0; z-index: 3; background: #C6FF3D; color: #121315; display: flex; flex-direction: column;
       padding: calc(14px + env(safe-area-inset-top, 0px)) 24px calc(24px + env(safe-area-inset-bottom, 0px)); transition: transform .45s cubic-bezier(.5,0,.3,1), opacity .45s; }
@@ -242,6 +246,14 @@
     .st-poster .bar b { display: block; height: 100%; width: 0; background: #121315; }
     .st-poster .st-head { margin: 10px -2px 0; } .st-poster .st-head .t { color: rgba(18,19,21,.7); font-size: 14px; }
     .st-poster .st-k { color: rgba(18,19,21,.6); margin-top: auto; }
+    /* тёмная тема: обложка не слепит — тёмный фон с мягким зелёным отсветом, лайм только в цифрах */
+    html:not(.light) .st-poster { background: radial-gradient(120% 70% at 85% 0%, rgba(189,235,91,.22), rgba(189,235,91,0) 60%), linear-gradient(170deg, #22311F 0%, #1A2621 50%, var(--story-bg) 100%); color: var(--ink); }
+    html:not(.light) .st-poster .bar { background: rgba(255,255,255,.14); } html:not(.light) .st-poster .bar b { background: var(--volt); }
+    html:not(.light) .st-poster .st-head .t, html:not(.light) .st-poster .st-k { color: var(--muted); }
+    html:not(.light) .st-poster .st-x { color: var(--ink); }
+    html:not(.light) .st-poster .huge { color: var(--volt); }
+    html:not(.light) .st-poster svg.sp path, html:not(.light) .st-poster svg.sp circle { stroke: var(--volt); }
+    html:not(.light) .st-poster svg.sp circle { fill: var(--volt); }
     .st-poster .huge { font-family: var(--num); font-weight: 800; font-size: clamp(110px, 40vw, 190px); line-height: .85; letter-spacing: -.02em; margin-top: 12px; font-variant-numeric: tabular-nums; }
     .st-poster .huge.sm { font-size: clamp(60px, 22vw, 92px); text-transform: uppercase; font-family: var(--display); letter-spacing: -.02em; }
     .st-poster .unit { font-family: var(--num); font-weight: 700; font-size: 24px; margin-top: 16px; }
@@ -1744,7 +1756,11 @@
 
       // Нарисовать набор медалей: [{ key, svg, size }] (size — сторона в CSS-пикселях).
       // Возвращает { key: адрес } для того, что получилось.
-      async function render(list) {
+      // Пока вручают медаль, фоновая отрисовка витрины ждёт: иначе она съедает кадры и монета крутится рывками.
+      // Срочное (сама монета) рисуется сразу.
+      let paused = false;
+      const hold = async () => { for (let i = 0; paused && i < 150; i++) await wait(100); };
+      async function render(list, urgent) {
         const my = gen;
         const css = await fontCss();
         if (!css) return {};
@@ -1755,6 +1771,7 @@
         for (const it of list) {
           if (urls[it.key]) { done[it.key] = urls[it.key]; continue; }
           const px = Math.round(it.size * dpr);
+          if (!urgent) await hold();
           try { jobs.push({ it, px, img: await toImg(it.svg, px, css) }); } catch (e) {}
         }
         // Safari подгружает шрифт внутри картинки не сразу: ждём, пока проба нарисуется нужным шрифтом
@@ -1762,6 +1779,7 @@
         for (let i = 0; i < 25 && (ok = check()) === false; i++) await wait(80);
         if (!ok) return done;
         for (const j of jobs) {
+          if (!urgent) await hold();
           await idle();
           if (my !== gen) return {};
           try {
@@ -1777,7 +1795,7 @@
       // Сбросить всё нарисованное (новые данные с сервера)
       function reset() { gen++; Object.keys(urls).forEach(k => { URL.revokeObjectURL(urls[k]); delete urls[k]; }); }
       function drop(key) { if (urls[key]) { URL.revokeObjectURL(urls[key]); delete urls[key]; } }
-      return { render, reset, drop, get: k => urls[k] };
+      return { render, reset, drop, get: k => urls[k], pause: v => { paused = !!v; } };
     })();
 
     // Экран достижений собирается заранее, в паузе после открытия главного экрана,
@@ -2560,7 +2578,7 @@
         <path id="mtFlag" d="M${fx} ${fy - 24}L${fx + 18} ${fy - 19}L${fx} ${fy - 14}Z" fill="#F2B53A"/>
         <text id="mtGoalT" x="${fx + 24}" y="${fy - 13}" font-size="13" font-weight="600" fill="${P.goal}" font-family="Golos Text, system-ui, sans-serif"></text>
         <g id="mtOthers"></g>
-        <g id="mtMe">
+        <g id="mtMe" data-mu="me">
           <ellipse cx="0" cy="1" rx="14" ry="3.5" fill="#000" opacity="${P.meShadow}"/>
           <g id="mtBody">
             <line id="mtLegB" x1="0" y1="-10" x2="0" y2="0" stroke="${P.meBack}" stroke-width="3.4" stroke-linecap="round"/>
@@ -2617,10 +2635,10 @@
       par('mtSkyG', 1, 1); par('mtFar2G', .9, .93); par('mtFarG', .82, .88); par('mtMidG', .62, .72);
     }
     function mtInitDrag(svg) {
-      let x0 = null, y0 = 0, cx0 = 0, cy0 = 0, vx = 0, vy = 0, lastX = 0, lastY = 0, lastT = 0, glide = 0;
+      let x0 = null, y0 = 0, cx0 = 0, cy0 = 0, vx = 0, vy = 0, lastX = 0, lastY = 0, lastT = 0, glide = 0, t0 = 0, moved = 0;
       svg.addEventListener('pointerdown', e => {
         cancelAnimationFrame(glide); MT.follow = false; $('mtHint').classList.add('off');
-        x0 = lastX = e.clientX; y0 = lastY = e.clientY; cx0 = MT.cx; cy0 = MT.cy; vx = vy = 0; lastT = performance.now();
+        x0 = lastX = e.clientX; y0 = lastY = e.clientY; cx0 = MT.cx; cy0 = MT.cy; vx = vy = 0; lastT = t0 = performance.now(); moved = 0;
         try { svg.setPointerCapture(e.pointerId); } catch (er) {}
       });
       svg.addEventListener('pointermove', e => {
@@ -2628,10 +2646,16 @@
         const k = MT.visW / svg.getBoundingClientRect().width, now = performance.now();
         const dt = Math.max(1, now - lastT);
         vx = (e.clientX - lastX) * k / dt; vy = (e.clientY - lastY) * k / dt; lastX = e.clientX; lastY = e.clientY; lastT = now;
+        moved = Math.max(moved, Math.hypot(e.clientX - x0, e.clientY - y0));
         mtCamera(cx0 - (e.clientX - x0) * k, cy0 - (e.clientY - y0) * k);
       });
-      const end = () => {
+      const end = e => {
         if (x0 == null) return; x0 = null;
+        // короткое касание без сдвига — нажатие: подпись над этим человечком выделяется и показывает цифры
+        if (e && e.type === 'pointerup' && moved < 8 && performance.now() - t0 < 500) {
+          const hit = document.elementFromPoint(e.clientX, e.clientY), g = hit && hit.closest && hit.closest('[data-mu]');
+          if (g) { mtSelect(g.dataset.mu === 'me' ? MT.me : MT.others[+g.dataset.mu]); return; }
+        }
         // докат по инерции
         const run = () => { vx *= .93; vy *= .93; if (Math.hypot(vx, vy) < .02) return; mtCamera(MT.cx - vx * 16, MT.cy - vy * 16); glide = requestAnimationFrame(run); };
         if (!calm()) glide = requestAnimationFrame(run);
@@ -2677,15 +2701,20 @@
     }
     const mtWeighedToday = u => { const e = (u && u.entries) || []; return e.length > 0 && stDay(e[e.length - 1].timestamp).getTime() === stDay(Date.now()).getTime(); };
     // плашка с именем над человечком; ширина — по настоящей длине текста
-    function mtPill(g, name, col, lift = 0) {
-      const P = mtPal();
-      g.innerHTML = name ? `<g transform="translate(0 ${-62 - lift})"><rect y="-11" height="20" rx="10" fill="${P.pill}" stroke="${col}" stroke-width="1.2"/><text y="4" text-anchor="middle" font-size="12" font-weight="700" fill="${P.pillText}" font-family="Golos Text, system-ui, sans-serif"></text></g>` : '';
-      if (!name) return;
+    // выбранная (нажали) — крупнее и залита своим цветом
+    function mtPill(g, name, col, lift = 0, sel = false) {
+      const P = mtPal(), F = 'font-family="Golos Text, system-ui, sans-serif"';
+      const ink = document.documentElement.classList.contains('light') ? '#FFFFFF' : '#10161D';
+      g.dataset.name = name; g.dataset.col = col; g.dataset.lift = lift;
+      if (!name) { g.innerHTML = ''; return; }
+      g.innerHTML = sel
+        ? `<g transform="translate(0 ${-66 - lift})"><rect y="-14" height="28" rx="14" fill="${col}"/><path d="M-6 13.5L0 20L6 13.5Z" fill="${col}"/><text y="5" text-anchor="middle" font-size="15" font-weight="800" fill="${ink}" ${F}></text></g>`
+        : `<g transform="translate(0 ${-62 - lift})"><rect y="-11" height="20" rx="10" fill="${P.pill}" stroke="${col}" stroke-width="1.2"/><text y="4" text-anchor="middle" font-size="12" font-weight="700" fill="${P.pillText}" ${F}></text></g>`;
       const t = g.querySelector('text'), r = g.querySelector('rect');
       t.textContent = name;
-      let w = name.length * 7.5;
+      let w = name.length * (sel ? 9.4 : 7.5);
       try { w = t.getComputedTextLength() || w; } catch (e) {}
-      r.setAttribute('x', (-w / 2 - 9).toFixed(1)); r.setAttribute('width', (w + 18).toFixed(1));
+      r.setAttribute('x', (-w / 2 - (sel ? 12 : 9)).toFixed(1)); r.setAttribute('width', (w + (sel ? 24 : 18)).toFixed(1));
     }
     // костёр в общем лагере — самом высоком, до которого дошли все. Горит, если сегодня взвесились все;
     // тлеет, если кто-то один; остывшие дрова, если никто
@@ -2712,15 +2741,18 @@
       // если стоят рядом (например, оба на вершине), имя второго поднимается над первым
       const spot = (tt, me) => { const [x, y] = mtAt(tt); return [x + (tt >= 1 ? (me ? -10 : -30) : 0), y]; }, taken = t != null ? [spot(t, true)] : [];
       let html = '';
-      const lifts = others.map(([o, tt]) => {
+      const lifts = others.map(([o, tt], i) => {
         const [x, y] = spot(tt), lift = taken.filter(([a, b]) => Math.abs(a - x) < 80 && Math.abs(b - y) < 30).length * 24;
         taken.push([x, y]);
-        html += `<g transform="translate(${x.toFixed(1)} ${y.toFixed(1)})">${mtFigure(P.other, P.otherBack)}<g class="mt-pill"></g></g>`;
+        html += `<g data-mu="${i}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)})">${mtFigure(P.other, P.otherBack)}<g class="mt-pill"></g></g>`;
         return lift;
       });
       $('mtOthers').innerHTML = html;
+      MT.others = others.map(([o]) => o);
+      $('mtHint').textContent = others.length ? 'Гору можно двигать, а на человечка — нажать' : 'Гору можно двигать пальцем';
       [...$('mtOthers').querySelectorAll('.mt-pill')].forEach((g, i) => mtPill(g, others[i][0].name || '', P.other, lifts[i]));
       mtPill($('mtMePill'), others.length && t != null ? (u.name || '') : '', P.me);
+      MT.me = u; MT.sel = null;
       if (!others.length || t == null) { $('mtFire').innerHTML = ''; return; }
       const low = Math.min(t, ...others.map(([, tt]) => tt)) * 100, camp = [...MT_CAMPS].reverse().find(c => c <= low + 1e-6);
       const [cx, cy] = camp ? mtAt(camp / 100) : MT_TRAIL[0];
@@ -2728,6 +2760,37 @@
       $('mtFire').innerHTML = mtFireSvg(cx + 22, cy + 4, today === others.length + 1 ? 'on' : today ? 'low' : 'off');
     }
     const fmt1 = v => fmt(parseFloat((+v).toFixed(1)));
+    // цифры сверху: свои или того, на чьё имя нажали
+    function mtStats(start, goal, current, mine) {
+      if (!goal || !start || start === goal || current == null) {
+        $('mtUp').innerHTML = '—'; $('mtLeft').innerHTML = '—';
+        $('mtNext').textContent = mine ? 'Задай цель в боте, и тропа появится' : 'Цель ещё не задана';
+        return;
+      }
+      const down = start > goal, total = Math.abs(start - goal);
+      const done = down ? start - current : current - start;
+      const t = Math.max(0, Math.min(1, done / total));
+      $('mtUp').innerHTML = (done > 0 ? (down ? '−' : '+') : '') + fmt1(Math.max(0, done)) + ' <small>кг</small>';
+      $('mtLeft').innerHTML = t >= 1 ? 'Цель!' : fmt1(Math.max(0, total - Math.max(0, done))) + ' <small>кг</small>';
+      const next = MT_CAMPS.find(c => c > t * 100);
+      $('mtNext').innerHTML = t >= 1 ? (mine ? 'Ты на вершине' : 'На вершине') : next
+        ? `До лагеря ${next}%: <b>${fmt1((next / 100 - t) * total)} кг</b>`
+        : `До вершины: <b>${fmt1((1 - t) * total)} кг</b>`;
+    }
+    // нажали на человечка или имя: его имя выделяется, сверху — его цифры; ещё раз или на себя — снова свои
+    function mtSelect(o) {
+      if (!MT.me || !MT.last) return;
+      const [, start, goal, current] = MT.last;
+      MT.sel = o && o !== MT.me && o !== MT.sel ? o : null;
+      if (MT.sel) { const e = o.entries || []; mtStats(o.start || (e[0] && e[0].weight), o.target, e.length ? e[e.length - 1].weight : null, false); }
+      else mtStats(start, goal, current, true);
+      document.querySelectorAll('#mtOthers [data-mu]').forEach(g => {
+        const p = g.querySelector('.mt-pill'), on = MT.others[+g.dataset.mu] === MT.sel;
+        mtPill(p, p.dataset.name, p.dataset.col, +p.dataset.lift, on);
+        if (on) g.parentNode.appendChild(g);
+      });
+      safeHaptic('selection');
+    }
     function renderMountain(u, start, goal, current) {
       MT.last = [u, start, goal, current];
       if (!MT.open) return;
@@ -2747,12 +2810,7 @@
       // лагерь горит, если медаль «Путь к цели» уже получена, или тропа до него дошла
       const earned = new Set(((u.medals && u.medals.catalog) || []).filter(m => m.status === 'earned').map(m => m.key));
       const reached = (c, tt) => earned.has('path_' + c) || tt * 100 >= c - 1e-6;
-      $('mtUp').innerHTML = (done > 0 ? (down ? '−' : '+') : '') + fmt1(Math.max(0, done)) + ' <small>кг</small>';
-      $('mtLeft').innerHTML = t >= 1 ? 'Цель!' : fmt1(Math.max(0, total - Math.max(0, done))) + ' <small>кг</small>';
-      const next = MT_CAMPS.find(c => c > t * 100);
-      $('mtNext').innerHTML = t >= 1 ? 'Ты на вершине' : next
-        ? `До лагеря ${next}%: <b>${fmt1((next / 100 - t) * total)} кг</b>`
-        : `До вершины: <b>${fmt1((1 - t) * total)} кг</b>`;
+      mtStats(start, goal, current, true);
       // человечек идёт по тропе: при открытии и смене человека — от подножия
       const from = (MT.user !== u || MT.t == null) ? 0 : MT.t;
       MT.user = u; MT.t = t;
@@ -2952,16 +3010,20 @@
       (C.rasterKeys || []).forEach(k => keys.indexOf(k) === -1 && MedalRaster.drop(k));
       C.rasterKeys = keys;
       const token = C.build = {};
-      MedalRaster.render([{ key: keys[0], svg: front, size: 300 }, { key: keys[1], svg: back, size: 300 }]).then(done => {
-        if (C.build !== token) return;
-        faces.forEach((f, i) => {
-          const url = done[keys[i]], old = f.querySelector('svg');
-          if (!url || !old) return;
-          const img = new Image();
-          img.alt = ''; img.draggable = false; img.src = url;
-          img.decode().then(() => { if (C.build === token && old.parentNode === f) f.replaceChild(img, old); }).catch(() => {});
-        });
-      });
+      // C.ready — обе стороны уже картинки: вручение ждёт его, иначе первые обороты крутят тяжёлый SVG и лагают
+      C.ready = Promise.race([
+        MedalRaster.render([{ key: keys[0], svg: front, size: 300 }, { key: keys[1], svg: back, size: 300 }], true).then(done => {
+          if (C.build !== token) return;
+          return Promise.all(faces.map((f, i) => {
+            const url = done[keys[i]], old = f.querySelector('svg');
+            if (!url || !old) return null;
+            const img = new Image();
+            img.alt = ''; img.draggable = false; img.src = url;
+            return img.decode().then(() => { if (C.build === token && old.parentNode === f) f.replaceChild(img, old); }).catch(() => {});
+          }));
+        }).catch(() => {}),
+        new Promise(r => setTimeout(r, 2500))
+      ]);
       // свечение за монетой — в цвет медали
       const o = medalOpts(m), f = (grand && o.grandField) || o.field;
       const col = grand ? '#F2B53A' : (f && f.enamel) || (MedalArt.M[o.rim] || MedalArt.M.gunmetal).mid;
@@ -2998,7 +3060,10 @@
     }
     function coinLoop(t) {
       if (C.mode === 'tween') {
-        const k = Math.max(0, Math.min(1, (t - C.tween.t0) / C.tween.dur)), e = 1 - Math.pow(1 - k, 3);
+        // время по кадрам: долгий кадр (сборка экрана, загрузка) не даёт монете перескочить
+        const tw = C.tween, dt = tw.last == null ? 0 : Math.min(t - tw.last, 34);
+        tw.last = t; if (t >= tw.t0) tw.el = (tw.el || 0) + dt;
+        const k = Math.max(0, Math.min(1, (tw.el || 0) / tw.dur)), e = 1 - Math.pow(1 - k, 3);
         C.angle = C.tween.from + (C.tween.to - C.tween.from) * e;
         if (C.tween.scaleFrom != null) {                    // вручение: вылетает из глубины с лёгким перелётом
           const b = 1 + 2.2 * Math.pow(k - 1, 3) + 1.2 * Math.pow(k - 1, 2);
@@ -3037,9 +3102,17 @@
       if (award) {
         $('cNext').textContent = award.more ? `Дальше · ещё ${award.more}` : 'Забрать';
         C.scale = .12;
-        C.tween = { from: -1080, to: 0, dur: 1700, t0: performance.now() + 250, scaleFrom: .12 };
-        setTimeout(() => safeHaptic('medium'), 250);
+        // монета вылетает, только когда её стороны готовы картинками; до этого её не видно
+        C.tween = { from: -1080, to: 0, dur: 1700, t0: Infinity, scaleFrom: .12 };
+        const stage = $('coinStage'), tw = C.tween;
+        stage.style.opacity = '0';
+        C.ready.then(() => requestAnimationFrame(() => {
+          if (C.tween !== tw) return;
+          stage.style.opacity = ''; tw.t0 = performance.now() + 120;
+          setTimeout(() => safeHaptic('medium'), 120);
+        }));
         C.landed = () => {
+          setTimeout(() => MedalRaster.pause(false), 600);   // монета встала — витрина дорисовывается дальше
           safeHaptic('success');
           $('coinBurst').classList.add('go');
           $('cInfo').classList.remove('wait');
@@ -3054,6 +3127,7 @@
       if (!C.tiltOn) { C.tiltOn = true; tiltStart(); }
     }
     function closeCoin() {
+      MedalRaster.pause(false);
       if (C.tiltOn) { C.tiltOn = false; tiltStop(); }
       $('coinView').classList.remove('open');
       $('confetti').innerHTML = '';
@@ -3109,7 +3183,10 @@
       saveSeen(seen.concat(fresh.map(m => m.key)));
       if (!fresh.length) return;
       awardQueue = fresh.map(m => Object.assign({}, m, { status: 'earned' }));
-      setTimeout(showNextAward, 600);
+      MedalRaster.pause(true);
+      // вручение — когда приложение догрузилось (график, экран медалей), а не посреди загрузки
+      const go = () => (window.requestIdleCallback ? requestIdleCallback(showNextAward, { timeout: 2000 }) : setTimeout(showNextAward, 300));
+      setTimeout(go, 900);
     }
     function showNextAward() {
       const burst = $('coinBurst');
@@ -3122,6 +3199,7 @@
       if (!m) { $('coinView').classList.remove('award-mode'); return; }
       const me = Object.keys(globalData).find(id => globalData[id].isMe);
       if (me && activeUserId !== String(me)) { activeUserId = String(me); renderUserTabs(); renderDashboard(); }
+      MedalRaster.pause(true);
       openCoin(m, { more: awardQueue.length });
     }
     document.addEventListener('DOMContentLoaded', () => {
