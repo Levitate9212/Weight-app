@@ -347,7 +347,23 @@
     #mtSvg .mt-spark { animation: mtSpark 2.4s linear infinite; }
     @keyframes mtFlick { from { transform: scale(1, 1); } 50% { transform: scale(.94, 1.07) skewX(-3deg); } to { transform: scale(1.04, .95) skewX(2deg); } }
     @keyframes mtSpark { from { transform: translateY(24px); opacity: 0; } 15% { opacity: 1; } to { transform: translateY(-14px); opacity: 0; } }
-    @media (prefers-reduced-motion: reduce) { #mtSvg .mt-flame, #mtSvg .mt-spark { animation: none; } }
+    /* погода у человечка: капли и снежинки падают, туман у ног плывёт, сияние дышит, иногда падает звезда */
+    #mtSvg .mt-drop { animation: mtDrop .8s linear infinite; }
+    #mtSvg .mt-flake { animation: mtFlake 2.8s linear infinite; }
+    #mtSvg .mt-fogd { animation: mtFogD 5s ease-in-out infinite alternate; }
+    #mtSvg .mt-fogd.b { animation-duration: 7s; animation-direction: alternate-reverse; }
+    #mtSvg .mt-glow { animation: mtGlowP 5s ease-in-out infinite alternate; }
+    #mtSvg .mt-shoot { opacity: 0; animation: mtShoot 11s linear 2s infinite; }
+    @keyframes mtDrop { from { transform: translateY(-4px); opacity: 0; } 20% { opacity: .9; } to { transform: translateY(46px); opacity: 0; } }
+    @keyframes mtFlake { from { transform: translate(0, -2px); opacity: 0; } 15% { opacity: 1; } to { transform: translate(6px, 46px); opacity: 0; } }
+    @keyframes mtFogD { from { transform: translateX(-7px); } to { transform: translateX(7px); } }
+    @keyframes mtGlowP { from { opacity: .6; } to { opacity: 1; } }
+    @keyframes mtShoot { 0%, 90% { opacity: 0; transform: translate(0, 0); } 91% { opacity: 1; } 97% { opacity: 0; transform: translate(-150px, 70px); } 100% { opacity: 0; transform: translate(-150px, 70px); } }
+    .mt-wx { font-size: 13px; font-weight: 600; color: var(--ink); margin-top: 6px; display: flex; align-items: center; gap: 7px; }
+    .mt-wx:empty { display: none; }
+    .mt-wx svg { width: 18px; height: 18px; flex: none; }
+    html.light .mt-wx { color: #15171A; }
+    @media (prefers-reduced-motion: reduce) { #mtSvg .mt-flame, #mtSvg .mt-spark, #mtSvg .mt-drop, #mtSvg .mt-flake, #mtSvg .mt-fogd, #mtSvg .mt-glow, #mtSvg .mt-shoot { animation: none; } #mtSvg .mt-shoot { display: none; } }
     #mtSvg { flex: 1 1 auto; min-height: 0; width: 100%; display: block; touch-action: none; cursor: grab; margin-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
     .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; touch-action: pan-y; }
     .day {
@@ -702,6 +718,7 @@
         <div class="r"><div class="k">До вершины</div><div class="v" id="mtLeft">—</div></div>
       </div>
       <p class="mt-next" id="mtNext"></p>
+      <p class="mt-wx" id="mtWx"></p>
     </div>
     <svg id="mtSvg" viewBox="0 560 410 650" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Гора: тропа от стартового веса к цели"></svg>
     <p class="mt-hint" id="mtHint">Гору можно двигать пальцем</p>
@@ -2499,6 +2516,79 @@
         snowSh: ['#7E9CC4', .42], flute: ['#9DB3CF', .38], bandSh: ['#1E2733', .32], bandLi: ['#F2F5F8', .4], faceSh: ['#5C7690', .35] }
     };
     const mtPal = () => MT_PAL[document.documentElement.classList.contains('light') ? 'day' : 'night'];
+    // Общее небо за хорошую неделю у всех: ночью северное сияние (размытое, рисуется один раз в картинку), днём радуга
+    function mtSkyGlow(day) {
+      if (day) {
+        const cols = ['#FF5A5A', '#FF9F3A', '#FFD84A', '#6BD66B', '#4AB0FF', '#5A6BFF', '#A05AFF'];
+        return `<defs><linearGradient id="mtRbFade" x1="0" y1="0" x2="0" y2="1"><stop offset=".45" stop-color="#fff"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+          <mask id="mtRbMask" maskUnits="userSpaceOnUse" x="-200" y="-100" width="800" height="600"><rect x="-200" y="-100" width="800" height="600" fill="url(#mtRbFade)"/></mask></defs>
+          <g class="mt-glow" mask="url(#mtRbMask)" fill="none" stroke-width="5" opacity=".5">` +
+          cols.map((c, i) => `<path d="M${-80 + i * 5} 420A${290 - i * 5} ${290 - i * 5} 0 0 1 ${500 - i * 5} 420" stroke="${c}"/>`).join('') + '</g>';
+      }
+      const band = (d, c) => `<path d="${d}" fill="${c}"/>`;
+      return `<g class="mt-glow"><g data-bake="-120 -40 640 420 .5" filter="url(#mtSoft)" opacity=".75">` +
+        band('M-60 150C40 70 120 190 210 110S360 40 470 120L470 180C360 110 300 220 210 170S40 150 -60 230Z', '#38E8A0') +
+        band('M-40 90C60 30 150 120 240 60S380 0 480 60L480 100C380 50 300 140 230 110S60 90 -40 150Z', '#4FD3C8') +
+        band('M20 200C110 150 190 230 270 180S400 130 470 170L470 210C390 180 320 250 260 230S110 210 20 250Z', '#8A6BFF') +
+        `</g></g>`;
+    }
+    // Своя погода у каждого человечка (фигурка стоит в точке 0 0, ростом ~48). Возвращает рисунок и насколько поднять имя
+    function mtWxSvg(kind) {
+      const day = mtPal() === MT_PAL.day;
+      const cloud = (cx, cy, k, fill, op) => `<g fill="${fill}" opacity="${op}"><ellipse cx="${cx}" cy="${cy + 3 * k}" rx="${17 * k}" ry="${6 * k}"/><ellipse cx="${cx - 7 * k}" cy="${cy}" rx="${8 * k}" ry="${7 * k}"/><ellipse cx="${cx + 4 * k}" cy="${cy - 3 * k}" rx="${10 * k}" ry="${9 * k}"/></g>`;
+      const light = day ? '#FFFFFF' : '#D3DAE5', dark = day ? '#8794A4' : '#6F7B90';
+      if (kind === 'cloudy') return [cloud(0, -62, 1.2, light, .92), 26];
+      if (kind === 'rain') {
+        const col = day ? '#2F6FB5' : '#8DBBFF';
+        const drops = [[-13, 0], [-6, -.35], [1, -.6], [8, -.15], [14, -.45], [-9, -.55], [4, -.25], [11, -.7]].map(([x, d]) =>
+          `<line class="mt-drop" style="animation-delay:${d}s" x1="${x}" y1="-50" x2="${x - 2}" y2="-42" stroke="${col}" stroke-width="2" stroke-linecap="round"/>`).join('');
+        const puddles = `<g fill="${col}" opacity=".45"><ellipse cx="-12" cy="2" rx="4" ry="1.2"/><ellipse cx="10" cy="3" rx="5" ry="1.4"/></g>`;
+        return [puddles + drops + cloud(0, -62, 1.25, dark, .95), 26];
+      }
+      if (kind === 'snow') {
+        const flakes = [[-13, 0], [-6, -1.2], [1, -.5], [8, -2], [14, -.9], [-16, -1.6], [4, -2.3], [11, -.3], [-2, -1.9]].map(([x, d]) =>
+          `<circle class="mt-flake" style="animation-delay:${d}s" cx="${x}" cy="-50" r="2.1" fill="#FFFFFF"/>`).join('');
+        return [flakes + cloud(0, -62, 1.2, day ? '#E9EEF4' : '#B9C3D2', .95), 26];
+      }
+      if (kind === 'fog') {
+        const f = day ? '#FFFFFF' : '#C3CCDA';
+        return [`<g fill="${f}"><ellipse class="mt-fogd" cx="0" cy="-3" rx="34" ry="6" opacity=".55"/><ellipse class="mt-fogd b" cx="6" cy="-10" rx="26" ry="5" opacity=".45"/><ellipse class="mt-fogd" cx="-8" cy="-15" rx="18" ry="4" opacity=".3"/></g>`, 0];
+      }
+      if (kind === 'cloud') {
+        const f = day ? '#F4F7FA' : '#AEB8C8';
+        return [`<g fill="${f}"><ellipse cx="0" cy="-16" rx="34" ry="16" opacity=".85"/><ellipse cx="-14" cy="-28" rx="16" ry="14" opacity=".85"/><ellipse cx="9" cy="-34" rx="19" ry="17" opacity=".88"/><ellipse class="mt-fogd" cx="0" cy="-6" rx="40" ry="8" opacity=".6"/></g>`, 10];
+      }
+      return ['', 0];
+    }
+    // Подпись над горой — только о своей погоде (того, кто открыл приложение); причину чужой погоды не пишем
+    function mtWxCaption() {
+      const me = Object.values(globalData || {}).find(o => o && o.isMe), w = me && me.weather;
+      const el = $('mtWx');
+      if (!w || !w.kind) { el.innerHTML = ''; return; }
+      const day = mtPal() === MT_PAL.day, h = v => fmt1(v) + ' ч';
+      const glow = w.sky === 'glow', good = w.sleep != null ? 'неделя без пропусков и хороший сон' : 'неделя без пропусков';
+      const txt = {
+        snow: 'Тихий снег: отдыхай, гора подождёт',
+        cloud: w.days != null ? `Ты в облаке: ${w.days} ${plural(w.days, 'день', 'дня', 'дней')} без замеров` : 'Ты в облаке: замеров пока нет',
+        fog: `Туман: сон ${h(w.sleep)}, выспись, и прояснится`,
+        rain: 'Дождик: день полегче, восстанавливайся',
+        cloudy: w.sleep != null && w.sleep < 7 ? `Облачно: сон ${h(w.sleep)}` : `Облачно: готовность ${w.ready}`,
+        clear: glow ? `${day ? 'Радуга' : 'Сияние'}: ${good}` : w.back ? 'Ясно: с возвращением' : w.sleep != null ? `Ясно: сон ${h(w.sleep)}` : 'Ясно'
+      }[w.kind] || '';
+      const ic = {
+        snow: '<path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9"/>',
+        cloud: '<path d="M7 18h10a4 4 0 0 0 .5-8A6 6 0 0 0 6 11a3.5 3.5 0 0 0 1 7z"/>',
+        fog: '<path d="M4 9h16M6 13h14M4 17h12"/>',
+        rain: '<path d="M7 14h10a4 4 0 0 0 .5-8A6 6 0 0 0 6 7a3.5 3.5 0 0 0 1 7zM9 17l-1 3M13 17l-1 3M17 17l-1 3"/>',
+        cloudy: '<path d="M7 18h10a4 4 0 0 0 .5-8A6 6 0 0 0 6 11a3.5 3.5 0 0 0 1 7z"/>',
+        clear: glow ? (day ? '<path d="M3 18a9 9 0 0 1 18 0M6.5 18a5.5 5.5 0 0 1 11 0"/>' : '<path d="M3 15c3-6 6 2 9-4s6 0 9-5M3 20c3-5 6 1 9-3s6 0 9-4"/>') : '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'
+      }[w.kind] || '';
+      el.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ic}</svg><span></span>`;
+      el.querySelector('span').textContent = txt;
+      // небо: сияние или радуга общие; падающая звезда — ночью у того, у кого ясно
+      const sky = $('mtGlowG'); if (sky) sky.style.display = glow ? '' : 'none';
+      const sh = $('mtShootG'); if (sh) sh.style.display = w.kind === 'clear' && !glow ? '' : 'none';
+    }
     function mtBuild() {
       const svg = $('mtSvg');
       if (svg.dataset.built) return;
@@ -2547,7 +2637,9 @@
         </defs>
         <g id="mtSkyG"><rect x="-600" y="-900" width="1800" height="3200" fill="url(#mtSky)"/>${day ? `<circle cx="330" cy="90" r="70" fill="url(#mtMoon)"/><circle cx="330" cy="90" r="17" fill="#FFF4CF"/><g fill="#FFFFFF">${clouds}</g>` : `
           <ellipse data-bake="-260 -60 920 500 .5" cx="200" cy="185" rx="320" ry="55" transform="rotate(-30 200 185)" fill="#7C8DB5" opacity="${P.milky}" filter="url(#mtSoft)"/>${stars}
-          <circle cx="330" cy="90" r="50" fill="url(#mtMoon)"/><circle cx="330" cy="90" r="14" fill="#E9ECEF" opacity=".85"/>`}</g>
+          <circle cx="330" cy="90" r="50" fill="url(#mtMoon)"/><circle cx="330" cy="90" r="14" fill="#E9ECEF" opacity=".85"/>
+          <g id="mtShootG" style="display:none"><path class="mt-shoot" d="M300 40l26 -12" stroke="#F2F3F0" stroke-width="1.6" stroke-linecap="round"/></g>`}
+          <g id="mtGlowG" style="display:none">${mtSkyGlow(day)}</g></g>
         <g id="mtFar2G"><path d="${far2.d}" fill="url(#mtFar2)"/><path d="${mtFaces(far2.ridge)}" fill="${P.faceSh[0]}" opacity="${P.faceSh[1] * .7}"/>
           <path d="${mtRangeSnow(far2.ridge, 250)}" fill="${P.farSnow[0]}" opacity="${P.farSnow[1] * .7}"/>
           <ellipse data-bake="-700 330 2000 280 .5" cx="300" cy="470" rx="900" ry="60" fill="${P.fog}" opacity="${P.fogOp}" filter="url(#mtFog)"/></g>
@@ -2604,6 +2696,7 @@
             <circle cx="2.6" cy="-26" r="4.3" fill="${P.me}"/>
             <path d="M-1.6 -27.5Q2.6 -32.5 6.8 -27.5Z" fill="#F2B53A"/>
           </g>
+          <g id="mtMeWx"></g>
           <g id="mtMePill"></g>
         </g>`;
       mtBake(svg);
@@ -2758,14 +2851,18 @@
       const lifts = others.map(([o, tt], i) => {
         const [x, y] = spot(tt), lift = taken.filter(([a, b]) => Math.abs(a - x) < 80 && Math.abs(b - y) < 30).length * 24;
         taken.push([x, y]);
-        html += `<g data-mu="${i}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)})">${mtFigure(P.other, P.otherBack)}<g class="mt-pill"></g></g>`;
-        return lift;
+        const [wx, wl] = mtWxSvg(o.weather && o.weather.kind);
+        html += `<g data-mu="${i}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)})">${mtFigure(P.other, P.otherBack)}${wx}<g class="mt-pill"></g></g>`;
+        return lift + wl;
       });
       $('mtOthers').innerHTML = html;
       MT.others = others.map(([o]) => o);
       $('mtHint').textContent = others.length ? 'Гору можно двигать, а на человечка — нажать' : 'Гору можно двигать пальцем';
       [...$('mtOthers').querySelectorAll('.mt-pill')].forEach((g, i) => mtPill(g, others[i][0].name || '', P.other, lifts[i]));
-      mtPill($('mtMePill'), others.length && t != null ? (u.name || '') : '', P.me);
+      const [myWx, myLift] = mtWxSvg(t != null && u.weather && u.weather.kind);
+      $('mtMeWx').innerHTML = myWx;
+      mtPill($('mtMePill'), others.length && t != null ? (u.name || '') : '', P.me, myLift);
+      mtWxCaption();
       MT.me = u; MT.sel = null;
       if (!others.length || t == null) { $('mtFire').innerHTML = ''; return; }
       const low = Math.min(t, ...others.map(([, tt]) => tt)) * 100, camp = [...MT_CAMPS].reverse().find(c => c <= low + 1e-6);
