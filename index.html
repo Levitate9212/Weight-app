@@ -341,12 +341,10 @@
     .mt-hint.off { opacity: 0; }
     #mtSvg .mt-baked { opacity: 0; transition: opacity .5s; }
     #mtSvg .mt-baked.on { opacity: 1; }
-    /* костёр: языки огня чуть колышутся, искры поднимаются и гаснут */
+    /* огонь факела чуть колышется */
     #mtSvg .mt-flame { transform-box: fill-box; transform-origin: 50% 100%; animation: mtFlick 1.3s ease-in-out infinite alternate; }
     #mtSvg .mt-flame.b { animation-duration: .9s; animation-delay: -.4s; }
-    #mtSvg .mt-spark { animation: mtSpark 2.4s linear infinite; }
     @keyframes mtFlick { from { transform: scale(1, 1); } 50% { transform: scale(.94, 1.07) skewX(-3deg); } to { transform: scale(1.04, .95) skewX(2deg); } }
-    @keyframes mtSpark { from { transform: translateY(24px); opacity: 0; } 15% { opacity: 1; } to { transform: translateY(-14px); opacity: 0; } }
     /* погода у человечка: капли и снежинки падают, туман у ног плывёт, сияние дышит, иногда падает звезда */
     #mtSvg .mt-drop { animation: mtDrop .8s linear infinite; }
     #mtSvg .mt-flake { animation: mtFlake 2.8s linear infinite; }
@@ -363,7 +361,7 @@
     .mt-wx:empty { display: none; }
     .mt-wx svg { width: 18px; height: 18px; flex: none; }
     html.light .mt-wx { color: #15171A; }
-    @media (prefers-reduced-motion: reduce) { #mtSvg .mt-flame, #mtSvg .mt-spark, #mtSvg .mt-drop, #mtSvg .mt-flake, #mtSvg .mt-fogd, #mtSvg .mt-glow, #mtSvg .mt-shoot { animation: none; } #mtSvg .mt-shoot { display: none; } }
+    @media (prefers-reduced-motion: reduce) { #mtSvg .mt-flame, #mtSvg .mt-drop, #mtSvg .mt-flake, #mtSvg .mt-fogd, #mtSvg .mt-glow, #mtSvg .mt-shoot { animation: none; } #mtSvg .mt-shoot { display: none; } }
     #mtSvg { flex: 1 1 auto; min-height: 0; width: 100%; display: block; touch-action: none; cursor: grab; margin-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
     .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; touch-action: pan-y; }
     .day {
@@ -2510,7 +2508,7 @@
       day: { sky: ['#4E9BD6', '#8EC3EA', '#DCEEF7'], lit: ['#9AA5B3', '#7D8896', '#5F7466', '#3E6440'], far: ['#8FA9C0', '#B8CCDB'], farSnow: ['#FFFFFF', .75],
         mid: ['#7893A6', '#A3BBCB'], mist: '#DCEEF7', shade: ['#22324A', .42, .26], snow: ['#FFFFFF', '#F1F6FB', '#D9E4EF'], ledgeL: ['#E6ECF2', .3], ledgeD: ['#2A3340', .3],
         gully: ['#1E2836', .3], spur: ['#FFFFFF', .5], ground: '#3A5D34', pines: '#1D3B25', trail: '#4A525C', me: '#5E9400', meBack: '#3F6A00',
-        start: '#1D2228', goal: '#15171A', pole: '#2A2F36', campOn: '#15171A', campOff: '#3D444D', triOff: '#E8ECEF', triOffS: '#59616B', meShadow: .25,
+        start: '#1D2228', goal: '#15171A', pole: '#2A2F36', campOn: '#15171A', campOff: '#3D444D', triOff: '#A9B1BA', triOffS: '#6B737D', meShadow: .25,
         other: '#D9661A', otherBack: '#A84C10', pill: 'rgba(255,255,255,.85)', pillText: '#15171A', smoke: '#8C949E',
         grain: .18, grainL: .2, tone: .14, rim: '#FFFFFF', rimOp: .8, fog: '#EAF4FA', fogOp: .6, far2: ['#A9C0D3', '#C9DAE6'], milky: 0,
         snowSh: ['#7E9CC4', .42], flute: ['#9DB3CF', .38], bandSh: ['#1E2733', .32], bandLi: ['#F2F5F8', .4], faceSh: ['#5C7690', .35] }
@@ -2603,7 +2601,10 @@
         stars += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${(.35 + sr() * .5).toFixed(2)}" fill="#E8ECF5" opacity="${(.2 + sr() * .45).toFixed(2)}"/>`;
       }
       const camps = MT_CAMPS.map(c => { const [x, y] = mtAt(c / 100);
-        return `<g class="mt-camp" data-c="${c}"><path d="M${x - 8} ${y + 3}L${x} ${y - 10}L${x + 8} ${y + 3}Z" stroke-width="1.4"/><text x="${x}" y="${y + 22}" text-anchor="middle" font-size="14" font-weight="700" font-family="Barlow Condensed, Arial Narrow, sans-serif">${c}%</text></g>`; }).join('');
+        // палатка: пройденный лагерь — окна и вход светятся, непройденный — серая
+        return `<g class="mt-camp" data-c="${c}"><circle class="tg" cx="${x}" cy="${y - 4}" r="30" fill="url(#mtFireGlow)" opacity="0"/>` +
+          `<path class="tb" d="M${x - 16} ${y + 4}L${x - 1} ${y - 16}L${x + 1} ${y - 16}L${x + 16} ${y + 4}Z" stroke-width="1.4" stroke-linejoin="round"/>` +
+          `<g class="tw"><path d="M${x - 4.5} ${y + 4}L${x} ${y - 6}L${x + 4.5} ${y + 4}Z"/><rect x="${x - 11}" y="${y - 3}" width="3.6" height="3.6" rx=".8"/><rect x="${x + 7.4}" y="${y - 3}" width="3.6" height="3.6" rx=".8"/></g><text x="${x}" y="${y + 24}" text-anchor="middle" font-size="14" font-weight="700" font-family="Barlow Condensed, Arial Narrow, sans-serif">${c}%</text></g>`; }).join('');
       const [fx, fy] = MT_TRAIL[MT_TRAIL.length - 1];
       // днём вместо звёзд — облака: несколько мягких овалов разной ширины
       let clouds = '';
@@ -2678,7 +2679,6 @@
         <path d="${mtD(MT_TRAIL)}" fill="none" stroke="${P.trail}" stroke-width="3" stroke-dasharray="1 7" stroke-linecap="round" stroke-linejoin="round"/>
         <path id="mtDone" d="" fill="none" stroke="${P.me}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
         ${camps}
-        <g id="mtFire"></g>
         <text id="mtStartT" x="${MT_TRAIL[0][0] - 4}" y="${MT_TRAIL[0][1] + 22}" font-size="13" font-weight="600" fill="${P.start}" font-family="Golos Text, system-ui, sans-serif"></text>
         <line x1="${fx}" y1="${fy}" x2="${fx}" y2="${fy - 24}" stroke="${P.pole}" stroke-width="1.6"/>
         <path id="mtFlag" d="M${fx} ${fy - 24}L${fx + 18} ${fy - 19}L${fx} ${fy - 14}Z" fill="#F2B53A"/>
@@ -2691,8 +2691,8 @@
             <rect x="-8.5" y="-22" width="6.5" height="10" rx="2" fill="#9AA0AA"/>
             <line x1="0" y1="-10" x2="1.5" y2="-21" stroke="${P.me}" stroke-width="4.4" stroke-linecap="round"/>
             <line id="mtLegF" x1="0" y1="-10" x2="0" y2="0" stroke="${P.me}" stroke-width="3.4" stroke-linecap="round"/>
+            <g id="mtTorch"></g>
             <line id="mtArm" x1="1.5" y1="-18.5" x2="6.5" y2="-12.5" stroke="${P.me}" stroke-width="2.8" stroke-linecap="round"/>
-            <line id="mtPole" x1="6.5" y1="-14" x2="8.5" y2="0.5" stroke="#E9ECEF" stroke-width="1.3" stroke-linecap="round"/>
             <circle cx="2.6" cy="-26" r="4.3" fill="${P.me}"/>
             <path d="M-1.6 -27.5Q2.6 -32.5 6.8 -27.5Z" fill="#F2B53A"/>
           </g>
@@ -2777,7 +2777,7 @@
       leg('mtLegF', a); leg('mtLegB', -a);
       const sw = walking ? Math.sin(phase) * 2 : 0;
       $('mtArm').setAttribute('x2', (6.5 - sw).toFixed(2));
-      $('mtPole').setAttribute('x1', (6.5 - sw).toFixed(2)); $('mtPole').setAttribute('x2', (8.5 - sw * 1.4).toFixed(2));
+      $('mtTorch').setAttribute('transform', `translate(${(-sw).toFixed(2)} 0)`);
     }
     function mtDraw(t, reached, walking) {
       const pts = [];
@@ -2792,9 +2792,11 @@
       mtPose(t * mtLen / 7, walking);
       if (MT.follow) mtCamera(x - MT.visW * .42, y - MT.visH * .55);
       document.querySelectorAll('.mt-camp').forEach(g => {
-        const on = reached(+g.dataset.c, t), tri = g.firstElementChild, txt = g.lastElementChild;
+        const on = reached(+g.dataset.c, t), tb = g.querySelector('.tb'), tw = g.querySelector('.tw'), txt = g.lastElementChild;
         const P = mtPal();
-        tri.setAttribute('fill', on ? P.me : P.triOff); tri.setAttribute('stroke', on ? P.me : P.triOffS);
+        tb.setAttribute('fill', on ? P.meBack : P.triOff); tb.setAttribute('stroke', on ? P.me : P.triOffS);
+        tw.setAttribute('fill', on ? '#FFE08A' : P.triOffS); tw.setAttribute('opacity', on ? 1 : .45);
+        g.querySelector('.tg').setAttribute('opacity', on ? .55 : 0);
         txt.setAttribute('fill', on ? P.campOn : P.campOff);
       });
     }
@@ -2823,25 +2825,19 @@
       try { w = t.getComputedTextLength() || w; } catch (e) {}
       r.setAttribute('x', (-w / 2 - (sel ? 12 : 9)).toFixed(1)); r.setAttribute('width', (w + (sel ? 24 : 18)).toFixed(1));
     }
-    // костёр в общем лагере — самом высоком, до которого дошли все. Горит, если сегодня взвесились все;
-    // тлеет, если кто-то один; остывшие дрова, если никто
-    function mtFireSvg(x, y, state) {
-      const P = mtPal(), n = v => v.toFixed(1);
-      const flame = (dx, top, w, col, cls) => `<path class="mt-flame${cls}" d="M${n(x + dx)} ${n(y - top)}C${n(x + dx + w)} ${n(y - top * .6)} ${n(x + dx + w * 1.1)} ${n(y - top * .2)} ${n(x + dx)} ${n(y - 1)}C${n(x + dx - w * 1.1)} ${n(y - top * .2)} ${n(x + dx - w * .9)} ${n(y - top * .55)} ${n(x + dx)} ${n(y - top)}Z" fill="${col}"/>`;
-      const logs = `<g stroke="#4A2E1A" stroke-width="3.2" stroke-linecap="round"><line x1="${x - 9}" y1="${y + 2}" x2="${x + 9}" y2="${y - 3}"/><line x1="${x - 9}" y1="${y - 3}" x2="${x + 9}" y2="${y + 2}"/></g>`;
-      if (state === 'on') return `<circle cx="${x}" cy="${y - 8}" r="54" fill="url(#mtFireGlow)"/>${logs}` +
-        flame(0, 30, 9, '#FF7A2E', '') + flame(-5, 15, 3.6, '#FF9F3A', ' b') + flame(1, 21, 5.5, '#FFC94A', ' b') +
-        [[-7, -40, 0], [6, -48, -.8], [2, -58, -1.6], [-3, -66, -2]].map(([dx, dy, d]) => `<circle class="mt-spark" style="animation-delay:${d}s" cx="${x + dx}" cy="${y + dy}" r="1.2" fill="#FFD27A"/>`).join('');
-      const smoke = (dx, dy, w, op) => `<path d="M${x + dx} ${y - dy}c-6 -8 6 -12 0 -20s6 -12 1 -20" fill="none" stroke="${P.smoke}" stroke-width="${w}" stroke-linecap="round" opacity="${op}"/>`;
-      if (state === 'low') return `<circle cx="${x}" cy="${y - 2}" r="22" fill="url(#mtFireGlow)" opacity=".7"/>${logs}<g fill="#FF6A2A">` +
-        [[-3, -2, 1.8], [3, -3, 1.5], [0, -5, 1.2], [5, 0, 1.1]].map(([dx, dy, r]) => `<circle cx="${x + dx}" cy="${y + dy}" r="${r}"/>`).join('') + '</g>' + smoke(0, 6, 2.4, .55) + smoke(4, 10, 1.8, .4);
-      return `<ellipse cx="${x}" cy="${y + 2}" rx="12" ry="3" fill="#6E727A" opacity=".6"/>${logs}`;
+    // факел в руке: горит, если человек сегодня взвесился; нет — просто погасший факел
+    function mtTorch(lit) {
+      const n = v => v.toFixed(1);
+      const flame = (dx, top, w, col, cls) => `<path class="mt-flame${cls}" d="M${n(8.4 + dx)} ${n(-22 - top)}C${n(8.4 + dx + w)} ${n(-22 - top * .6)} ${n(8.4 + dx + w * 1.1)} ${n(-22 - top * .2)} ${n(8.4 + dx)} -22.3C${n(8.4 + dx - w * 1.1)} ${n(-22 - top * .2)} ${n(8.4 + dx - w * .9)} ${n(-22 - top * .55)} ${n(8.4 + dx)} ${n(-22 - top)}Z" fill="${col}"/>`;
+      return `${lit ? '<circle cx="8.4" cy="-25" r="11" fill="url(#mtFireGlow)"/>' : ''}<line x1="5.6" y1="-9" x2="8.2" y2="-21" stroke="#8A5A32" stroke-width="1.6" stroke-linecap="round"/>` +
+        `<rect x="6.9" y="-23" width="2.8" height="3.4" rx="1" fill="${lit ? '#5A3A22' : '#3A2C24'}"/>` +
+        (lit ? flame(0, 8, 2.6, '#FF7A2E', '') + flame(0, 5, 1.5, '#FFC94A', ' b') : '');
     }
     // второй человечек: тот же рисунок, свой цвет, стоит на месте
-    const mtFigure = (col, back) => `<ellipse cx="0" cy="1" rx="14" ry="3.5" fill="#000" opacity="${mtPal().meShadow}"/><g transform="scale(1.5)">
+    const mtFigure = (col, back, lit) => `<ellipse cx="0" cy="1" rx="14" ry="3.5" fill="#000" opacity="${mtPal().meShadow}"/><g transform="scale(1.5)">
       <line x1="0" y1="-10" x2="-2.3" y2=".2" stroke="${back}" stroke-width="3.4" stroke-linecap="round"/><rect x="-8.5" y="-22" width="6.5" height="10" rx="2" fill="#9AA0AA"/>
       <line x1="0" y1="-10" x2="1.5" y2="-21" stroke="${col}" stroke-width="4.4" stroke-linecap="round"/><line x1="0" y1="-10" x2="2.3" y2=".2" stroke="${col}" stroke-width="3.4" stroke-linecap="round"/>
-      <line x1="1.5" y1="-18.5" x2="6.5" y2="-12.5" stroke="${col}" stroke-width="2.8" stroke-linecap="round"/><line x1="6.5" y1="-14" x2="8.5" y2=".5" stroke="#E9ECEF" stroke-width="1.3" stroke-linecap="round"/>
+      ${mtTorch(lit)}<line x1="1.5" y1="-18.5" x2="6.5" y2="-12.5" stroke="${col}" stroke-width="2.8" stroke-linecap="round"/>
       <circle cx="2.6" cy="-26" r="4.3" fill="${col}"/><path d="M-1.6 -27.5Q2.6 -32.5 6.8 -27.5Z" fill="#F2B53A"/></g>`;
     function mtCompany(u, t) {
       const P = mtPal(), others = Object.values(globalData).filter(o => o !== u).map(o => [o, mtTrailT(o)]).filter(([, tt]) => tt != null);
@@ -2852,7 +2848,7 @@
         const [x, y] = spot(tt), lift = taken.filter(([a, b]) => Math.abs(a - x) < 80 && Math.abs(b - y) < 30).length * 24;
         taken.push([x, y]);
         const [wx, wl] = mtWxSvg(o.weather && o.weather.kind);
-        html += `<g data-mu="${i}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)})">${mtFigure(P.other, P.otherBack)}${wx}<g class="mt-pill"></g></g>`;
+        html += `<g data-mu="${i}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)})">${mtFigure(P.other, P.otherBack, mtWeighedToday(o))}${wx}<g class="mt-pill"></g></g>`;
         return lift + wl;
       });
       $('mtOthers').innerHTML = html;
@@ -2864,11 +2860,7 @@
       mtPill($('mtMePill'), others.length && t != null ? (u.name || '') : '', P.me, myLift);
       mtWxCaption();
       MT.me = u; MT.sel = null;
-      if (!others.length || t == null) { $('mtFire').innerHTML = ''; return; }
-      const low = Math.min(t, ...others.map(([, tt]) => tt)) * 100, camp = [...MT_CAMPS].reverse().find(c => c <= low + 1e-6);
-      const [cx, cy] = camp ? mtAt(camp / 100) : MT_TRAIL[0];
-      const today = [u, ...others.map(([o]) => o)].filter(mtWeighedToday).length;
-      $('mtFire').innerHTML = mtFireSvg(cx + 22, cy + 4, today === others.length + 1 ? 'on' : today ? 'low' : 'off');
+      $('mtTorch').innerHTML = mtTorch(mtWeighedToday(u));
     }
     const fmt1 = v => fmt(parseFloat((+v).toFixed(1)));
     // цифры сверху: свои или того, на чьё имя нажали
