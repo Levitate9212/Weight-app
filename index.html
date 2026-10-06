@@ -1399,6 +1399,8 @@
       return o;
     };
 
+    // число на «Красивом числе»: пятизначное (100,1) — чуть мельче, чтобы влезло в поле
+    const prettyText = n => `<text x="120" y="132" text-anchor="middle" font-size="${n.length > 4 ? 54 : 64}" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-style="italic" font-weight="800">${n}</text>`;
     const ART = {
       road: {   // путь к цели: дорога к горизонту и флажок финиша
         art: `<rect x="34" y="80" width="172" height="3" rx="1.5"/>
@@ -1606,7 +1608,7 @@
               ${[[84, 90, '#2F8FE0'], [160, 94, '#E8434B'], [100, 72, '#F2B705'], [140, 72, '#B455D6'], [60, 120, '#2F8FE0'], [184, 120, '#2FBF6A']].map(([x, y, c]) => `<circle cx="${x}" cy="${y}" r="2.6" fill="${c}"/>`).join('')}`
       },
       digits: {   // красивое число
-        art: `<text x="120" y="132" text-anchor="middle" font-size="64" font-family="Barlow Condensed, Arial Narrow, sans-serif" font-style="italic" font-weight="800">88,8</text>`
+        art: prettyText('88,8')
       },
       decade: {   // новая десятка: табло, где 10 уезжает вверх, а снизу встаёт 9
         art: `<rect x="72" y="58" width="96" height="112" rx="14"/>
@@ -1669,7 +1671,7 @@
       // скрытые: у каждой своя эмаль
       hidden:   (m, art) => ({ rim: 'gold', relief: 'nickel', field: { enamel: HIDDEN_ENAMEL[art] || '#F2B705' } })
     };
-      return { M, medal, ART, STYLE };
+      return { M, medal, ART, STYLE, prettyArt: prettyText };
     })();
 
     // =====================================================================
@@ -1702,6 +1704,8 @@
       const locked = m.status !== 'earned';
       const style = locked ? { rim: 'locked', relief: 'locked', field: 'oxid' } : MedalArt.STYLE[m.art === 'belt' ? 'body' : m.section](m.metal, m.art);
       const art = m.art && MedalArt.ART[m.art] ? MedalArt.ART[m.art] : {};
+      // «Красивое число»: в центре монеты — то самое число, за которое получена (снизу его не дублируем)
+      if (m.art === 'digits' && m.big) return { label: m.title, ...style, art: MedalArt.prettyArt(m.big), big: '', caption: m.caption || '', band: false };
       return { label: m.title, ...style, ...art, big: m.big || '', caption: m.caption || '', band: false };
     }
     // у одного ключа у братьев может быть разная надпись (например, «Цель взята» со своим весом)
