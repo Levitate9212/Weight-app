@@ -386,7 +386,8 @@
     .mt-wx svg { width: 18px; height: 18px; flex: none; }
     html.light .mt-wx { color: #15171A; }
     @media (prefers-reduced-motion: reduce) { #mtSvg .mt-flame, #mtSvg .mt-drop, #mtSvg .mt-flake, #mtSvg .mt-fogd, #mtSvg .mt-glow, #mtSvg .mt-shoot { animation: none; } #mtSvg .mt-shoot { display: none; } }
-    #mtSvg { flex: 1 1 auto; min-height: 0; width: 100%; display: block; touch-action: none; cursor: grab; }
+    /* гора на весь экран под шапкой; в колонке flex Safari считал ширину по пропорциям картинки, и справа оставалась полоса фона */
+    #mtSvg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
     .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; touch-action: pan-y; }
     .day {
       display: flex; flex-direction: column; align-items: center; gap: 1px;
@@ -2888,14 +2889,14 @@
     const MT_PAL = {
       night: { sky: ['#121621', '#1C2333', '#15171C'], lit: ['#6B7486', '#4B5261', '#30343D', '#1D2026'], far: ['#323B4F', '#1A1E27'], farSnow: ['#8C97AB', .38],
         mid: ['#2A303C', '#16181D'], mist: '#1C2333', shade: ['#070A12', .55, .38], snow: ['#E6ECF4', '#C9D3E0', '#A3AFC2'], ledgeL: ['#8B95A7', .22], ledgeD: ['#0C0E13', .4],
-        gully: ['#06080D', .35], spur: ['#C3CCDA', .35], ground: '#101216', pines: '#0B0C0F', trail: '#6A707A', me: '#C6FF3D', meBack: '#8FB82C',
+        gully: ['#06080D', .35], spur: ['#C3CCDA', .35], ground: '#101216', groundG: ['#2A2F38', '#191C22', '#0F1114'], groundRim: ['#8A94A3', .3], pines: '#0B0C0F', trail: '#6A707A', me: '#C6FF3D', meBack: '#8FB82C',
         start: '#9A9DA3', goal: '#F2F3F0', pole: '#F2F3F0', campOn: '#F2F3F0', campOff: '#8A8D94', triOff: '#24262A', triOffS: '#5A5F68', meShadow: .4,
         other: '#FFB547', otherBack: '#D98F2B', pill: 'rgba(18,19,21,.75)', pillText: '#F2F3F0', smoke: '#B9C0CA',
         grain: .3, grainL: .08, tone: .1, rim: '#DCE6F5', rimOp: .55, fog: '#1C2333', fogOp: .55, far2: ['#3A4560', '#232A3A'], milky: .16,
         snowSh: ['#3E4F72', .55], flute: ['#56688C', .34], bandSh: ['#05070C', .45], bandLi: ['#9AA4B5', .3], faceSh: ['#0B0F18', .4] },
       day: { sky: ['#4E9BD6', '#8EC3EA', '#DCEEF7'], lit: ['#9AA5B3', '#7D8896', '#5F7466', '#3E6440'], far: ['#8FA9C0', '#B8CCDB'], farSnow: ['#FFFFFF', .75],
         mid: ['#7893A6', '#A3BBCB'], mist: '#DCEEF7', shade: ['#22324A', .42, .26], snow: ['#FFFFFF', '#F1F6FB', '#D9E4EF'], ledgeL: ['#E6ECF2', .3], ledgeD: ['#2A3340', .3],
-        gully: ['#1E2836', .3], spur: ['#FFFFFF', .5], ground: '#3A5D34', pines: '#1D3B25', trail: '#4A525C', me: '#5E9400', meBack: '#3F6A00',
+        gully: ['#1E2836', .3], spur: ['#FFFFFF', .5], ground: '#3A5D34', groundG: ['#5E7A5E', '#41663F', '#2C4B2E'], groundRim: ['#E4EEDC', .55], pines: '#1D3B25', trail: '#4A525C', me: '#5E9400', meBack: '#3F6A00',
         start: '#1D2228', goal: '#15171A', pole: '#2A2F36', campOn: '#15171A', campOff: '#3D444D', triOff: '#A9B1BA', triOffS: '#6B737D', meShadow: .25,
         other: '#D9661A', otherBack: '#A84C10', pill: 'rgba(255,255,255,.85)', pillText: '#15171A', smoke: '#8C949E',
         grain: .18, grainL: .2, tone: .14, rim: '#FFFFFF', rimOp: .8, fog: '#EAF4FA', fogOp: .6, far2: ['#A9C0D3', '#C9DAE6'], milky: 0,
@@ -2978,6 +2979,8 @@
       const sky = $('mtGlowG'); if (sky) sky.style.display = glow ? '' : 'none';
       const sh = $('mtShootG'); if (sh) sh.style.display = ww.kind === 'clear' && !glow ? '' : 'none';
     }
+    // край долины у подножия: мягкие холмы, как продолжение горы
+    const MT_GROUND = 'M-600 1170Q-200 1156 100 1168Q400 1180 700 1166Q1000 1154 1300 1170Q1600 1180 2200 1164';
     function mtBuild() {
       const svg = $('mtSvg');
       if (svg.dataset.built) return;
@@ -3017,6 +3020,8 @@
           <linearGradient id="mtShade" x1=".8" y1="0" x2=".2" y2="1"><stop offset="0" stop-color="${P.shade[0]}" stop-opacity="${P.shade[1]}"/><stop offset=".55" stop-color="${P.shade[0]}" stop-opacity="${P.shade[2]}"/><stop offset="1" stop-color="${P.shade[0]}" stop-opacity=".05"/></linearGradient>
           <linearGradient id="mtSnow" gradientUnits="userSpaceOnUse" x1="0" y1="210" x2="0" y2="720"><stop offset="0" stop-color="${P.snow[0]}"/><stop offset=".6" stop-color="${P.snow[1]}"/><stop offset="1" stop-color="${P.snow[2]}"/></linearGradient>
           <clipPath id="mtClip"><path d="${MT_SHAPE}"/></clipPath>
+          <clipPath id="mtGroundClip"><path d="${MT_GROUND}V1700H-600Z"/></clipPath>
+          <linearGradient id="mtGround" gradientUnits="userSpaceOnUse" x1="0" y1="1150" x2="0" y2="1250"><stop offset="0" stop-color="${P.groundG[0]}"/><stop offset=".45" stop-color="${P.groundG[1]}"/><stop offset="1" stop-color="${P.groundG[2]}"/></linearGradient>
           <clipPath id="mtFarClip"><path d="${far.d}"/></clipPath>
           <clipPath id="mtSnowClip"><path d="${rock.snow}"/></clipPath>
           <filter id="mtGrainF" filterUnits="userSpaceOnUse" x="-300" y="150" width="2400" height="1100"><feTurbulence type="fractalNoise" baseFrequency=".03 .11" numOctaves="3" seed="7"/><feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -2.6 1.45"/></filter>
@@ -3065,7 +3070,10 @@
         <path data-bake="-80 190 1740 1000 1" d="${mtD(MT_RIDGE)}" fill="none" stroke="${P.rim}" stroke-width="5" opacity="${P.rimOp * .45}" filter="url(#mtGlow)" stroke-linejoin="round"/>
         <path d="${mtD(MT_RIDGE)}" fill="none" stroke="${P.rim}" stroke-width="1.4" opacity="${P.rimOp}" stroke-linejoin="round"/>
         <ellipse data-bake="1420 160 280 180 1" cx="1560" cy="250" rx="90" ry="22" fill="#FFFFFF" opacity=".22" filter="url(#mtFog)" transform="rotate(-12 1560 250)"/>
-        <path d="M-600 1700V1170Q-200 1156 100 1168Q400 1180 700 1166Q1000 1154 1300 1170Q1600 1180 2200 1164V1700Z" fill="${P.ground}"/>
+        <path d="M-600 1700V1170${MT_GROUND.slice(10)}V1700Z" fill="url(#mtGround)"/>
+        <g clip-path="url(#mtGroundClip)"><g data-bake="-80 1140 1740 120 1"><rect x="-300" y="1140" width="2400" height="120" filter="url(#mtGrainF)" opacity="${P.grain}"/>
+          <rect x="-300" y="1140" width="2400" height="120" filter="url(#mtTone)" opacity="${P.tone}"/></g></g>
+        <path d="${MT_GROUND}" fill="none" stroke="${P.groundRim[0]}" stroke-width="1.2" opacity="${P.groundRim[1]}"/>
         <path d="${mtPines()}" fill="${P.pines}"/>
         <path d="${mtD(MT_TRAIL)}" fill="none" stroke="${P.trail}" stroke-width="3" stroke-dasharray="1 7" stroke-linecap="round" stroke-linejoin="round"/>
         <path id="mtDone" d="" fill="none" stroke="${P.me}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
