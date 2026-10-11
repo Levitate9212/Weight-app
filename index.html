@@ -8,7 +8,7 @@
   <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;0,800;1,700;1,800&family=Golos+Text:wght@400;500;600;700&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;0,800;1,700;1,800&family=Golos+Text:wght@400;500;600;700&family=Montserrat:wght@600&display=swap" rel="stylesheet">
   <style>
     /* =====================================================================
        Стиль «Спорт-ночь»: один лаймовый акцент, узкие жирные цифры.
@@ -1211,7 +1211,7 @@
         SP.inK = PT.pick(PT.ARRIVE, 'sp_in'); SP.outK = PT.pick(PT.EXIT, 'sp_out'); SP.exitAt = null;
         cv.setAttribute('aria-label', line);
         // Montserrat заглавными, не самый жирный — выбор Вадима: так фраза из точек читается лучше всего
-        const FONT = 'Montserrat, "Golos Text", system-ui, -apple-system, sans-serif', FW = 700;
+        const FONT = 'Montserrat, "Golos Text", system-ui, -apple-system, sans-serif', FW = 600;
         SP.s = PT.scene(cv, {
           n: 5000, still: 2600,
           shape: (W, H, N) => PT.sample(W, H, g => {
