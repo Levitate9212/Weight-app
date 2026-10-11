@@ -325,6 +325,11 @@
     .big b { font-family: var(--num); font-weight: 700; font-size: clamp(70px, 23vw, 92px); letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
     /* вес как табло: каждая цифра — барабан 0–9 (три круга), крутится вверх к своей цифре */
     /* невидимая копия числа держит место и строку текста, барабаны лежат поверх неё */
+    /* текущий вес — тем же переливом, что фраза заставки: лайм → мята → бирюза */
+    .big b, .odo .c, .odo .sep { background-image: linear-gradient(90deg, var(--pt-a), var(--pt-b) 50%, var(--pt-c)); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
+    .big b.odo { background-image: none; }
+    /* в табло каждая цифра красится своим куском общей полосы (--gx — где цифра, --gw — ширина числа) */
+    .odo .c, .odo .sep { background-size: var(--gw, 100%) 100%; background-position: calc(-1 * var(--gx, 0px)) 0; background-repeat: no-repeat; }
     .odo { position: relative; }
     .odo .ghost { visibility: hidden; }
     .odo .roll { position: absolute; left: 0; top: -.12em; display: flex; }
@@ -1241,9 +1246,10 @@
     // Заставка из частиц: фраза дня собирается из потока, а при входе в приложение разлетается.
     // Каждый раз другое появление и уход, подряд не повторяются. Если что-то не так — остаётся прежняя заставка.
     const SP = { s: null, exitAt: null, inK: 'dust', outK: 'blast', lay: null };
-    // насколько фраза уже «чёткая»: с 1,7 с проявляется, на выходе за четверть секунды снова уходит в точки
+    // насколько фраза уже «чёткая»: точки встают ровно в буквы к 1,8 с, затем за 0,8 с плавно проявляется текст;
+    // на выходе за четверть секунды снова уходит в точки
     const spCrisp = t => {
-      const c = u => PT.clamp((u - 1.7) / .6);
+      const c = u => { const v = PT.clamp((u - 1.8) / .8); return v * v * (3 - 2 * v); };
       return SP.exitAt == null ? c(t) : PT.clamp(c(SP.exitAt) - (t - SP.exitAt) * 4);
     };
     function splashParticles() {
@@ -1255,7 +1261,7 @@
         // Montserrat заглавными, не самый жирный — выбор Вадима: так фраза из точек читается лучше всего
         const FONT = 'Montserrat, "Golos Text", system-ui, -apple-system, sans-serif', FW = 600;
         SP.s = PT.scene(cv, {
-          n: 5000, still: 2600,
+          n: 5000, still: 2600, snap: true,
           shape: (W, H, N) => PT.sample(W, H, g => {
             const words = line.toUpperCase().split(' '), lines = []; let cur = '', fs = Math.round(W * .12);
             g.font = `${FW} ${fs}px ${FONT}`;
@@ -1265,9 +1271,9 @@
             g.font = `${FW} ${fs}px ${FONT}`; g.fillStyle = '#000'; g.textAlign = 'center'; g.textBaseline = 'middle';
             lines.forEach((l, i) => g.fillText(l, W / 2, H * .45 + (i - (lines.length - 1) / 2) * fs * 1.12));
             SP.lay = { lines, fs };
-          }, N, false, .3),     // внутри букв точек побольше — так читается
+          }, N, false, .5),     // поровну по краю и внутри: контур буквы чёткий, а сама буква плотная
           // собравшись, фраза перетекает в чёткий текст (точки гаснут); на выходе — снова в точки, и они разлетаются
-          alpha: (has, t) => has ? 1 - spCrisp(t) : 1,   // чёткий текст сменяет точки целиком, без крошек по краям
+          alpha: (has, t) => has ? 1 - PT.clamp((spCrisp(t) - .35) / .65) : 1,   // текст проявляется поверх точек, и только потом точки гаснут целиком — без провала и крошек
           over: (ctx, W, H, t) => {
             const k = spCrisp(t), L = SP.lay;
             if (k <= .01 || !L) return;
@@ -1307,7 +1313,7 @@
       if (sp.classList.contains('gone')) { if (then) then(); return; }
       if (SP.s && SP.s.alive) {
         // фраза успевает собраться, потом разлетается, а под ней уже открыто приложение
-        const wait = Math.max(0, 2.8 - SP.s.time()) * 1000;   // успеть собраться и стать чётким текстом
+        const wait = Math.max(0, 3.0 - SP.s.time()) * 1000;   // успеть собраться и стать чётким текстом
         setTimeout(() => {
           SP.exitAt = SP.s.time();
           if (then) then();
@@ -4456,6 +4462,8 @@
       const prevAligned = pad(pi, ni.length).slice(-ni.length) + (nf ? ',' + (pf + '0').slice(0, nf.length) : '');
       el.classList.add('odo');
       el.innerHTML = `<span class="ghost">${txt}</span><span class="roll">` + [...txt].map(ch => /\d/.test(ch) ? `<span class="od"><span class="odr">${cells}</span></span>` : `<span class="sep">${ch}</span>`).join('') + '</span>';
+      el.style.setProperty('--gw', el.querySelector('.ghost').offsetWidth + 'px');
+      el.querySelectorAll('.roll > span').forEach(s => s.style.setProperty('--gx', s.offsetLeft + 'px'));
       const rolls = [...el.querySelectorAll('.odr')], digits = [...txt].filter(c => /\d/.test(c)), prevD = [...prevAligned].filter(c => /\d/.test(c));
       const intro = from != null, n = rolls.length, dur = intro ? 1100 : 520;
       rolls.forEach((r, k) => {
