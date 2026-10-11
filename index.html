@@ -1077,8 +1077,8 @@
       function scene(canvas, o) {
         const ctx = canvas.getContext('2d');
         let W = 1, H = 1, dpr = 1, t0 = 0, last = 0, raf = 0, alive = false;
-        let N = 0, N0 = 0, X, Y, VX, VY, TX, TY, SZ, CI, AL, R1, R2, LG, HAS, PAL, B, FX, FY, GW = 1, GH = 1, fc = 0, slow = 0;
-        const CS = 18;   // поток считаем по сетке 18×18 px, а не для каждой точки — так в разы быстрее
+        let N = 0, N0 = 0, X, Y, VX, VY, TX, TY, SZ, CI, AL, R1, R2, LG, HAS, PAL, B, FX, FY, KI, MV = null, GW = 1, GH = 1, fc = 0, slow = 0;
+        const CS = 18, MP = new Float32Array(2);   // поток считаем по сетке 18×18 px, а не для каждой точки — так в разы быстрее
         function size() {
           dpr = Math.min(window.devicePixelRatio || 1, 1.75);
           const r = canvas.getBoundingClientRect(); W = Math.max(1, r.width); H = Math.max(1, r.height);
@@ -1089,10 +1089,11 @@
           N = Math.round(Math.min(o.n * (W > 700 && o.nWide || 1.2), o.n * (W * H) / (360 * 640)));   // на большом экране (комп) точек больше, иначе фигура редкая
           X = new Float32Array(N); Y = new Float32Array(N); VX = new Float32Array(N); VY = new Float32Array(N);
           TX = new Float32Array(N); TY = new Float32Array(N); SZ = new Float32Array(N); CI = new Uint16Array(N);
-          AL = new Float32Array(N); R1 = new Float32Array(N); R2 = new Float32Array(N); LG = new Float32Array(N); HAS = new Uint8Array(N);
+          AL = new Float32Array(N); KI = new Uint32Array(N); R1 = new Float32Array(N); R2 = new Float32Array(N); LG = new Float32Array(N); HAS = new Uint8Array(N);
           N0 = N; GW = Math.ceil(W / CS) + 2; GH = Math.ceil(H / CS) + 2; FX = new Float32Array(GW * GH); FY = new Float32Array(GW * GH); fc = 0; slow = 0;
           const light = isDark() ? 1 : 1.3;
           const sh = o.shape ? o.shape(W, H, N) : { pts: null }, tg = sh.pts, nt = tg ? tg.length / 2 : 0;
+          MV = sh.move || null;   // move(k, t, out) — точка фигуры едет (линия графика течёт); 2 — перескок в начало
           // цвета: свои (у медали — из картинки) или перелив темы
           if (sh.col) { PAL = [...new Set(sh.col)]; } else PAL = null;
           const palIdx = PAL ? new Map(PAL.map((c, i) => [c, i])) : null;
@@ -1107,7 +1108,7 @@
             AL[i] = r < .95 ? .55 + Math.random() * .45 : .35;
             HAS[i] = nt && (o.member ? o.member(i, N, nt) : 1) ? 1 : 0;
             const k = HAS[i] ? perm[mj++ % nt] : 0;
-            if (HAS[i]) { TX[i] = tg[k * 2]; TY[i] = tg[k * 2 + 1]; }
+            if (HAS[i]) { TX[i] = tg[k * 2]; TY[i] = tg[k * 2 + 1]; KI[i] = k; }
             LG[i] = HAS[i] && o.lag ? o.lag(TX[i], TY[i], W, H, R2[i]) : R2[i];   // кто собирается раньше
             const s = o.spawn({ i, r1: R1[i], r2: R2[i] }, W, H); X[i] = s[0]; Y[i] = s[1]; VX[i] = s[2] || 0; VY[i] = s[3] || 0;
             if (PAL && HAS[i]) CI[i] = palIdx.get(sh.col[k]);
@@ -1132,6 +1133,10 @@
             const gx = X[i] / CS | 0, gy = Y[i] / CS | 0, q = (gy < 0 ? 0 : gy >= GH ? GH - 1 : gy) * GW + (gx < 0 ? 0 : gx >= GW ? GW - 1 : gx), m = .8 + R1[i] * .4;
             let ax = FX[q] * m, ay = FY[q] * m;
             if (o.bias) { const b = o.bias(t, R1[i]); ax += b[0]; ay += b[1]; }
+            if (MV && HAS[i]) {
+              const m = MV(KI[i], t, MP);
+              if (m) { TX[i] = MP[0]; TY[i] = MP[1]; if (m === 2 && g >= 1) { X[i] = TX[i]; Y[i] = TY[i]; VX[i] = VY[i] = 0; } }
+            }
             if (HAS[i] && g > 0) {
               const k = ease(clamp(g * (1 + LK) - LG[i] * LK));
               ax = ax * (1 - k * .92) + (TX[i] - X[i]) * .055 * k; ay = ay * (1 - k * .92) + (TY[i] - Y[i]) * .055 * k;
@@ -2627,7 +2632,7 @@
         const cv = document.createElement('canvas'); cv.className = 'st-pt'; cv.setAttribute('aria-hidden', 'true');
         el.insertBefore(cv, el.firstChild);
         const svg = el.querySelector('svg.sp'), path = svg && svg.querySelector('path'), dot = svg && svg.querySelector('circle');
-        let nt = 0, end = null;
+        let nt = 0, end = null, lut = null, lu, ldn, lsp, base = 0;
         const s = PT.scene(cv, {
           n: 5200, wrap: true, shimmer: .35,
           shape: (W, H, N) => {
@@ -2644,14 +2649,27 @@
             const out = new Float32Array(nt * 2); out.set(num.pts);
             if (nLine) {
               const L = path.getTotalLength(), M = path.getScreenCTM(), pr = el.getBoundingClientRect(), P = svg.createSVGPoint();
+              // линия на экране (таблица из 240 точек); каждая точка линии течёт по ней слева направо, как потоки фона
+              const NS = 240; lut = new Float32Array((NS + 1) * 2);
+              for (let k = 0; k <= NS; k++) { const q = path.getPointAtLength(k / NS * L); P.x = q.x; P.y = q.y; const r = P.matrixTransform(M); lut[k * 2] = r.x - pr.left; lut[k * 2 + 1] = r.y - pr.top; }
+              lu = new Float32Array(nLine); ldn = new Float32Array(nLine); lsp = new Float32Array(nLine);
               for (let j = 0; j < nLine; j++) {
-                const q = path.getPointAtLength(Math.random() * L); P.x = q.x; P.y = q.y; const r = P.matrixTransform(M);
-                const dn = Math.random() < .7 ? (Math.random() - .5) * 2.4 : Math.pow(Math.random(), 2) * H * .045;
-                out[(nNum + j) * 2] = r.x - pr.left; out[(nNum + j) * 2 + 1] = r.y - pr.top + dn;
+                lu[j] = Math.random(); lsp[j] = .1 + Math.random() * .06;
+                ldn[j] = Math.random() < .7 ? (Math.random() - .5) * 2.4 : Math.pow(Math.random(), 2) * H * .045;
+                const k = Math.round(lu[j] * NS);
+                out[(nNum + j) * 2] = lut[k * 2]; out[(nNum + j) * 2 + 1] = lut[k * 2 + 1] + ldn[j];
               }
+              base = nNum;
               if (dot) { P.x = +dot.getAttribute('cx'); P.y = +dot.getAttribute('cy'); const r = P.matrixTransform(dot.getScreenCTM()); end = [r.x - pr.left, r.y - pr.top]; }
             }
-            return { pts: out };
+            const move = lut ? (k, t, mp) => {
+              if (k < base) return 0;
+              const j = k - base, u = lu[j] + t * lsp[j], f = u - Math.floor(u), x = f * 240, a = x | 0, b = Math.min(240, a + 1), w = x - a;
+              mp[0] = lut[a * 2] + (lut[b * 2] - lut[a * 2]) * w; mp[1] = lut[a * 2 + 1] + (lut[b * 2 + 1] - lut[a * 2 + 1]) * w + ldn[j];
+              const wrapped = Math.floor(u) !== Math.floor(lu[j] + (t - .05) * lsp[j]);
+              return wrapped ? 2 : 1;
+            } : null;
+            return { pts: out, move };
           },
           member: i => i % 4 !== 3,
           spawn: (p, W, H) => p.i % 4 !== 3 ? [Math.random() * W, H + Math.random() * H * .4, 0, -4 - p.r2 * 5] : [Math.random() * W, Math.random() * H, 0, 0],
