@@ -1062,7 +1062,7 @@
         }
         function reset() {
           size();
-          N = Math.round(Math.min(o.n * 1.2, o.n * (W * H) / (360 * 640)));
+          N = Math.round(Math.min(o.n * (W > 700 && o.nWide || 1.2), o.n * (W * H) / (360 * 640)));   // на большом экране (комп) точек больше, иначе фигура редкая
           X = new Float32Array(N); Y = new Float32Array(N); VX = new Float32Array(N); VY = new Float32Array(N);
           TX = new Float32Array(N); TY = new Float32Array(N); SZ = new Float32Array(N); CI = new Uint16Array(N);
           AL = new Float32Array(N); R1 = new Float32Array(N); R2 = new Float32Array(N); LG = new Float32Array(N); HAS = new Uint8Array(N);
@@ -2800,14 +2800,15 @@
     }
     // дальние хребты: те же природные неровности, у высоких вершин — снег
     function mtRange(base, amp, seed, n) {
-      const rnd = mtRnd(seed), key = [[-600, base]];
+      const rnd = mtRnd(seed), key = [[-2000, base], [-600, base]];   // хребет с запасом по краям: на широком экране не обрывается
       for (let x = -600; x < 1800;) {
         const w = 120 + rnd() * 220;
         key.push([x + w * .5, base - amp * (.35 + rnd() * .65)], [x + w, base - amp * rnd() * .3]);
         x += w;
       }
+      key.push([3200, base]);
       const ridge = mtJag(key, .3, n, rnd, true);
-      return { d: mtD(ridge) + 'L1800 2400L-600 2400Z', ridge };
+      return { d: mtD(ridge) + 'L3200 2400L-2000 2400Z', ridge };
     }
     function mtRangeSnow(ridge, line) {
       let d = '';
@@ -2980,7 +2981,7 @@
       const sh = $('mtShootG'); if (sh) sh.style.display = ww.kind === 'clear' && !glow ? '' : 'none';
     }
     // край долины у подножия: мягкие холмы, как продолжение горы
-    const MT_GROUND = 'M-600 1170Q-200 1156 100 1168Q400 1180 700 1166Q1000 1154 1300 1170Q1600 1180 2200 1164';
+    const MT_GROUND = 'M-2000 1168Q-1300 1180 -600 1170Q-200 1156 100 1168Q400 1180 700 1166Q1000 1154 1300 1170Q1600 1180 2200 1164Q2700 1152 3200 1170';
     function mtBuild() {
       const svg = $('mtSvg');
       if (svg.dataset.built) return;
@@ -3020,7 +3021,7 @@
           <linearGradient id="mtShade" x1=".8" y1="0" x2=".2" y2="1"><stop offset="0" stop-color="${P.shade[0]}" stop-opacity="${P.shade[1]}"/><stop offset=".55" stop-color="${P.shade[0]}" stop-opacity="${P.shade[2]}"/><stop offset="1" stop-color="${P.shade[0]}" stop-opacity=".05"/></linearGradient>
           <linearGradient id="mtSnow" gradientUnits="userSpaceOnUse" x1="0" y1="210" x2="0" y2="720"><stop offset="0" stop-color="${P.snow[0]}"/><stop offset=".6" stop-color="${P.snow[1]}"/><stop offset="1" stop-color="${P.snow[2]}"/></linearGradient>
           <clipPath id="mtClip"><path d="${MT_SHAPE}"/></clipPath>
-          <clipPath id="mtGroundClip"><path d="${MT_GROUND}V1700H-600Z"/></clipPath>
+          <clipPath id="mtGroundClip"><path d="${MT_GROUND}V1700H-2000Z"/></clipPath>
           <linearGradient id="mtGround" gradientUnits="userSpaceOnUse" x1="0" y1="1150" x2="0" y2="1250"><stop offset="0" stop-color="${P.groundG[0]}"/><stop offset=".45" stop-color="${P.groundG[1]}"/><stop offset="1" stop-color="${P.groundG[2]}"/></linearGradient>
           <clipPath id="mtFarClip"><path d="${far.d}"/></clipPath>
           <clipPath id="mtSnowClip"><path d="${rock.snow}"/></clipPath>
@@ -3032,7 +3033,7 @@
           <filter id="mtSoft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="40"/></filter>
           <filter id="mtGlow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3"/></filter>
         </defs>
-        <g id="mtSkyG"><rect x="-600" y="-900" width="1800" height="3200" fill="url(#mtSky)"/>${day ? `<circle cx="330" cy="90" r="70" fill="url(#mtMoon)"/><circle cx="330" cy="90" r="17" fill="#FFF4CF"/><g fill="#FFFFFF">${clouds}</g>` : `
+        <g id="mtSkyG"><rect x="-3000" y="-900" width="7000" height="3200" fill="url(#mtSky)"/>${day ? `<circle cx="330" cy="90" r="70" fill="url(#mtMoon)"/><circle cx="330" cy="90" r="17" fill="#FFF4CF"/><g fill="#FFFFFF">${clouds}</g>` : `
           <ellipse data-bake="-260 -60 920 500 .5" cx="200" cy="185" rx="320" ry="55" transform="rotate(-30 200 185)" fill="#7C8DB5" opacity="${P.milky}" filter="url(#mtSoft)"/>${stars}
           <circle cx="330" cy="90" r="50" fill="url(#mtMoon)"/><circle cx="330" cy="90" r="14" fill="#E9ECEF" opacity=".85"/>
           <g id="mtShootG" style="display:none"><path class="mt-shoot" d="M300 40l26 -12" stroke="#F2F3F0" stroke-width="1.6" stroke-linecap="round"/></g>`}
@@ -3042,9 +3043,9 @@
           <ellipse data-bake="-700 330 2000 280 .5" cx="300" cy="470" rx="900" ry="60" fill="${P.fog}" opacity="${P.fogOp}" filter="url(#mtFog)"/></g>
         <g id="mtFarG"><path d="${far.d}" fill="url(#mtFar)"/><path d="${mtFaces(far.ridge)}" fill="${P.faceSh[0]}" opacity="${P.faceSh[1]}" clip-path="url(#mtFarClip)"/>
           <path d="${mtRangeSnow(far.ridge, 330)}" fill="${P.farSnow[0]}" opacity="${P.farSnow[1]}" clip-path="url(#mtFarClip)"/>
-          <rect x="-600" y="380" width="2400" height="260" fill="url(#mtMist)"/></g>
+          <rect x="-3000" y="380" width="7000" height="260" fill="url(#mtMist)"/></g>
         <g id="mtMidG"><path d="${mid.d}" fill="url(#mtMid)"/><path d="${mtFaces(mid.ridge)}" fill="${P.faceSh[0]}" opacity="${P.faceSh[1] * .8}"/>
-          <rect x="-600" y="560" width="2400" height="240" fill="url(#mtMist)" opacity=".7"/>
+          <rect x="-3000" y="560" width="7000" height="240" fill="url(#mtMist)" opacity=".7"/>
           <ellipse data-bake="-560 580 1520 240 .5" cx="200" cy="700" rx="700" ry="50" fill="${P.fog}" opacity="${P.fogOp * .8}" filter="url(#mtFog)"/></g>
         <path d="${MT_SHAPE}" fill="url(#mtLit)"/>
         <g clip-path="url(#mtClip)">
@@ -3070,7 +3071,7 @@
         <path data-bake="-80 190 1740 1000 1" d="${mtD(MT_RIDGE)}" fill="none" stroke="${P.rim}" stroke-width="5" opacity="${P.rimOp * .45}" filter="url(#mtGlow)" stroke-linejoin="round"/>
         <path d="${mtD(MT_RIDGE)}" fill="none" stroke="${P.rim}" stroke-width="1.4" opacity="${P.rimOp}" stroke-linejoin="round"/>
         <ellipse data-bake="1420 160 280 180 1" cx="1560" cy="250" rx="90" ry="22" fill="#FFFFFF" opacity=".22" filter="url(#mtFog)" transform="rotate(-12 1560 250)"/>
-        <path d="M-600 1700V1170${MT_GROUND.slice(10)}V1700Z" fill="url(#mtGround)"/>
+        <path d="M-2000 1700${MT_GROUND.replace(/^M/, 'L')}V1700Z" fill="url(#mtGround)"/>
         <g clip-path="url(#mtGroundClip)"><g data-bake="-80 1140 1740 120 1"><rect x="-300" y="1140" width="2400" height="120" filter="url(#mtGrainF)" opacity="${P.grain}"/>
           <rect x="-300" y="1140" width="2400" height="120" filter="url(#mtTone)" opacity="${P.tone}"/></g></g>
         <path d="${MT_GROUND}" fill="none" stroke="${P.groundRim[0]}" stroke-width="1.2" opacity="${P.groundRim[1]}"/>
@@ -3368,7 +3369,7 @@
       let fore = false;     // всё, что после земли, — передний план
       svg.querySelectorAll('path, circle, ellipse, line, rect').forEach(el => {
         if (el.closest(skip) || el.getAttribute('filter')) return;
-        if (el.parentNode === svg && /^M-600 1700/.test(el.getAttribute('d') || '')) { fore = true; if (detail) return; }
+        if (el.parentNode === svg && /^M-2000 1700/.test(el.getAttribute('d') || '')) { fore = true; if (detail) return; }
         if (detail && !fore && !el.closest('#mtSkyG')) return;
         let op = 1;
         for (let e = el; e && e !== svg; e = e.parentNode) op *= e.getAttribute('opacity') == null ? 1 : +e.getAttribute('opacity');
@@ -3399,7 +3400,7 @@
       if (!cr.width) return false;
       let shown = false;
       MTP.s = PT.scene(cv, {
-        n: 9000, lagK: 1.4,
+        n: 9000, nWide: 3, lagK: 1.4,
         shape: (W, H, N) => {
           const nd = Math.round(N * .3), a = PT.sample(W, H, g => mtSilhouettes(g, svg, cr, false), N - nd, false, .72);
           const b = PT.sample(W, H, g => mtSilhouettes(g, svg, cr, true), nd, false, .6);
