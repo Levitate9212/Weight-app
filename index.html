@@ -2108,8 +2108,8 @@
       const tiles = sp.map(([k, s]) => {
         const m = stSport(k), name = k === 'тренировка' ? 'Тренировка' : stCap(k);
         const v = s.km ? `${stKm(s.km)}<small>км</small>` : s.min >= 60 ? `${Math.floor(s.min / 60)}<small>ч</small>${s.min % 60 ? ` ${s.min % 60}<small>мин</small>` : ''}` : s.min ? `${s.min}<small>мин</small>` : `${s.n}<small>${plural(s.n, 'раз', 'раза', 'раз')}</small>`;
-        // набор высоты за неделю — у бега, лестницы и лыж
-        const up = s.elev && /^(бег|лестниц|лыж)/.test(k) ? `<br>↑ набор ${Math.round(s.elev)} м` : '';
+        // набор высоты за неделю — у бега, ходьбы, велосипеда, лестницы и лыж
+        const up = s.elev && /^(бег|ходьб|прогул|вело|лестниц|лыж)/.test(k) ? `<br>↑ набор ${Math.round(s.elev)} м` : '';
         const l = [name, s.km && s.min ? stMin(s.min) : ''].filter(Boolean).join(' · ');
         return `<div class="st-tile" style="background:${m.c}">${stIcon(m.ic)}${s.km || s.min ? `<span class="n">×${s.n}</span>` : ''}<div class="v">${v}</div><div class="l">${esc(l)}${up}</div></div>`;
       });
@@ -2127,9 +2127,9 @@
       elev: ['набор, м', v => v], cadence: ['каденс', v => v], swim: ['метров', v => Math.round(v * 1000).toLocaleString('ru-RU')]
     };
     // какие цифры у какого вида и в каком порядке (решение Вадима 05.10); нет цифры — «—»
-    const ST_WO_SETS = [[/^бег/, ['km', 'min', 'pace', 'hr', 'kcal', 'cadence', 'elev']], [/^(ходьб|прогул)/, ['km', 'min', 'pace', 'hr', 'kcal', 'cadence']], [/лестниц/, ['km', 'min', 'hr', 'elev', 'kcal']],
+    const ST_WO_SETS = [[/^(бег|ходьб|прогул)/, ['km', 'min', 'pace', 'hr', 'kcal', 'cadence', 'elev']], [/лестниц/, ['km', 'min', 'hr', 'elev', 'kcal']],
       [/^лыж/, ['km', 'min', 'pace', 'hr', 'kcal', 'elev']],
-      [/^вело/, ['km', 'min', 'speed', 'hr', 'kcal']], [/^плав/, ['swim', 'min', 'kcal']], [/./, ['min', 'hr', 'kcal']]];
+      [/^вело/, ['km', 'min', 'speed', 'hr', 'kcal', 'elev']], [/^плав/, ['swim', 'min', 'kcal']], [/./, ['min', 'hr', 'kcal']]];
     const ST_WO_ANY = ['km', 'min', 'pace', 'speed', 'hr', 'kcal'];
     function stWoCard(w) {
       const known = w.sport && w.sport !== 'тренировка', m = known ? stSport(w.sport) : null, d = new Date(w.at);
