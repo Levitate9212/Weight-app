@@ -1133,9 +1133,10 @@
             const gx = X[i] / CS | 0, gy = Y[i] / CS | 0, q = (gy < 0 ? 0 : gy >= GH ? GH - 1 : gy) * GW + (gx < 0 ? 0 : gx >= GW ? GW - 1 : gx), m = .8 + R1[i] * .4;
             let ax = FX[q] * m, ay = FY[q] * m;
             if (o.bias) { const b = o.bias(t, R1[i]); ax += b[0]; ay += b[1]; }
+            let glide = false;
             if (MV && HAS[i]) {
               const m = MV(KI[i], t, MP);
-              if (m) { TX[i] = MP[0]; TY[i] = MP[1]; if (m === 2 && g >= 1) { X[i] = TX[i]; Y[i] = TY[i]; VX[i] = VY[i] = 0; } }
+              if (m) { TX[i] = MP[0]; TY[i] = MP[1]; if (m === 2 && g >= 1) { X[i] = TX[i]; Y[i] = TY[i]; VX[i] = VY[i] = 0; } glide = g >= 1; }
             }
             if (HAS[i] && g > 0) {
               const k = ease(clamp(g * (1 + LK) - LG[i] * LK));
@@ -1144,8 +1145,13 @@
               a += (1 - a) * k * .9;
             }
             if (o.exit) { const e = o.exit(i, t, X[i], Y[i], W, H, R1[i], R2[i]); if (e) { ax += e[0]; ay += e[1]; a *= e[2]; } }
-            VX[i] = (VX[i] + ax * f) * damp; VY[i] = (VY[i] + ay * f) * damp;
-            X[i] += VX[i] * f; Y[i] += VY[i] * f;
+            if (glide) {
+              // собранная точка едущей фигуры скользит за своей целью без пружины — ровно, как потоки фона
+              const kq = 1 - Math.pow(.75, f); X[i] += (TX[i] - X[i]) * kq; Y[i] += (TY[i] - Y[i]) * kq; VX[i] = VY[i] = 0;
+            } else {
+              VX[i] = (VX[i] + ax * f) * damp; VY[i] = (VY[i] + ay * f) * damp;
+              X[i] += VX[i] * f; Y[i] += VY[i] * f;
+            }
             if (!HAS[i] && o.wrap) {
               if (X[i] < -10) X[i] += W + 20; else if (X[i] > W + 10) X[i] -= W + 20;
               if (Y[i] < -10) Y[i] += H + 20; else if (Y[i] > H + 10) Y[i] -= H + 20;
