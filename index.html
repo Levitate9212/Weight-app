@@ -8,7 +8,7 @@
   <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;0,800;1,700;1,800&family=Golos+Text:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;0,800;1,700;1,800&family=Golos+Text:wght@400;500;600;700&family=Montserrat:wght@600&display=swap" rel="stylesheet">
   <style>
     /* =====================================================================
        Стиль «Спорт-ночь»: один лаймовый акцент, узкие жирные цифры.
@@ -344,6 +344,10 @@
     #mtView { position: fixed; inset: 0; z-index: 44; background: #121621; color: var(--ink); display: flex; flex-direction: column;
       opacity: 0; pointer-events: none; transform: translateY(24px); transition: opacity .25s ease, transform .35s cubic-bezier(.3,.8,.3,1); }
     #mtView.open { opacity: 1; pointer-events: auto; transform: none; }
+    #mtView .mt-pt { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; }
+    #mtSvg > g, #mtSvg > path, #mtSvg > image, #mtSvg > line, #mtSvg > text { transition: opacity .7s ease; }
+    #mtSvg #mtSkyG > g, #mtSvg #mtSkyG > circle[cx="330"] { transition: opacity .7s ease; }
+    #mtSvg.pt-hide > :not(#mtSkyG):not(defs), #mtSvg.pt-hide #mtSkyG > g, #mtSvg.pt-hide #mtSkyG > circle[cx="330"] { opacity: 0; transition: none; }
     .mt-top { position: relative; z-index: 2; padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 0; max-width: 460px; width: 100%; margin: 0 auto; }
     .mt-top .back-btn { padding-bottom: 6px; }
     .mt-top h2 { font-family: var(--display); font-weight: 700; font-size: 30px; line-height: 1.1; }
@@ -382,7 +386,8 @@
     .mt-wx svg { width: 18px; height: 18px; flex: none; }
     html.light .mt-wx { color: #15171A; }
     @media (prefers-reduced-motion: reduce) { #mtSvg .mt-flame, #mtSvg .mt-drop, #mtSvg .mt-flake, #mtSvg .mt-fogd, #mtSvg .mt-glow, #mtSvg .mt-shoot { animation: none; } #mtSvg .mt-shoot { display: none; } }
-    #mtSvg { flex: 1 1 auto; min-height: 0; width: 100%; display: block; touch-action: none; cursor: grab; margin-bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+    /* гора на весь экран под шапкой; в колонке flex Safari считал ширину по пропорциям картинки, и справа оставалась полоса фона */
+    #mtSvg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
     .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; touch-action: pan-y; }
     .day {
       display: flex; flex-direction: column; align-items: center; gap: 1px;
@@ -1026,9 +1031,10 @@
         const c = document.createElement('canvas'); c.width = W; c.height = H;
         const g = c.getContext('2d', { willReadFrequently: true }); draw(g, W, H);
         const d = g.getImageData(0, 0, W, H).data, edge = [], inner = [];
-        const on = (x, y) => x >= 0 && y >= 0 && x < W && y < H && d[(y * W + x) * 4 + 3] > 128;
+        // за краем холста считаем «то же самое»: фигура, уходящая за край, не получает там ложной кромки
+        const on = (x, y) => x < 0 || y < 0 || x >= W || y >= H || d[(y * W + x) * 4 + 3] > 128;
         for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-          if (!on(x, y)) continue;
+          if (d[(y * W + x) * 4 + 3] <= 128) continue;
           (on(x - 1, y) && on(x + 1, y) && on(x, y - 1) && on(x, y + 1) && on(x - 2, y) && on(x + 2, y) ? inner : edge).push(x, y);
         }
         const pts = new Float32Array(n * 2), col = withColor ? new Array(n) : null;
@@ -1047,7 +1053,7 @@
       function scene(canvas, o) {
         const ctx = canvas.getContext('2d');
         let W = 1, H = 1, dpr = 1, t0 = 0, last = 0, raf = 0, alive = false;
-        let N = 0, N0 = 0, X, Y, VX, VY, TX, TY, SZ, CI, AL, R1, R2, HAS, PAL, B, FX, FY, GW = 1, GH = 1, fc = 0, slow = 0;
+        let N = 0, N0 = 0, X, Y, VX, VY, TX, TY, SZ, CI, AL, R1, R2, LG, HAS, PAL, B, FX, FY, GW = 1, GH = 1, fc = 0, slow = 0;
         const CS = 18;   // поток считаем по сетке 18×18 px, а не для каждой точки — так в разы быстрее
         function size() {
           dpr = Math.min(window.devicePixelRatio || 1, 1.75);
@@ -1056,10 +1062,10 @@
         }
         function reset() {
           size();
-          N = Math.round(Math.min(o.n * 1.2, o.n * (W * H) / (360 * 640)));
+          N = Math.round(Math.min(o.n * (W > 700 && o.nWide || 1.2), o.n * (W * H) / (360 * 640)));   // на большом экране (комп) точек больше, иначе фигура редкая
           X = new Float32Array(N); Y = new Float32Array(N); VX = new Float32Array(N); VY = new Float32Array(N);
           TX = new Float32Array(N); TY = new Float32Array(N); SZ = new Float32Array(N); CI = new Uint16Array(N);
-          AL = new Float32Array(N); R1 = new Float32Array(N); R2 = new Float32Array(N); HAS = new Uint8Array(N);
+          AL = new Float32Array(N); R1 = new Float32Array(N); R2 = new Float32Array(N); LG = new Float32Array(N); HAS = new Uint8Array(N);
           N0 = N; GW = Math.ceil(W / CS) + 2; GH = Math.ceil(H / CS) + 2; FX = new Float32Array(GW * GH); FY = new Float32Array(GW * GH); fc = 0; slow = 0;
           const light = isDark() ? 1 : 1.3;
           const sh = o.shape ? o.shape(W, H, N) : { pts: null }, tg = sh.pts, nt = tg ? tg.length / 2 : 0;
@@ -1078,6 +1084,7 @@
             HAS[i] = nt && (o.member ? o.member(i, N, nt) : 1) ? 1 : 0;
             const k = HAS[i] ? perm[mj++ % nt] : 0;
             if (HAS[i]) { TX[i] = tg[k * 2]; TY[i] = tg[k * 2 + 1]; }
+            LG[i] = HAS[i] && o.lag ? o.lag(TX[i], TY[i], W, H, R2[i]) : R2[i];   // кто собирается раньше
             const s = o.spawn({ i, r1: R1[i], r2: R2[i] }, W, H); X[i] = s[0]; Y[i] = s[1]; VX[i] = s[2] || 0; VY[i] = s[3] || 0;
             if (PAL && HAS[i]) CI[i] = palIdx.get(sh.col[k]);
             else { const u = HAS[i] ? TX[i] / W * .85 + TY[i] / H * .15 : R1[i]; CI[i] = PAL ? (R1[i] * PAL.length) | 0 : Math.round(clamp(u + (R2[i] - .5) * .12) * (NB - 1)); }
@@ -1091,7 +1098,7 @@
           ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'destination-out';
           ctx.fillStyle = `rgba(0,0,0,${isDark() ? .3 : .38})`; ctx.fillRect(0, 0, W, H);
           ctx.globalCompositeOperation = 'source-over';
-          const g = o.gather ? o.gather(t) : 0, damp = Math.pow(.94, f), sp = o.flowSpeed ? o.flowSpeed(t) : .09;
+          const g = o.gather ? o.gather(t) : 0, LK = o.lagK || .25, damp = Math.pow(.94, f), sp = o.flowSpeed ? o.flowSpeed(t) : .09;
           for (let gy = 0; gy < GH; gy++) for (let gx = 0; gx < GW; gx++) { const a = flow(gx * CS, gy * CS, t), q = gy * GW + gx; FX[q] = Math.cos(a) * sp; FY[q] = Math.sin(a) * sp; }
           // слабый телефон: пока кадры долгие, точек становится меньше (но не меньше трети)
           if (N > N0 * .3) { fc++; if (dt > .022) slow++; if (fc === 20) { if (slow > 12) N = Math.round(N * .65); fc = slow = 0; } }
@@ -1102,7 +1109,7 @@
             let ax = FX[q] * m, ay = FY[q] * m;
             if (o.bias) { const b = o.bias(t, R1[i]); ax += b[0]; ay += b[1]; }
             if (HAS[i] && g > 0) {
-              const k = ease(clamp(g * 1.25 - R2[i] * .25));
+              const k = ease(clamp(g * (1 + LK) - LG[i] * LK));
               ax = ax * (1 - k * .92) + (TX[i] - X[i]) * .055 * k; ay = ay * (1 - k * .92) + (TY[i] - Y[i]) * .055 * k;
               VX[i] *= 1 - .2 * k; VY[i] *= 1 - .2 * k;
               a += (1 - a) * k * .9;
@@ -1203,18 +1210,19 @@
       try {
         SP.inK = PT.pick(PT.ARRIVE, 'sp_in'); SP.outK = PT.pick(PT.EXIT, 'sp_out'); SP.exitAt = null;
         cv.setAttribute('aria-label', line);
-        const FONT = '"Barlow Condensed", "Arial Narrow", sans-serif';
+        // Montserrat заглавными, не самый жирный — выбор Вадима: так фраза из точек читается лучше всего
+        const FONT = 'Montserrat, "Golos Text", system-ui, -apple-system, sans-serif', FW = 600;
         SP.s = PT.scene(cv, {
           n: 5000, still: 2600,
           shape: (W, H, N) => PT.sample(W, H, g => {
-            const words = line.toUpperCase().split(' '), lines = []; let cur = '', fs = Math.round(W * .17);
-            g.font = `800 ${fs}px ${FONT}`;
+            const words = line.toUpperCase().split(' '), lines = []; let cur = '', fs = Math.round(W * .12);
+            g.font = `${FW} ${fs}px ${FONT}`;
             words.forEach(wd => { const t = cur ? cur + ' ' + wd : wd; if (g.measureText(t).width > W * .84 && cur) { lines.push(cur); cur = wd; } else cur = t; });
             lines.push(cur);
             fs = Math.round(fs * Math.min(1, W * .86 / Math.max(...lines.map(l => g.measureText(l).width))));
-            g.font = `800 ${fs}px ${FONT}`; g.fillStyle = '#000'; g.textAlign = 'center'; g.textBaseline = 'middle';
-            lines.forEach((l, i) => g.fillText(l, W / 2, H * .45 + (i - (lines.length - 1) / 2) * fs * .98));
-          }, N),
+            g.font = `${FW} ${fs}px ${FONT}`; g.fillStyle = '#000'; g.textAlign = 'center'; g.textBaseline = 'middle';
+            lines.forEach((l, i) => g.fillText(l, W / 2, H * .45 + (i - (lines.length - 1) / 2) * fs * 1.12));
+          }, N, false, .3),     // внутри букв точек побольше — так читается
           spawn: (p, W, H) => PT.ARRIVE[SP.inK](p, W, H, W / 2, H * .45),
           gather: t => SP.exitAt != null ? 0 : PT.clamp((t - .4) / 1.4),
           flowSpeed: () => SP.exitAt != null ? .16 : .09,
@@ -1227,7 +1235,7 @@
         });
         sp.classList.add('pt');
         // фраза рисуется шрифтом приложения: ждём его, но не дольше 700 мс
-        const font = document.fonts && document.fonts.load ? document.fonts.load(`800 80px ${FONT}`) : Promise.resolve();
+        const font = document.fonts && document.fonts.load ? document.fonts.load(`${FW} 80px ${FONT}`) : Promise.resolve();
         // и темы приложения (она ставится при загрузке страницы), чтобы цвета сразу были свои
         const page = document.readyState === 'loading' ? new Promise(r => document.addEventListener('DOMContentLoaded', r)) : Promise.resolve();
         const go = () => { if (SP.s && !sp.classList.contains('gone')) SP.s.start(); };
@@ -2792,14 +2800,15 @@
     }
     // дальние хребты: те же природные неровности, у высоких вершин — снег
     function mtRange(base, amp, seed, n) {
-      const rnd = mtRnd(seed), key = [[-600, base]];
+      const rnd = mtRnd(seed), key = [[-2000, base], [-600, base]];   // хребет с запасом по краям: на широком экране не обрывается
       for (let x = -600; x < 1800;) {
         const w = 120 + rnd() * 220;
         key.push([x + w * .5, base - amp * (.35 + rnd() * .65)], [x + w, base - amp * rnd() * .3]);
         x += w;
       }
+      key.push([3200, base]);
       const ridge = mtJag(key, .3, n, rnd, true);
-      return { d: mtD(ridge) + 'L1800 2400L-600 2400Z', ridge };
+      return { d: mtD(ridge) + 'L3200 2400L-2000 2400Z', ridge };
     }
     function mtRangeSnow(ridge, line) {
       let d = '';
@@ -2971,6 +2980,8 @@
       const sky = $('mtGlowG'); if (sky) sky.style.display = glow ? '' : 'none';
       const sh = $('mtShootG'); if (sh) sh.style.display = ww.kind === 'clear' && !glow ? '' : 'none';
     }
+    // край долины у подножия: мягкие холмы, как продолжение горы
+    const MT_GROUND = 'M-2000 1168Q-1300 1180 -600 1170Q-200 1156 100 1168Q400 1180 700 1166Q1000 1154 1300 1170Q1600 1180 2200 1164Q2700 1152 3200 1170';
     function mtBuild() {
       const svg = $('mtSvg');
       if (svg.dataset.built) return;
@@ -3010,6 +3021,7 @@
           <linearGradient id="mtShade" x1=".8" y1="0" x2=".2" y2="1"><stop offset="0" stop-color="${P.shade[0]}" stop-opacity="${P.shade[1]}"/><stop offset=".55" stop-color="${P.shade[0]}" stop-opacity="${P.shade[2]}"/><stop offset="1" stop-color="${P.shade[0]}" stop-opacity=".05"/></linearGradient>
           <linearGradient id="mtSnow" gradientUnits="userSpaceOnUse" x1="0" y1="210" x2="0" y2="720"><stop offset="0" stop-color="${P.snow[0]}"/><stop offset=".6" stop-color="${P.snow[1]}"/><stop offset="1" stop-color="${P.snow[2]}"/></linearGradient>
           <clipPath id="mtClip"><path d="${MT_SHAPE}"/></clipPath>
+          <clipPath id="mtGroundClip"><path d="${MT_GROUND}V1700H-2000Z"/></clipPath>
           <clipPath id="mtFarClip"><path d="${far.d}"/></clipPath>
           <clipPath id="mtSnowClip"><path d="${rock.snow}"/></clipPath>
           <filter id="mtGrainF" filterUnits="userSpaceOnUse" x="-300" y="150" width="2400" height="1100"><feTurbulence type="fractalNoise" baseFrequency=".03 .11" numOctaves="3" seed="7"/><feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -2.6 1.45"/></filter>
@@ -3020,7 +3032,7 @@
           <filter id="mtSoft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="40"/></filter>
           <filter id="mtGlow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3"/></filter>
         </defs>
-        <g id="mtSkyG"><rect x="-600" y="-900" width="1800" height="3200" fill="url(#mtSky)"/>${day ? `<circle cx="330" cy="90" r="70" fill="url(#mtMoon)"/><circle cx="330" cy="90" r="17" fill="#FFF4CF"/><g fill="#FFFFFF">${clouds}</g>` : `
+        <g id="mtSkyG"><rect x="-3000" y="-900" width="7000" height="3200" fill="url(#mtSky)"/>${day ? `<circle cx="330" cy="90" r="70" fill="url(#mtMoon)"/><circle cx="330" cy="90" r="17" fill="#FFF4CF"/><g fill="#FFFFFF">${clouds}</g>` : `
           <ellipse data-bake="-260 -60 920 500 .5" cx="200" cy="185" rx="320" ry="55" transform="rotate(-30 200 185)" fill="#7C8DB5" opacity="${P.milky}" filter="url(#mtSoft)"/>${stars}
           <circle cx="330" cy="90" r="50" fill="url(#mtMoon)"/><circle cx="330" cy="90" r="14" fill="#E9ECEF" opacity=".85"/>
           <g id="mtShootG" style="display:none"><path class="mt-shoot" d="M300 40l26 -12" stroke="#F2F3F0" stroke-width="1.6" stroke-linecap="round"/></g>`}
@@ -3030,10 +3042,13 @@
           <ellipse data-bake="-700 330 2000 280 .5" cx="300" cy="470" rx="900" ry="60" fill="${P.fog}" opacity="${P.fogOp}" filter="url(#mtFog)"/></g>
         <g id="mtFarG"><path d="${far.d}" fill="url(#mtFar)"/><path d="${mtFaces(far.ridge)}" fill="${P.faceSh[0]}" opacity="${P.faceSh[1]}" clip-path="url(#mtFarClip)"/>
           <path d="${mtRangeSnow(far.ridge, 330)}" fill="${P.farSnow[0]}" opacity="${P.farSnow[1]}" clip-path="url(#mtFarClip)"/>
-          <rect x="-600" y="380" width="2400" height="260" fill="url(#mtMist)"/></g>
+          <rect x="-3000" y="380" width="7000" height="260" fill="url(#mtMist)"/></g>
         <g id="mtMidG"><path d="${mid.d}" fill="url(#mtMid)"/><path d="${mtFaces(mid.ridge)}" fill="${P.faceSh[0]}" opacity="${P.faceSh[1] * .8}"/>
-          <rect x="-600" y="560" width="2400" height="240" fill="url(#mtMist)" opacity=".7"/>
+          <rect x="-3000" y="560" width="7000" height="240" fill="url(#mtMist)" opacity=".7"/>
           <ellipse data-bake="-560 580 1520 240 .5" cx="200" cy="700" rx="700" ry="50" fill="${P.fog}" opacity="${P.fogOp * .8}" filter="url(#mtFog)"/></g>
+        <path id="mtGroundP" d="M-2000 1700${MT_GROUND.replace(/^M/, 'L')}V1700Z" fill="url(#mtLit)"/>
+        <g clip-path="url(#mtGroundClip)"><g data-bake="-80 1140 1740 120 1"><rect x="-300" y="1140" width="2400" height="120" filter="url(#mtGrainF)" opacity="${P.grain}"/>
+          <rect x="-300" y="1140" width="2400" height="120" filter="url(#mtTone)" opacity="${P.tone}"/></g></g>
         <path d="${MT_SHAPE}" fill="url(#mtLit)"/>
         <g clip-path="url(#mtClip)">
           <g data-bake="-80 150 1740 1080 1"><rect x="-300" y="150" width="2400" height="1100" filter="url(#mtGrainF)" opacity="${P.grain}"/>
@@ -3058,8 +3073,7 @@
         <path data-bake="-80 190 1740 1000 1" d="${mtD(MT_RIDGE)}" fill="none" stroke="${P.rim}" stroke-width="5" opacity="${P.rimOp * .45}" filter="url(#mtGlow)" stroke-linejoin="round"/>
         <path d="${mtD(MT_RIDGE)}" fill="none" stroke="${P.rim}" stroke-width="1.4" opacity="${P.rimOp}" stroke-linejoin="round"/>
         <ellipse data-bake="1420 160 280 180 1" cx="1560" cy="250" rx="90" ry="22" fill="#FFFFFF" opacity=".22" filter="url(#mtFog)" transform="rotate(-12 1560 250)"/>
-        <path d="M-600 1700V1170Q-200 1156 100 1168Q400 1180 700 1166Q1000 1154 1300 1170Q1600 1180 2200 1164V1700Z" fill="${P.ground}"/>
-        <path d="${mtPines()}" fill="${P.pines}"/>
+        <path id="mtPinesP" d="${mtPines()}" fill="${P.pines}"/>
         <path d="${mtD(MT_TRAIL)}" fill="none" stroke="${P.trail}" stroke-width="3" stroke-dasharray="1 7" stroke-linecap="round" stroke-linejoin="round"/>
         <path id="mtDone" d="" fill="none" stroke="${P.me}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
         ${camps}
@@ -3314,7 +3328,7 @@
       // бывают по полсекунды, и раньше человечек стоял, а потом рывком догонял. Долгий кадр
       // засчитывается как обычный (не больше 34 мс). Старт — после короткой паузы, разгон и торможение плавные.
       const dur = 3200 + 6400 * Math.abs(t - from);
-      let el = -350, last = null, prevT = from;
+      let el = MTP.wait ? -MTP.wait : -350, last = null, prevT = from; MTP.wait = 0;
       const step = now => {
         el += last == null ? 0 : Math.min(now - last, 34); last = now;
         const k = Math.max(0, Math.min(1, el / dur)), e = k < .5 ? 2 * k * k : 1 - Math.pow(2 - 2 * k, 2) / 2;
@@ -3328,16 +3342,105 @@
       };
       MT.raf = requestAnimationFrame(step);
     }
+    // Открытие горы частицами: всё, что есть на экране (хребты, ёлки, палатки, люди, флаг, облака,
+    // солнце или луна), собирается из точек снизу вверх, потом настоящая гора проявляется сквозь них.
+    // Человечек начинает подъём, когда частицы закончили. Если что-то не так — гора открывается как раньше.
+    const MTP = { s: null, wait: 0 };
+    // силуэты всего, что нарисовано: каждую фигуру сначала обводим «ластиком», потом заливаем —
+    // так между ёлкой и горой за ней остаётся тонкая щель, и точки обводят каждую фигуру отдельно
+    // detail — только мелочи (ёлки, палатки, люди, флаг, тропа, небо): им отдаём отдельную долю точек, иначе они тонут
+    function mtSilhouettes(g, svg, cr, detail) {
+      const skip = 'defs, [style*="display:none"], [style*="display: none"], g[clip-path="url(#mtClip)"], g[clip-path="url(#mtSnowClip)"]';
+      const geo = el => {
+        const A = n => +el.getAttribute(n) || 0, P = new Path2D();
+        switch (el.tagName) {
+          case 'path': return new Path2D(el.getAttribute('d') || '');
+          case 'circle': if (A('r') < 2) return null; P.arc(A('cx'), A('cy'), A('r'), 0, 7); return P;
+          case 'ellipse': P.ellipse(A('cx'), A('cy'), A('rx'), A('ry'), 0, 0, 7); return P;
+          case 'line': P.moveTo(A('x1'), A('y1')); P.lineTo(A('x2'), A('y2')); return P;
+          case 'rect': if (A('width') > 200) return null; P.rect(A('x'), A('y'), A('width'), A('height')); return P;
+        }
+        return null;
+      };
+      const at = el => { const k = el.getScreenCTM(); if (!k) return 0; g.setTransform(k.a, k.b, k.c, k.d, k.e - cr.left, k.f - cr.top); return 1 / Math.hypot(k.a, k.b); };
+      g.lineCap = g.lineJoin = 'round';
+      let fore = false;     // всё, начиная с ёлок, — передний план
+      svg.querySelectorAll('path, circle, ellipse, line, rect').forEach(el => {
+        if (el.closest(skip) || el.getAttribute('filter')) return;
+        if (el.id === 'mtPinesP') fore = true;
+        if (detail && !fore && !el.closest('#mtSkyG')) return;
+        let op = 1;
+        for (let e = el; e && e !== svg; e = e.parentNode) op *= e.getAttribute('opacity') == null ? 1 : +e.getAttribute('opacity');
+        if (op < .12) return;
+        const P = geo(el); if (!P) return;
+        const w = at(el); if (!w) return;
+        const fe = el.closest('[fill]'), fill = fe ? fe.getAttribute('fill') : '#000', stroke = el.getAttribute('stroke'), sw = +el.getAttribute('stroke-width') || 0;
+        if (el.tagName !== 'line' && fill !== 'none' && !/mtMist|mtMoon|mtFireGlow|transparent/.test(fill)) {
+          g.globalCompositeOperation = 'destination-out'; g.lineWidth = 2.6 * w; g.stroke(P);
+          g.globalCompositeOperation = 'source-over'; g.fill(P);
+          // на самой горе — скальные грани и тропа щелями, чтобы она читалась как гора, а не пятно
+          if (el.parentNode === svg && el.getAttribute('d') === MT_SHAPE) {
+            g.globalCompositeOperation = 'destination-out'; g.lineWidth = 2.2 * w;
+            svg.querySelectorAll('g[clip-path="url(#mtClip)"] > path[fill="none"]').forEach(e => g.stroke(new Path2D(e.getAttribute('d'))));
+          }
+        } else if (stroke && stroke !== 'none' && sw) {
+          g.globalCompositeOperation = 'source-over'; g.lineWidth = Math.max(sw, 2.2 * w); g.stroke(P);
+        }
+      });
+      g.globalCompositeOperation = 'source-over';
+    }
+    function mtParticles() {
+      const view = $('mtView'), svg = $('mtSvg');
+      let cv = view.querySelector('.mt-pt');
+      if (!cv) { cv = document.createElement('canvas'); cv.className = 'mt-pt'; cv.setAttribute('aria-hidden', 'true'); view.appendChild(cv); }
+      if (MTP.s) MTP.s.stop();
+      const cr = cv.getBoundingClientRect();
+      if (!cr.width) return false;
+      let shown = false;
+      MTP.s = PT.scene(cv, {
+        n: 9000, nWide: 3, lagK: 1.4,
+        shape: (W, H, N) => {
+          const nd = Math.round(N * .3), a = PT.sample(W, H, g => mtSilhouettes(g, svg, cr, false), N - nd, false, .72);
+          const b = PT.sample(W, H, g => mtSilhouettes(g, svg, cr, true), nd, false, .6);
+          if (!a.pts || !b.pts) return a.pts ? a : b;
+          const pts = new Float32Array(N * 2); pts.set(a.pts); pts.set(b.pts, a.pts.length);
+          return { pts };
+        },
+        lag: (x, y, W, H, r2) => PT.clamp(y / H * .85 + r2 * .15),          // нижние точки встают на место первыми
+        spawn: (p, W, H) => PT.ARRIVE.rise(p, W, H),
+        gather: t => PT.clamp((t - .15) / 1.7),
+        exit: (i, t, x, y, W, H, r1, r2) => t < 2.5 ? null : [(r1 - .5) * .05, -.06 - r2 * .1, PT.clamp(1 - (t - 2.5) / .8)],
+        over: (ctx, W, H, t) => { if (!shown && t >= 2.4) { shown = true; svg.classList.remove('pt-hide'); } },
+        done: t => t > 3.4,
+        stopped: () => svg.classList.remove('pt-hide')
+      });
+      MTP.s.start();
+      if (!MTP.s.alive) return false;
+      svg.classList.add('pt-hide');
+      return true;
+    }
     function openMountain() {
       if (MT.open) return;
       MT.open = true; MT.t = null; MT.follow = true; $('mtHint').classList.remove('off');
       safeHaptic('light');
       $('mtView').classList.add('open');
       navPush(closeMountain);
-      if (MT.last) renderMountain(...MT.last);
+      if (!MT.last) return;
+      // подъём ждёт, пока гора соберётся из точек
+      const pt = !PT.reduce && !calm(), svg = $('mtSvg');
+      MTP.wait = pt ? 2700 : 0;
+      renderMountain(...MT.last);
+      if (!pt) return;
+      // гора уже спрятана; точки берём после первого кадра, когда камера и человечки стоят на своих местах
+      svg.classList.add('pt-hide');
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        if (!MT.open) return svg.classList.remove('pt-hide');
+        try { if (!mtParticles()) svg.classList.remove('pt-hide'); } catch (e) { svg.classList.remove('pt-hide'); }
+      }));
     }
     function closeMountain() {
-      MT.open = false;
+      MT.open = false; MTP.wait = 0;
+      if (MTP.s) MTP.s.stop();
       cancelAnimationFrame(MT.raf);
       $('mtView').classList.remove('open');
       navForget(closeMountain);
