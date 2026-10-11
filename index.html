@@ -344,6 +344,9 @@
     #mtView { position: fixed; inset: 0; z-index: 44; background: #121621; color: var(--ink); display: flex; flex-direction: column;
       opacity: 0; pointer-events: none; transform: translateY(24px); transition: opacity .25s ease, transform .35s cubic-bezier(.3,.8,.3,1); }
     #mtView.open { opacity: 1; pointer-events: auto; transform: none; }
+    #mtView .mt-pt { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; }
+    #mtSvg > g, #mtSvg > path, #mtSvg > image, #mtSvg > line, #mtSvg > text { transition: opacity .7s ease; }
+    #mtSvg.pt-hide > :not(#mtSkyG):not(defs) { opacity: 0; transition: none; }
     .mt-top { position: relative; z-index: 2; padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 0; max-width: 460px; width: 100%; margin: 0 auto; }
     .mt-top .back-btn { padding-bottom: 6px; }
     .mt-top h2 { font-family: var(--display); font-weight: 700; font-size: 30px; line-height: 1.1; }
@@ -1047,7 +1050,7 @@
       function scene(canvas, o) {
         const ctx = canvas.getContext('2d');
         let W = 1, H = 1, dpr = 1, t0 = 0, last = 0, raf = 0, alive = false;
-        let N = 0, N0 = 0, X, Y, VX, VY, TX, TY, SZ, CI, AL, R1, R2, HAS, PAL, B, FX, FY, GW = 1, GH = 1, fc = 0, slow = 0;
+        let N = 0, N0 = 0, X, Y, VX, VY, TX, TY, SZ, CI, AL, R1, R2, LG, HAS, PAL, B, FX, FY, GW = 1, GH = 1, fc = 0, slow = 0;
         const CS = 18;   // поток считаем по сетке 18×18 px, а не для каждой точки — так в разы быстрее
         function size() {
           dpr = Math.min(window.devicePixelRatio || 1, 1.75);
@@ -1059,7 +1062,7 @@
           N = Math.round(Math.min(o.n * 1.2, o.n * (W * H) / (360 * 640)));
           X = new Float32Array(N); Y = new Float32Array(N); VX = new Float32Array(N); VY = new Float32Array(N);
           TX = new Float32Array(N); TY = new Float32Array(N); SZ = new Float32Array(N); CI = new Uint16Array(N);
-          AL = new Float32Array(N); R1 = new Float32Array(N); R2 = new Float32Array(N); HAS = new Uint8Array(N);
+          AL = new Float32Array(N); R1 = new Float32Array(N); R2 = new Float32Array(N); LG = new Float32Array(N); HAS = new Uint8Array(N);
           N0 = N; GW = Math.ceil(W / CS) + 2; GH = Math.ceil(H / CS) + 2; FX = new Float32Array(GW * GH); FY = new Float32Array(GW * GH); fc = 0; slow = 0;
           const light = isDark() ? 1 : 1.3;
           const sh = o.shape ? o.shape(W, H, N) : { pts: null }, tg = sh.pts, nt = tg ? tg.length / 2 : 0;
@@ -1078,6 +1081,7 @@
             HAS[i] = nt && (o.member ? o.member(i, N, nt) : 1) ? 1 : 0;
             const k = HAS[i] ? perm[mj++ % nt] : 0;
             if (HAS[i]) { TX[i] = tg[k * 2]; TY[i] = tg[k * 2 + 1]; }
+            LG[i] = HAS[i] && o.lag ? o.lag(TX[i], TY[i], W, H, R2[i]) : R2[i];   // кто собирается раньше
             const s = o.spawn({ i, r1: R1[i], r2: R2[i] }, W, H); X[i] = s[0]; Y[i] = s[1]; VX[i] = s[2] || 0; VY[i] = s[3] || 0;
             if (PAL && HAS[i]) CI[i] = palIdx.get(sh.col[k]);
             else { const u = HAS[i] ? TX[i] / W * .85 + TY[i] / H * .15 : R1[i]; CI[i] = PAL ? (R1[i] * PAL.length) | 0 : Math.round(clamp(u + (R2[i] - .5) * .12) * (NB - 1)); }
@@ -1091,7 +1095,7 @@
           ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'destination-out';
           ctx.fillStyle = `rgba(0,0,0,${isDark() ? .3 : .38})`; ctx.fillRect(0, 0, W, H);
           ctx.globalCompositeOperation = 'source-over';
-          const g = o.gather ? o.gather(t) : 0, damp = Math.pow(.94, f), sp = o.flowSpeed ? o.flowSpeed(t) : .09;
+          const g = o.gather ? o.gather(t) : 0, LK = o.lagK || .25, damp = Math.pow(.94, f), sp = o.flowSpeed ? o.flowSpeed(t) : .09;
           for (let gy = 0; gy < GH; gy++) for (let gx = 0; gx < GW; gx++) { const a = flow(gx * CS, gy * CS, t), q = gy * GW + gx; FX[q] = Math.cos(a) * sp; FY[q] = Math.sin(a) * sp; }
           // слабый телефон: пока кадры долгие, точек становится меньше (но не меньше трети)
           if (N > N0 * .3) { fc++; if (dt > .022) slow++; if (fc === 20) { if (slow > 12) N = Math.round(N * .65); fc = slow = 0; } }
@@ -1102,7 +1106,7 @@
             let ax = FX[q] * m, ay = FY[q] * m;
             if (o.bias) { const b = o.bias(t, R1[i]); ax += b[0]; ay += b[1]; }
             if (HAS[i] && g > 0) {
-              const k = ease(clamp(g * 1.25 - R2[i] * .25));
+              const k = ease(clamp(g * (1 + LK) - LG[i] * LK));
               ax = ax * (1 - k * .92) + (TX[i] - X[i]) * .055 * k; ay = ay * (1 - k * .92) + (TY[i] - Y[i]) * .055 * k;
               VX[i] *= 1 - .2 * k; VY[i] *= 1 - .2 * k;
               a += (1 - a) * k * .9;
@@ -1203,17 +1207,18 @@
       try {
         SP.inK = PT.pick(PT.ARRIVE, 'sp_in'); SP.outK = PT.pick(PT.EXIT, 'sp_out'); SP.exitAt = null;
         cv.setAttribute('aria-label', line);
-        const FONT = '"Barlow Condensed", "Arial Narrow", sans-serif';
+        // тот же шрифт, что у заголовков приложения (Golos Text), а не узкий цифровой
+        const FONT = '"Golos Text", system-ui, -apple-system, sans-serif';
         SP.s = PT.scene(cv, {
           n: 5000, still: 2600,
           shape: (W, H, N) => PT.sample(W, H, g => {
-            const words = line.toUpperCase().split(' '), lines = []; let cur = '', fs = Math.round(W * .17);
-            g.font = `800 ${fs}px ${FONT}`;
+            const words = line.split(' '), lines = []; let cur = '', fs = Math.round(W * .13);
+            g.font = `700 ${fs}px ${FONT}`;
             words.forEach(wd => { const t = cur ? cur + ' ' + wd : wd; if (g.measureText(t).width > W * .84 && cur) { lines.push(cur); cur = wd; } else cur = t; });
             lines.push(cur);
             fs = Math.round(fs * Math.min(1, W * .86 / Math.max(...lines.map(l => g.measureText(l).width))));
-            g.font = `800 ${fs}px ${FONT}`; g.fillStyle = '#000'; g.textAlign = 'center'; g.textBaseline = 'middle';
-            lines.forEach((l, i) => g.fillText(l, W / 2, H * .45 + (i - (lines.length - 1) / 2) * fs * .98));
+            g.font = `700 ${fs}px ${FONT}`; g.fillStyle = '#000'; g.textAlign = 'center'; g.textBaseline = 'middle';
+            lines.forEach((l, i) => g.fillText(l, W / 2, H * .45 + (i - (lines.length - 1) / 2) * fs * 1.12));
           }, N),
           spawn: (p, W, H) => PT.ARRIVE[SP.inK](p, W, H, W / 2, H * .45),
           gather: t => SP.exitAt != null ? 0 : PT.clamp((t - .4) / 1.4),
@@ -1227,7 +1232,7 @@
         });
         sp.classList.add('pt');
         // фраза рисуется шрифтом приложения: ждём его, но не дольше 700 мс
-        const font = document.fonts && document.fonts.load ? document.fonts.load(`800 80px ${FONT}`) : Promise.resolve();
+        const font = document.fonts && document.fonts.load ? document.fonts.load(`700 80px ${FONT}`) : Promise.resolve();
         // и темы приложения (она ставится при загрузке страницы), чтобы цвета сразу были свои
         const page = document.readyState === 'loading' ? new Promise(r => document.addEventListener('DOMContentLoaded', r)) : Promise.resolve();
         const go = () => { if (SP.s && !sp.classList.contains('gone')) SP.s.start(); };
@@ -3314,7 +3319,7 @@
       // бывают по полсекунды, и раньше человечек стоял, а потом рывком догонял. Долгий кадр
       // засчитывается как обычный (не больше 34 мс). Старт — после короткой паузы, разгон и торможение плавные.
       const dur = 3200 + 6400 * Math.abs(t - from);
-      let el = -350, last = null, prevT = from;
+      let el = MTP.wait ? -MTP.wait : -350, last = null, prevT = from; MTP.wait = 0;
       const step = now => {
         el += last == null ? 0 : Math.min(now - last, 34); last = now;
         const k = Math.max(0, Math.min(1, el / dur)), e = k < .5 ? 2 * k * k : 1 - Math.pow(2 - 2 * k, 2) / 2;
@@ -3328,16 +3333,93 @@
       };
       MT.raf = requestAnimationFrame(step);
     }
+    // Открытие горы частицами. ridge — точки слетаются в гору, потом она проявляется;
+    // rise — то же, но гора собирается снизу вверх; trail — гора как раньше, точки бегут по тропе.
+    // Человечек начинает подъём, когда частицы закончили. Если что-то не так — гора открывается как раньше.
+    const MTP = { s: null, wait: 0 };
+    function mtParticles() {
+      const view = $('mtView'), svg = $('mtSvg'), v = window.MT_PT_V || 'ridge';
+      let cv = view.querySelector('.mt-pt');
+      if (!cv) { cv = document.createElement('canvas'); cv.className = 'mt-pt'; cv.setAttribute('aria-hidden', 'true'); view.appendChild(cv); }
+      if (MTP.s) MTP.s.stop();
+      // камера сразу туда, откуда человечек начнёт путь (иначе она встанет туда только на следующем кадре)
+      if (MT.follow) { mtCamera(); const [x0, y0] = mtAt(0); mtCamera(x0 - MT.visW * .42, y0 - MT.visH * .55); }
+      const m = svg.getScreenCTM(), cr = cv.getBoundingClientRect();
+      if (!m || !cr.width) return false;
+      const toC = (x, y) => [m.a * x + m.c * y + m.e - cr.left, m.b * x + m.d * y + m.f - cr.top];
+      const trail = v === 'trail', foot = toC(...MT_TRAIL[0]);
+      // доля пути по тропе для точки экрана (по ближайшей точке тропы)
+      const TR = MT_TRAIL.map(q => toC(...q)), TD = [0];
+      for (let i = 1; i < TR.length; i++) TD.push(TD[i - 1] + Math.hypot(TR[i][0] - TR[i - 1][0], TR[i][1] - TR[i - 1][1]));
+      const along = (x, y) => { let b = 1e9, d = 0; TR.forEach((q, i) => { const e = Math.hypot(q[0] - x, q[1] - y); if (e < b) { b = e; d = TD[i]; } }); return d; };
+      const REV = trail ? 99 : v === 'rise' ? 2.4 : 2.0, OUT = trail ? 2.1 : REV + .1;
+      let shown = false, maxD = 1;
+      MTP.s = PT.scene(cv, {
+        n: trail ? 2600 : 9000, lagK: v === 'rise' ? 1.4 : trail ? 1.6 : .25,
+        shape: (W, H, N) => {
+          const r = PT.sample(W, H, g => {
+            g.setTransform(m.a, m.b, m.c, m.d, m.e - cr.left, m.f - cr.top);
+            const px = 1 / Math.hypot(m.a, m.b);
+            g.lineCap = g.lineJoin = 'round';
+            if (trail) {
+              g.lineWidth = 7 * px; g.stroke(new Path2D(mtD(MT_TRAIL)));
+              MT_CAMPS.forEach(c => { const [x, y] = mtAt(c / 100); g.beginPath(); g.arc(x, y - 4, 14 * px, 0, 7); g.fill(); });
+              return;
+            }
+            // все хребты, от дальних к ближним; у каждого свой сдвиг (параллакс), поэтому своя матрица.
+            // Перед каждым хребтом вырезаем его контур — между хребтами остаётся тонкая щель, они не сливаются
+            const layer = (el, d) => {
+              const k = el.getScreenCTM(); if (!k) return;
+              g.setTransform(k.a, k.b, k.c, k.d, k.e - cr.left, k.f - cr.top);
+              const P2 = new Path2D(d), w = 1 / Math.hypot(k.a, k.b);
+              g.globalCompositeOperation = 'destination-out'; g.lineWidth = 3 * w; g.stroke(P2);
+              g.globalCompositeOperation = 'source-over'; g.fill(P2);
+            };
+            ['mtFar2G', 'mtFarG', 'mtMidG'].forEach(id => { const e = $(id) && $(id).querySelector('path'); if (e) layer(e, e.getAttribute('d')); });
+            const main = svg.querySelector(`path[d="${MT_SHAPE}"]`) || svg;
+            layer(main, MT_SHAPE);
+            g.setTransform(m.a, m.b, m.c, m.d, m.e - cr.left, m.f - cr.top);
+            // скальные линии и тропу вырезаем: внутри горы появляются грани, она читается как гора
+            g.globalCompositeOperation = 'destination-out'; g.lineWidth = 2.2 * px;
+            svg.querySelectorAll('g[clip-path="url(#mtClip)"] > path[fill="none"]').forEach(e => g.stroke(new Path2D(e.getAttribute('d'))));
+            g.lineWidth = 4 * px; g.stroke(new Path2D(mtD(MT_TRAIL)));
+          }, N, false, trail ? .7 : .5);
+          if (r.pts) for (let i = 0; i < r.pts.length; i += 2) maxD = Math.max(maxD, trail ? along(r.pts[i], r.pts[i + 1]) : 0);
+          return r;
+        },
+        lag: (x, y, W, H, r2) => v === 'rise' ? PT.clamp(y / H * .85 + r2 * .15) : trail ? PT.clamp(along(x, y) / maxD * .9 + r2 * .1) : r2,
+        spawn: (p, W, H) => trail ? [foot[0] + (p.r1 - .5) * 30, foot[1] + (p.r2 - .5) * 20, (p.r1 - .5) * 2, -1 - p.r2 * 2]
+          : v === 'rise' ? PT.ARRIVE.rise(p, W, H) : PT.ARRIVE.dust(p, W, H),
+        gather: t => PT.clamp((t - .15) / (v === 'rise' ? 1.7 : trail ? 1.5 : 1.25)),
+        exit: (i, t, x, y, W, H, r1, r2) => {
+          if (t < OUT) return null;
+          const e = t - OUT;
+          return [(r1 - .5) * .05, -.06 - r2 * .1, PT.clamp(1 - e / .8)];
+        },
+        over: (ctx, W, H, t) => { if (!shown && t >= REV) { shown = true; svg.classList.remove('pt-hide'); } },
+        done: t => t > OUT + .9,
+        stopped: () => svg.classList.remove('pt-hide')
+      });
+      MTP.s.start();
+      if (!trail && MTP.s.alive) svg.classList.add('pt-hide');
+      return true;
+    }
     function openMountain() {
       if (MT.open) return;
       MT.open = true; MT.t = null; MT.follow = true; $('mtHint').classList.remove('off');
       safeHaptic('light');
       $('mtView').classList.add('open');
       navPush(closeMountain);
-      if (MT.last) renderMountain(...MT.last);
+      if (!MT.last) return;
+      // подъём ждёт, пока гора соберётся из точек
+      const pt = !PT.reduce && !calm();
+      MTP.wait = pt ? ((window.MT_PT_V || 'ridge') === 'rise' ? 2700 : 2300) : 0;
+      renderMountain(...MT.last);
+      if (pt) try { if (!mtParticles()) MTP.wait = 0; } catch (e) { $('mtSvg').classList.remove('pt-hide'); }
     }
     function closeMountain() {
-      MT.open = false;
+      MT.open = false; MTP.wait = 0;
+      if (MTP.s) MTP.s.stop();
       cancelAnimationFrame(MT.raf);
       $('mtView').classList.remove('open');
       navForget(closeMountain);
