@@ -8,7 +8,7 @@
   <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;0,800;1,700;1,800&family=Golos+Text:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;0,800;1,700;1,800&family=Golos+Text:wght@400;500;600;700&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
   <style>
     /* =====================================================================
        Стиль «Спорт-ночь»: один лаймовый акцент, узкие жирные цифры.
@@ -1210,19 +1210,19 @@
       try {
         SP.inK = PT.pick(PT.ARRIVE, 'sp_in'); SP.outK = PT.pick(PT.EXIT, 'sp_out'); SP.exitAt = null;
         cv.setAttribute('aria-label', line);
-        // тот же шрифт, что у заголовков приложения (Golos Text), а не узкий цифровой
-        const FONT = '"Golos Text", system-ui, -apple-system, sans-serif';
+        // Montserrat заглавными, не самый жирный — выбор Вадима: так фраза из точек читается лучше всего
+        const FONT = 'Montserrat, "Golos Text", system-ui, -apple-system, sans-serif', FW = 700;
         SP.s = PT.scene(cv, {
           n: 5000, still: 2600,
           shape: (W, H, N) => PT.sample(W, H, g => {
-            const words = line.split(' '), lines = []; let cur = '', fs = Math.round(W * .13);
-            g.font = `700 ${fs}px ${FONT}`;
+            const words = line.toUpperCase().split(' '), lines = []; let cur = '', fs = Math.round(W * .12);
+            g.font = `${FW} ${fs}px ${FONT}`;
             words.forEach(wd => { const t = cur ? cur + ' ' + wd : wd; if (g.measureText(t).width > W * .84 && cur) { lines.push(cur); cur = wd; } else cur = t; });
             lines.push(cur);
             fs = Math.round(fs * Math.min(1, W * .86 / Math.max(...lines.map(l => g.measureText(l).width))));
-            g.font = `700 ${fs}px ${FONT}`; g.fillStyle = '#000'; g.textAlign = 'center'; g.textBaseline = 'middle';
+            g.font = `${FW} ${fs}px ${FONT}`; g.fillStyle = '#000'; g.textAlign = 'center'; g.textBaseline = 'middle';
             lines.forEach((l, i) => g.fillText(l, W / 2, H * .45 + (i - (lines.length - 1) / 2) * fs * 1.12));
-          }, N),
+          }, N, false, .3),     // внутри букв точек побольше — так читается
           spawn: (p, W, H) => PT.ARRIVE[SP.inK](p, W, H, W / 2, H * .45),
           gather: t => SP.exitAt != null ? 0 : PT.clamp((t - .4) / 1.4),
           flowSpeed: () => SP.exitAt != null ? .16 : .09,
@@ -1235,7 +1235,7 @@
         });
         sp.classList.add('pt');
         // фраза рисуется шрифтом приложения: ждём его, но не дольше 700 мс
-        const font = document.fonts && document.fonts.load ? document.fonts.load(`700 80px ${FONT}`) : Promise.resolve();
+        const font = document.fonts && document.fonts.load ? document.fonts.load(`${FW} 80px ${FONT}`) : Promise.resolve();
         // и темы приложения (она ставится при загрузке страницы), чтобы цвета сразу были свои
         const page = document.readyState === 'loading' ? new Promise(r => document.addEventListener('DOMContentLoaded', r)) : Promise.resolve();
         const go = () => { if (SP.s && !sp.classList.contains('gone')) SP.s.start(); };
