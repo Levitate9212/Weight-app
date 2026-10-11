@@ -1142,10 +1142,11 @@
               ax = ax * (1 - k * .92) + (TX[i] - X[i]) * .055 * k; ay = ay * (1 - k * .92) + (TY[i] - Y[i]) * .055 * k;
               VX[i] *= 1 - .2 * k; VY[i] *= 1 - .2 * k;
               a += (1 - a) * k * .9;
+              if (o.snap && k > .97) glide = true;   // snap: собравшаяся точка встаёт ровно на место — края фигур и букв чёткие
             }
             if (o.exit) { const e = o.exit(i, t, X[i], Y[i], W, H, R1[i], R2[i]); if (e) { ax += e[0]; ay += e[1]; a *= e[2]; } }
             if (glide) {
-              // собранная точка едущей фигуры скользит за своей целью без пружины — ровно, как потоки фона
+              // собранная точка скользит за своей целью без пружины и дрожи — ровно, как потоки фона
               const kq = 1 - Math.pow(.75, f); X[i] += (TX[i] - X[i]) * kq; Y[i] += (TY[i] - Y[i]) * kq; VX[i] = VY[i] = 0;
             } else {
               VX[i] = (VX[i] + ax * f) * damp; VY[i] = (VY[i] + ay * f) * damp;
@@ -1266,7 +1267,7 @@
             SP.lay = { lines, fs };
           }, N, false, .3),     // внутри букв точек побольше — так читается
           // собравшись, фраза перетекает в чёткий текст (точки гаснут); на выходе — снова в точки, и они разлетаются
-          alpha: (has, t) => has ? 1 - .92 * spCrisp(t) : 1,
+          alpha: (has, t) => has ? 1 - spCrisp(t) : 1,   // чёткий текст сменяет точки целиком, без крошек по краям
           over: (ctx, W, H, t) => {
             const k = spCrisp(t), L = SP.lay;
             if (k <= .01 || !L) return;
@@ -2235,8 +2236,13 @@
       }
       const show = () => sc.classList.remove('pt-text');
       sc.classList.add('pt-text');
-      // точки берём после первого кадра, когда витрина уже на месте в вёрстке
-      requestAnimationFrame(() => {
+      // точки берём, когда экран доехал до места: пока он выезжает, Safari отдаёт места слов без сдвига экрана,
+      // и надписи из точек уезжали влево за край
+      let started = false;
+      const begin = () => { if (started) return; started = true; sc.removeEventListener('transitionend', onEnd); requestAnimationFrame(run); };
+      const onEnd = e => { if (e.target === sc) begin(); };
+      sc.addEventListener('transitionend', onEnd); setTimeout(begin, 380);
+      const run = () => {
         try {
           const cr = cv.getBoundingClientRect();
           if (!cr.width || !sc.classList.contains('open')) return show();
@@ -2255,9 +2261,9 @@
             });
           };
           ACP.s = PT.scene(cv, {
-            n: 7000, nWide: 3, lagK: 1.4,
+            n: 7000, nWide: 3, lagK: 1.4, snap: true,
             shape: (W, H, N) => {
-              const nt = Math.round(N * .35), a = PT.sample(W, H, g => shape(g, 'pics'), N - nt, false, .55), b = PT.sample(W, H, g => shape(g, 'text'), nt, false, .3);
+              const nt = Math.round(N * .35), a = PT.sample(W, H, g => shape(g, 'pics'), N - nt, false, .55), b = PT.sample(W, H, g => shape(g, 'text'), nt, false, .55);
               const parts = [a, b].filter(r => r.pts);
               if (!parts.length) return { pts: null };
               const pts = new Float32Array(parts.reduce((s, r) => s + r.pts.length, 0)); let o = 0;
@@ -2275,7 +2281,7 @@
           ACP.s.start();                       // start() сначала останавливает прежнюю сцену и этим показывает витрину —
           if (ACP.s.alive) sc.classList.add('pt-text'); else show();   // прячем её снова
         } catch (e) { show(); }
-      });
+      };
     }
     function closeAchScreen() {
       if (ACP.s) ACP.s.stop();
@@ -3594,13 +3600,13 @@
       if (!cr.width) return false;
       let shown = false;
       MTP.s = PT.scene(cv, {
-        n: 9000, nWide: 3, lagK: 1.4,
+        n: 9000, nWide: 3, lagK: 1.4, snap: true,
         shape: (W, H, N) => {
           // доли точек: гора и хребты, мелочи переднего плана, надписи — иначе мелкое и текст тонут
           const nd = Math.round(N * .26), nt = Math.round(N * .2);
           const parts = [PT.sample(W, H, g => mtSilhouettes(g, svg, cr, false), N - nd - nt, false, .72),
             PT.sample(W, H, g => mtSilhouettes(g, svg, cr, true), nd, false, .6),
-            PT.sample(W, H, g => mtTexts(g, svg, cr), nt, false, .3)].filter(r => r.pts);
+            PT.sample(W, H, g => mtTexts(g, svg, cr), nt, false, .55)].filter(r => r.pts);
           if (!parts.length) return { pts: null };
           const pts = new Float32Array(parts.reduce((a, r) => a + r.pts.length, 0)); let o = 0;
           parts.forEach(r => { pts.set(r.pts, o); o += r.pts.length; });
