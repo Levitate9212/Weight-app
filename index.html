@@ -1145,9 +1145,11 @@
           }
           // пачками по цвету и яркости — так быстро даже для тысяч точек
           const pal = PAL || ramp();
+          // shimmer: перелив — цвета бегут по фигуре туда-обратно (лайм → мята → бирюза)
+          const tri = u => 1 - Math.abs(((u % 2) + 2) % 2 - 1), sh = !PAL && o.shimmer;
           for (let c = 0; c < pal.length; c++) for (let l = 0; l < 4; l++) {
             const bk = B[c * 4 + l]; if (!bk.length) continue;
-            ctx.globalAlpha = (l + 1) / 4; ctx.fillStyle = pal[c]; ctx.beginPath();
+            ctx.globalAlpha = (l + 1) / 4; ctx.fillStyle = sh ? pal[Math.round(tri(c / (NB - 1) + t * sh) * (NB - 1))] : pal[c]; ctx.beginPath();
             for (const i of bk) { const s = SZ[i]; ctx.rect(X[i] - s / 2, Y[i] - s / 2, s, s); }
             ctx.fill();
           }
@@ -1221,7 +1223,12 @@
 
     // Заставка из частиц: фраза дня собирается из потока, а при входе в приложение разлетается.
     // Каждый раз другое появление и уход, подряд не повторяются. Если что-то не так — остаётся прежняя заставка.
-    const SP = { s: null, exitAt: null, inK: 'dust', outK: 'blast' };
+    const SP = { s: null, exitAt: null, inK: 'dust', outK: 'blast', lay: null };
+    // насколько фраза уже «чёткая»: с 1,7 с проявляется, на выходе за четверть секунды снова уходит в точки
+    const spCrisp = t => {
+      const c = u => PT.clamp((u - 1.7) / .6);
+      return SP.exitAt == null ? c(t) : PT.clamp(c(SP.exitAt) - (t - SP.exitAt) * 4);
+    };
     function splashParticles() {
       const sp = $('splash'), cv = $('spPt'), line = ($('splashNote') || {}).textContent || '';
       if (!cv || !line || !cv.getContext) return;
@@ -1240,7 +1247,20 @@
             fs = Math.round(fs * Math.min(1, W * .86 / Math.max(...lines.map(l => g.measureText(l).width))));
             g.font = `${FW} ${fs}px ${FONT}`; g.fillStyle = '#000'; g.textAlign = 'center'; g.textBaseline = 'middle';
             lines.forEach((l, i) => g.fillText(l, W / 2, H * .45 + (i - (lines.length - 1) / 2) * fs * 1.12));
+            SP.lay = { lines, fs };
           }, N, false, .3),     // внутри букв точек побольше — так читается
+          // собравшись, фраза перетекает в чёткий текст (точки гаснут); на выходе — снова в точки, и они разлетаются
+          alpha: (has, t) => has ? 1 - .92 * spCrisp(t) : 1,
+          over: (ctx, W, H, t) => {
+            const k = spCrisp(t), L = SP.lay;
+            if (k <= .01 || !L) return;
+            const r = PT.ramp(), gr = ctx.createLinearGradient(W * .1, 0, W * .9, 0);
+            gr.addColorStop(0, r[0]); gr.addColorStop(.5, r[Math.round(r.length / 2)]); gr.addColorStop(1, r[r.length - 1]);
+            ctx.save(); ctx.globalAlpha = k; ctx.fillStyle = gr;
+            ctx.font = `${FW} ${L.fs}px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            L.lines.forEach((l, i) => ctx.fillText(l, W / 2, H * .45 + (i - (L.lines.length - 1) / 2) * L.fs * 1.12));
+            ctx.restore();
+          },
           spawn: (p, W, H) => PT.ARRIVE[SP.inK](p, W, H, W / 2, H * .45),
           gather: t => SP.exitAt != null ? 0 : PT.clamp((t - .4) / 1.4),
           flowSpeed: () => SP.exitAt != null ? .16 : .09,
@@ -1270,7 +1290,7 @@
       if (sp.classList.contains('gone')) { if (then) then(); return; }
       if (SP.s && SP.s.alive) {
         // фраза успевает собраться, потом разлетается, а под ней уже открыто приложение
-        const wait = Math.max(0, 1.9 - SP.s.time()) * 1000;
+        const wait = Math.max(0, 2.8 - SP.s.time()) * 1000;   // успеть собраться и стать чётким текстом
         setTimeout(() => {
           SP.exitAt = SP.s.time();
           if (then) then();
@@ -2599,7 +2619,7 @@
         const svg = el.querySelector('svg.sp'), path = svg && svg.querySelector('path'), dot = svg && svg.querySelector('circle');
         let nt = 0, end = null;
         const s = PT.scene(cv, {
-          n: 5200, wrap: true,
+          n: 5200, wrap: true, shimmer: .35,
           shape: (W, H, N) => {
             nt = Math.round(N * .74);
             const nLine = path ? Math.round(nt * .26) : 0, nNum = nt - nLine, cs = getComputedStyle(huge), txt = huge.textContent;
@@ -2681,7 +2701,7 @@
       ST.views = stViews(u, b);
       ST.i = Math.max(0, ST.views.findIndex(v => v.id === id));
       stGo(ST.i, false); $('stPage').scrollTop = top;
-      if (ST.posterOn) { const bar = $('stPosterBar'), wd = bar && bar.style.width; $('stPoster').innerHTML = stPosterHtml(ST.views[ST.i], b); if (wd) $('stPosterBar').style.width = wd; }
+      if (ST.posterOn) { const el = $('stPoster'), bar = $('stPosterBar'), wd = bar && bar.style.width, cv = el.querySelector('.st-pt'); el.innerHTML = stPosterHtml(ST.views[ST.i], b); if (cv) el.insertBefore(cv, el.firstChild); if (wd) $('stPosterBar').style.width = wd; }
     }
     function openStory() {
       const u = globalData[activeUserId];
