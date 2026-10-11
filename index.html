@@ -24,6 +24,7 @@
       --rule:    #2A3644;
       --volt:    #BDEB5B;   /* лайм, мягче */
       --volt-dim: rgba(189, 235, 91, .13);
+      --pt-a: #BDEB5B; --pt-b: #76E2A8; --pt-c: #5CC8E8;   /* перелив частиц и графика: лайм → мята → бирюза */
       --volt-ink:#121315;
       --down:    #BDEB5B;   /* вес ушёл */
       --up:      #FF8C7A;   /* вес прибавился */
@@ -44,6 +45,7 @@
       --rule:    #E6E0D4;
       --volt:    #64951C;
       --volt-dim: rgba(100, 149, 28, .12);
+      --pt-a: #64951C; --pt-b: #13926E; --pt-c: #1F74B8;
       --volt-ink:#121315;
       --down:    #5E8F1A;
       --up:      #E0503A;
@@ -180,7 +182,23 @@
     .st-chart { margin-top: 26px; }   /* запятая крупной цифры свисает ниже строки — график не должен на неё залезать */
     .st-chart svg { display: block; width: 100%; height: 96px; overflow: visible; }
     .st-chart .ln { fill: none; stroke: var(--volt); stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
-    .st-card.draw .st-chart .ln { animation: stDraw 1s .15s ease-out both; }
+    /* график рисуется, когда карточку видно (после обложки): линия идёт слева направо, под ней проявляется заливка,
+       в конце «выскакивает» точка с волной и подписи веса */
+    .st-chart .ar { fill: var(--volt); opacity: .13; }
+    /* после отрисовки график живёт: цвета линии бегут лайм → мята → бирюза, по линии пробегает искра, точка дышит */
+    .st-chart .gs0, .st-chart .gs2 { stop-color: var(--pt-a); } .st-chart .gs1 { stop-color: var(--pt-c); } .st-chart .gsm { stop-color: var(--pt-b); }
+    .st-chart .sk { fill: #fff; opacity: 0; filter: drop-shadow(0 0 4px var(--pt-b)); }
+    html.light .st-chart .sk { fill: var(--pt-c); }
+    .st-chart.go .ln { animation: stDraw 1.2s .1s cubic-bezier(.45,0,.2,1) both; }
+    .st-chart.go .ar { animation: stArea .7s .8s ease both; }
+    .st-chart.go .dt { animation: stPop .45s 1.2s cubic-bezier(.3,1.6,.5,1) both; transform-box: fill-box; transform-origin: center; }
+    .st-chart.go .rp { animation: stRipple 2.2s 1.3s ease-out infinite both; transform-box: fill-box; transform-origin: center; }
+    .st-chart .rp { fill: none; stroke: var(--volt); stroke-width: 2; opacity: 0; }
+    .st-chart.go .wl { animation: stFadeUp .4s 1.15s ease both; }
+    @keyframes stArea { from { opacity: 0; } to { opacity: .13; } }
+    @keyframes stPop { from { transform: scale(0); } to { transform: scale(1); } }
+    @keyframes stRipple { from { opacity: .7; transform: scale(1); } to { opacity: 0; transform: scale(3.2); } }
+    @keyframes stFadeUp { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
     @keyframes stDraw { from { stroke-dashoffset: var(--len); } to { stroke-dashoffset: 0; } }
     .st-chart text { fill: var(--muted); font-size: 11px; font-family: var(--text); }
     .st-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
@@ -289,7 +307,7 @@
     .st-poster.pt svg.sp { visibility: hidden; }
     @keyframes stIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
     @media (prefers-reduced-motion: reduce) {
-      .st-card.in-l, .st-card.in-r, .st-card.draw .st-chart .ln, .st-poster.in *, .st-poster.in svg.sp path { animation: none !important; }
+      .st-card.in-l, .st-card.in-r, .st-chart.go *, .st-poster.in *, .st-poster.in svg.sp path { animation: none !important; }
       .st-poster { transition: none; }
     }
     .who-name {
@@ -348,6 +366,9 @@
     #mtSvg > g, #mtSvg > path, #mtSvg > image, #mtSvg > line, #mtSvg > text { transition: opacity .7s ease; }
     #mtSvg #mtSkyG > g, #mtSvg #mtSkyG > circle[cx="330"] { transition: opacity .7s ease; }
     #mtSvg.pt-hide > :not(#mtSkyG):not(defs), #mtSvg.pt-hide #mtSkyG > g, #mtSvg.pt-hide #mtSkyG > circle[cx="330"] { opacity: 0; transition: none; }
+    /* пока гора собирается из точек, надписи (заголовок, цифры, подсказка) тоже из точек, а настоящие спрятаны */
+    #mtView .mt-top > * { transition: opacity .7s ease; }
+    #mtView.pt-text .mt-top > *, #mtView.pt-text .mt-hint { opacity: 0; transition: none; }
     .mt-top { position: relative; z-index: 2; padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 0; max-width: 460px; width: 100%; margin: 0 auto; }
     .mt-top .back-btn { padding-bottom: 6px; }
     .mt-top h2 { font-family: var(--display); font-weight: 700; font-size: 30px; line-height: 1.1; }
@@ -463,6 +484,9 @@
       transform: translateX(100%); transition: transform .3s cubic-bezier(.2, .8, .2, 1);
     }
     .screen.open { transform: translateX(0); }
+    #achScreen .ach-pt { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
+    #achScreen .screen-inner { transition: opacity .6s ease; }
+    #achScreen.pt-text .screen-inner { opacity: 0; transition: none; }
     .screen-inner { max-width: 460px; margin: 0 auto; padding: 14px 16px calc(32px + env(safe-area-inset-bottom, 0px)); }
     .screen-top { display: flex; align-items: baseline; justify-content: space-between; }
     .screen-top h2 { font-family: var(--display); font-weight: 700; font-size: 30px; }
@@ -748,7 +772,6 @@
       <div class="mt-wx" id="mtWx"></div>
     </div>
     <svg id="mtSvg" viewBox="0 560 410 650" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Гора: тропа от стартового веса к цели"></svg>
-    <p class="mt-hint" id="mtHint">Гору можно двигать пальцем</p>
   </div>
 
   <!-- Экран всех медалей -->
@@ -1053,8 +1076,8 @@
       function scene(canvas, o) {
         const ctx = canvas.getContext('2d');
         let W = 1, H = 1, dpr = 1, t0 = 0, last = 0, raf = 0, alive = false;
-        let N = 0, N0 = 0, X, Y, VX, VY, TX, TY, SZ, CI, AL, R1, R2, LG, HAS, PAL, B, FX, FY, GW = 1, GH = 1, fc = 0, slow = 0;
-        const CS = 18;   // поток считаем по сетке 18×18 px, а не для каждой точки — так в разы быстрее
+        let N = 0, N0 = 0, X, Y, VX, VY, TX, TY, SZ, CI, AL, R1, R2, LG, HAS, PAL, B, FX, FY, KI, MV = null, GW = 1, GH = 1, fc = 0, slow = 0;
+        const CS = 18, MP = new Float32Array(2);   // поток считаем по сетке 18×18 px, а не для каждой точки — так в разы быстрее
         function size() {
           dpr = Math.min(window.devicePixelRatio || 1, 1.75);
           const r = canvas.getBoundingClientRect(); W = Math.max(1, r.width); H = Math.max(1, r.height);
@@ -1065,10 +1088,11 @@
           N = Math.round(Math.min(o.n * (W > 700 && o.nWide || 1.2), o.n * (W * H) / (360 * 640)));   // на большом экране (комп) точек больше, иначе фигура редкая
           X = new Float32Array(N); Y = new Float32Array(N); VX = new Float32Array(N); VY = new Float32Array(N);
           TX = new Float32Array(N); TY = new Float32Array(N); SZ = new Float32Array(N); CI = new Uint16Array(N);
-          AL = new Float32Array(N); R1 = new Float32Array(N); R2 = new Float32Array(N); LG = new Float32Array(N); HAS = new Uint8Array(N);
+          AL = new Float32Array(N); KI = new Uint32Array(N); R1 = new Float32Array(N); R2 = new Float32Array(N); LG = new Float32Array(N); HAS = new Uint8Array(N);
           N0 = N; GW = Math.ceil(W / CS) + 2; GH = Math.ceil(H / CS) + 2; FX = new Float32Array(GW * GH); FY = new Float32Array(GW * GH); fc = 0; slow = 0;
           const light = isDark() ? 1 : 1.3;
           const sh = o.shape ? o.shape(W, H, N) : { pts: null }, tg = sh.pts, nt = tg ? tg.length / 2 : 0;
+          MV = sh.move || null;   // move(k, t, out) — точка фигуры едет (линия графика течёт); 2 — перескок в начало
           // цвета: свои (у медали — из картинки) или перелив темы
           if (sh.col) { PAL = [...new Set(sh.col)]; } else PAL = null;
           const palIdx = PAL ? new Map(PAL.map((c, i) => [c, i])) : null;
@@ -1083,7 +1107,7 @@
             AL[i] = r < .95 ? .55 + Math.random() * .45 : .35;
             HAS[i] = nt && (o.member ? o.member(i, N, nt) : 1) ? 1 : 0;
             const k = HAS[i] ? perm[mj++ % nt] : 0;
-            if (HAS[i]) { TX[i] = tg[k * 2]; TY[i] = tg[k * 2 + 1]; }
+            if (HAS[i]) { TX[i] = tg[k * 2]; TY[i] = tg[k * 2 + 1]; KI[i] = k; }
             LG[i] = HAS[i] && o.lag ? o.lag(TX[i], TY[i], W, H, R2[i]) : R2[i];   // кто собирается раньше
             const s = o.spawn({ i, r1: R1[i], r2: R2[i] }, W, H); X[i] = s[0]; Y[i] = s[1]; VX[i] = s[2] || 0; VY[i] = s[3] || 0;
             if (PAL && HAS[i]) CI[i] = palIdx.get(sh.col[k]);
@@ -1108,6 +1132,11 @@
             const gx = X[i] / CS | 0, gy = Y[i] / CS | 0, q = (gy < 0 ? 0 : gy >= GH ? GH - 1 : gy) * GW + (gx < 0 ? 0 : gx >= GW ? GW - 1 : gx), m = .8 + R1[i] * .4;
             let ax = FX[q] * m, ay = FY[q] * m;
             if (o.bias) { const b = o.bias(t, R1[i]); ax += b[0]; ay += b[1]; }
+            let glide = false;
+            if (MV && HAS[i]) {
+              const m = MV(KI[i], t, MP);
+              if (m) { TX[i] = MP[0]; TY[i] = MP[1]; if (m === 2 && g >= 1) { X[i] = TX[i]; Y[i] = TY[i]; VX[i] = VY[i] = 0; } glide = g >= 1; }
+            }
             if (HAS[i] && g > 0) {
               const k = ease(clamp(g * (1 + LK) - LG[i] * LK));
               ax = ax * (1 - k * .92) + (TX[i] - X[i]) * .055 * k; ay = ay * (1 - k * .92) + (TY[i] - Y[i]) * .055 * k;
@@ -1115,8 +1144,13 @@
               a += (1 - a) * k * .9;
             }
             if (o.exit) { const e = o.exit(i, t, X[i], Y[i], W, H, R1[i], R2[i]); if (e) { ax += e[0]; ay += e[1]; a *= e[2]; } }
-            VX[i] = (VX[i] + ax * f) * damp; VY[i] = (VY[i] + ay * f) * damp;
-            X[i] += VX[i] * f; Y[i] += VY[i] * f;
+            if (glide) {
+              // собранная точка едущей фигуры скользит за своей целью без пружины — ровно, как потоки фона
+              const kq = 1 - Math.pow(.75, f); X[i] += (TX[i] - X[i]) * kq; Y[i] += (TY[i] - Y[i]) * kq; VX[i] = VY[i] = 0;
+            } else {
+              VX[i] = (VX[i] + ax * f) * damp; VY[i] = (VY[i] + ay * f) * damp;
+              X[i] += VX[i] * f; Y[i] += VY[i] * f;
+            }
             if (!HAS[i] && o.wrap) {
               if (X[i] < -10) X[i] += W + 20; else if (X[i] > W + 10) X[i] -= W + 20;
               if (Y[i] < -10) Y[i] += H + 20; else if (Y[i] > H + 10) Y[i] -= H + 20;
@@ -1127,9 +1161,11 @@
           }
           // пачками по цвету и яркости — так быстро даже для тысяч точек
           const pal = PAL || ramp();
+          // shimmer: перелив — цвета бегут по фигуре туда-обратно (лайм → мята → бирюза)
+          const tri = u => 1 - Math.abs(((u % 2) + 2) % 2 - 1), sh = !PAL && o.shimmer;
           for (let c = 0; c < pal.length; c++) for (let l = 0; l < 4; l++) {
             const bk = B[c * 4 + l]; if (!bk.length) continue;
-            ctx.globalAlpha = (l + 1) / 4; ctx.fillStyle = pal[c]; ctx.beginPath();
+            ctx.globalAlpha = (l + 1) / 4; ctx.fillStyle = sh ? pal[Math.round(tri(c / (NB - 1) + t * sh) * (NB - 1))] : pal[c]; ctx.beginPath();
             for (const i of bk) { const s = SZ[i]; ctx.rect(X[i] - s / 2, Y[i] - s / 2, s, s); }
             ctx.fill();
           }
@@ -1203,7 +1239,12 @@
 
     // Заставка из частиц: фраза дня собирается из потока, а при входе в приложение разлетается.
     // Каждый раз другое появление и уход, подряд не повторяются. Если что-то не так — остаётся прежняя заставка.
-    const SP = { s: null, exitAt: null, inK: 'dust', outK: 'blast' };
+    const SP = { s: null, exitAt: null, inK: 'dust', outK: 'blast', lay: null };
+    // насколько фраза уже «чёткая»: с 1,7 с проявляется, на выходе за четверть секунды снова уходит в точки
+    const spCrisp = t => {
+      const c = u => PT.clamp((u - 1.7) / .6);
+      return SP.exitAt == null ? c(t) : PT.clamp(c(SP.exitAt) - (t - SP.exitAt) * 4);
+    };
     function splashParticles() {
       const sp = $('splash'), cv = $('spPt'), line = ($('splashNote') || {}).textContent || '';
       if (!cv || !line || !cv.getContext) return;
@@ -1222,7 +1263,20 @@
             fs = Math.round(fs * Math.min(1, W * .86 / Math.max(...lines.map(l => g.measureText(l).width))));
             g.font = `${FW} ${fs}px ${FONT}`; g.fillStyle = '#000'; g.textAlign = 'center'; g.textBaseline = 'middle';
             lines.forEach((l, i) => g.fillText(l, W / 2, H * .45 + (i - (lines.length - 1) / 2) * fs * 1.12));
+            SP.lay = { lines, fs };
           }, N, false, .3),     // внутри букв точек побольше — так читается
+          // собравшись, фраза перетекает в чёткий текст (точки гаснут); на выходе — снова в точки, и они разлетаются
+          alpha: (has, t) => has ? 1 - .92 * spCrisp(t) : 1,
+          over: (ctx, W, H, t) => {
+            const k = spCrisp(t), L = SP.lay;
+            if (k <= .01 || !L) return;
+            const r = PT.ramp(), gr = ctx.createLinearGradient(W * .1, 0, W * .9, 0);
+            gr.addColorStop(0, r[0]); gr.addColorStop(.5, r[Math.round(r.length / 2)]); gr.addColorStop(1, r[r.length - 1]);
+            ctx.save(); ctx.globalAlpha = k; ctx.fillStyle = gr;
+            ctx.font = `${FW} ${L.fs}px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            L.lines.forEach((l, i) => ctx.fillText(l, W / 2, H * .45 + (i - (L.lines.length - 1) / 2) * L.fs * 1.12));
+            ctx.restore();
+          },
           spawn: (p, W, H) => PT.ARRIVE[SP.inK](p, W, H, W / 2, H * .45),
           gather: t => SP.exitAt != null ? 0 : PT.clamp((t - .4) / 1.4),
           flowSpeed: () => SP.exitAt != null ? .16 : .09,
@@ -1252,7 +1306,7 @@
       if (sp.classList.contains('gone')) { if (then) then(); return; }
       if (SP.s && SP.s.alive) {
         // фраза успевает собраться, потом разлетается, а под ней уже открыто приложение
-        const wait = Math.max(0, 1.9 - SP.s.time()) * 1000;
+        const wait = Math.max(0, 2.8 - SP.s.time()) * 1000;   // успеть собраться и стать чётким текстом
         setTimeout(() => {
           SP.exitAt = SP.s.time();
           if (then) then();
@@ -2108,6 +2162,7 @@
       $('achScreen').classList.add('open');
       navPush(closeAchScreen);
       tiltStart();
+      achParticles();
     }
     function buildAchScreen(u) {
       achBuiltFor = u;
@@ -2166,7 +2221,64 @@
         });
       });
     }
+    // Открытие витрины частицами, как гора: медали, заголовки и подписи собираются из точек снизу вверх,
+    // потом проявляется настоящая витрина. Нажимать можно сразу; если начать листать — точки сразу уступают место.
+    const ACP = { s: null };
+    function achParticles() {
+      const sc = $('achScreen'), inner = sc.querySelector('.screen-inner');
+      if (ACP.s) ACP.s.stop();
+      if (PT.reduce || calm() || !inner) return;
+      let cv = sc.querySelector('.ach-pt');
+      if (!cv) {
+        cv = document.createElement('canvas'); cv.className = 'ach-pt'; cv.setAttribute('aria-hidden', 'true'); sc.appendChild(cv);
+        sc.addEventListener('scroll', () => { if (ACP.s && ACP.s.alive) ACP.s.stop(); }, { passive: true });
+      }
+      const show = () => sc.classList.remove('pt-text');
+      sc.classList.add('pt-text');
+      // точки берём после первого кадра, когда витрина уже на месте в вёрстке
+      requestAnimationFrame(() => {
+        try {
+          const cr = cv.getBoundingClientRect();
+          if (!cr.width || !sc.classList.contains('open')) return show();
+          let shown = false;
+          const shape = (g, part) => {
+            g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#000';
+            if (part === 'text') return ptWords(g, inner, cr);
+            // медали — их собственные силуэты (картинка с прозрачным фоном), живые SVG — кругом; полоски прогресса
+            inner.querySelectorAll('.mw > img, .mw > svg, .mini').forEach(el => {
+              const r = el.getBoundingClientRect();
+              if (r.bottom < cr.top || r.top > cr.bottom || !r.width) return;
+              const x = r.left - cr.left, y = r.top - cr.top;
+              if (el.tagName === 'IMG' && el.complete && el.naturalWidth) g.drawImage(el, x, y, r.width, r.height);
+              else if (el.classList.contains('mini')) { g.beginPath(); g.rect(x, y, r.width, Math.max(3, r.height)); g.fill(); }
+              else { g.beginPath(); g.arc(x + r.width / 2, y + r.height / 2, r.width * .44, 0, 7); g.fill(); }
+            });
+          };
+          ACP.s = PT.scene(cv, {
+            n: 7000, nWide: 3, lagK: 1.4,
+            shape: (W, H, N) => {
+              const nt = Math.round(N * .35), a = PT.sample(W, H, g => shape(g, 'pics'), N - nt, false, .55), b = PT.sample(W, H, g => shape(g, 'text'), nt, false, .3);
+              const parts = [a, b].filter(r => r.pts);
+              if (!parts.length) return { pts: null };
+              const pts = new Float32Array(parts.reduce((s, r) => s + r.pts.length, 0)); let o = 0;
+              parts.forEach(r => { pts.set(r.pts, o); o += r.pts.length; });
+              return { pts };
+            },
+            lag: (x, y, W, H, r2) => PT.clamp(y / H * .85 + r2 * .15),          // как гора: снизу вверх
+            spawn: (p, W, H) => PT.ARRIVE.rise(p, W, H),
+            gather: t => PT.clamp((t - .1) / 1.3),
+            exit: (i, t, x, y, W, H, r1, r2) => t < 1.9 ? null : [(r1 - .5) * .05, -.06 - r2 * .1, PT.clamp(1 - (t - 1.9) / .6)],
+            over: (ctx, W, H, t) => { if (!shown && t >= 1.8) { shown = true; show(); } },
+            done: t => t > 2.6,
+            stopped: show
+          });
+          ACP.s.start();                       // start() сначала останавливает прежнюю сцену и этим показывает витрину —
+          if (ACP.s.alive) sc.classList.add('pt-text'); else show();   // прячем её снова
+        } catch (e) { show(); }
+      });
+    }
     function closeAchScreen() {
+      if (ACP.s) ACP.s.stop();
       $('achScreen').classList.remove('open');
       navForget(closeAchScreen);
       tiltStop();
@@ -2181,7 +2293,7 @@
     // =====================================================================
     const ST_MONTHS = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
     const ST_GEN = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
-    const ST = { u: null, views: [], i: 0, timer: 0, preT: 0, posterT0: 0, posterOpen: 0, posterOn: false, srv: null, prev: null, req: 0 };
+    const ST = { u: null, views: [], i: 0, timer: 0, preT: 0, posterT0: 0, posterOpen: 0, posterOn: false, srv: null, prev: null, req: 0, gid: 0 };
     const ST_POSTER = 4500, ST_POSTER_WAIT = 12000;
     function stDay(ts) { const d = new Date(ts); if (d.getHours() < 4) d.setDate(d.getDate() - 1); d.setHours(0, 0, 0, 0); return d; }
     const stKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -2291,21 +2403,41 @@
     const ST_WEEKDAY_ACC = ['в воскресенье', 'в понедельник', 'во вторник', 'в среду', 'в четверг', 'в пятницу', 'в субботу'];
     function stCoach(text, wait) { return text ? `<div class="st-coach">${esc(text)}</div>` : wait ? `<div class="st-coach wait">…</div>` : ''; }
     function esc(t) { return String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+    // плавная линия через точки без изломов и без выбросов выше/ниже замеров (монотонный кубический сплайн)
+    function smoothD(pts) {
+      const n = pts.length, f = v => v.toFixed(1);
+      if (n < 3) return 'M' + pts.map(p => f(p[0]) + ' ' + f(p[1])).join('L');
+      const dx = [], m = [], tg = [];
+      for (let i = 0; i < n - 1; i++) { dx[i] = pts[i + 1][0] - pts[i][0] || 1e-6; m[i] = (pts[i + 1][1] - pts[i][1]) / dx[i]; }
+      tg[0] = m[0]; tg[n - 1] = m[n - 2];
+      for (let i = 1; i < n - 1; i++) tg[i] = m[i - 1] * m[i] <= 0 ? 0 : 3 * (dx[i - 1] + dx[i]) / ((2 * dx[i] + dx[i - 1]) / m[i - 1] + (dx[i] + 2 * dx[i - 1]) / m[i]);
+      let d = 'M' + f(pts[0][0]) + ' ' + f(pts[0][1]);
+      for (let i = 0; i < n - 1; i++) {
+        const h = dx[i] / 3, a = pts[i], b = pts[i + 1];
+        d += `C${f(a[0] + h)} ${f(a[1] + tg[i] * h)} ${f(b[0] - h)} ${f(b[1] - tg[i + 1] * h)} ${f(b[0])} ${f(b[1])}`;
+      }
+      return d;
+    }
     function stChart(w) {
       if (w.ws.length < 2) return w.ws.length ? `<div class="st-chart"><svg viewBox="0 0 300 120"><circle cx="150" cy="60" r="6" fill="var(--volt)"/><text x="150" y="92" text-anchor="middle">${fmt(w.ws[0].w)} кг</text></svg></div>` : '';
       const n = w.days, ws = w.ws, lo = Math.min(...ws.map(e => e.w)), hi = Math.max(...ws.map(e => e.w)), pad = Math.max(.3, (hi - lo) * .15);
       const X = e => 16 + (e.d - w.from) / DAY_MS / Math.max(1, n - 1) * 268, Y = v => 14 + (hi + pad - v) / (hi - lo + 2 * pad) * 84;
       const pts = ws.map(e => [X(e), Y(e.w)]);
-      let len = 0; pts.forEach((p, i) => { if (i) len += Math.hypot(p[0] - pts[i - 1][0], p[1] - pts[i - 1][1]); });
       const labels = [...Array(n)].map((_, k) => `<text x="${(16 + k / Math.max(1, n - 1) * 268).toFixed(1)}" y="118" text-anchor="middle">${ST_DAYS[k].toLowerCase()}</text>`).join('');
       const lastP = pts[pts.length - 1];
       // подпись у точки — над ней; но если соседняя точка выше, линия приходит сверху, и подпись уходит под точку
       const ly = (p, nb) => nb[1] < p[1] - 2 && p[1] + 19 <= 106 ? p[1] + 19 : p[1] - 10;
-      return `<div class="st-chart"><svg viewBox="0 0 300 120">${labels}
-        <polyline class="ln" points="${pts.map(p => p.map(v => v.toFixed(1)).join(',')).join(' ')}" style="--len:${len.toFixed(0)};stroke-dasharray:${len.toFixed(0)}"/>
-        <circle cx="${lastP[0].toFixed(1)}" cy="${lastP[1].toFixed(1)}" r="5" fill="var(--volt)"/>
-        <text x="${pts[0][0].toFixed(1)}" y="${ly(pts[0], pts[1]).toFixed(1)}" text-anchor="start">${fmt(ws[0].w)}</text>
-        <text x="${lastP[0].toFixed(1)}" y="${ly(lastP, pts[pts.length - 2]).toFixed(1)}" text-anchor="end" style="fill:var(--ink);font-weight:600">${fmt(ws[ws.length - 1].w)}</text></svg></div>`;
+      const gid = 'stG' + (++ST.gid), live = !PT.reduce, lineD = smoothD(pts);
+      return `<div class="st-chart"><svg viewBox="0 0 300 120"><defs><linearGradient id="${gid}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="300" y2="0" spreadMethod="reflect">
+          <stop offset="0" class="gs0"/><stop offset=".5" class="gsm"/><stop offset="1" class="gs1"/>
+          ${live ? '<animateTransform attributeName="gradientTransform" type="translate" from="0 0" to="600 0" dur="5s" repeatCount="indefinite"/>' : ''}</linearGradient></defs>${labels}
+        <path class="ar" d="${lineD}L${lastP[0].toFixed(1)} 100L${pts[0][0].toFixed(1)} 100Z" style="fill:url(#${gid})"/>
+        <path class="ln" d="${lineD}" pathLength="100" style="--len:100;stroke-dasharray:100;stroke:url(#${gid})"/>
+        ${live ? `<circle class="sk" r="3.2"><animateMotion path="${lineD}" dur="3.6s" begin="indefinite" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;.55;1" calcMode="linear"/><animate attributeName="opacity" values="0;1;1;0;0" keyTimes="0;.06;.5;.56;1" dur="3.6s" begin="indefinite" repeatCount="indefinite"/></circle>` : ''}
+        <circle class="rp" cx="${lastP[0].toFixed(1)}" cy="${lastP[1].toFixed(1)}" r="5"/>
+        <circle class="dt" cx="${lastP[0].toFixed(1)}" cy="${lastP[1].toFixed(1)}" r="5" fill="var(--volt)"/>
+        <text class="wl" x="${pts[0][0].toFixed(1)}" y="${ly(pts[0], pts[1]).toFixed(1)}" text-anchor="start">${fmt(ws[0].w)}</text>
+        <text class="wl" x="${lastP[0].toFixed(1)}" y="${ly(lastP, pts[pts.length - 2]).toFixed(1)}" text-anchor="end" style="fill:var(--ink);font-weight:600">${fmt(ws[ws.length - 1].w)}</text></svg></div>`;
     }
     // виды спорта: свой цвет и значок; новый вид получает цвет из запасных и секундомер
     // значки видов спорта — цветные, в одном стиле с мячом: тёмный контур, яркая заливка
@@ -2479,9 +2611,8 @@
       if (w.ws.length > 1) {
         const lo = Math.min(...w.ws.map(e => e.w)), hi = Math.max(...w.ws.map(e => e.w)), r = Math.max(.4, hi - lo);
         const pts = w.ws.map(e => [8 + (e.d - w.from) / DAY_MS / 6 * 324, 10 + (hi - e.w) / r * 70]);
-        let len = 0; pts.forEach((p, i) => { if (i) len += Math.hypot(p[0] - pts[i - 1][0], p[1] - pts[i - 1][1]); });
-        const d = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' '), lp = pts[pts.length - 1];
-        spark = `<svg class="sp" viewBox="0 0 340 90"><path d="${d}" fill="none" stroke="#121315" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" style="--len:${len.toFixed(0)};stroke-dasharray:${len.toFixed(0)}"/><circle cx="${lp[0].toFixed(1)}" cy="${lp[1].toFixed(1)}" r="8" fill="#121315"/></svg>`;
+        const d = smoothD(pts), lp = pts[pts.length - 1];
+        spark = `<svg class="sp" viewBox="0 0 340 90"><path d="${d}" pathLength="100" fill="none" stroke="#121315" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" style="--len:100;stroke-dasharray:100"/><circle cx="${lp[0].toFixed(1)}" cy="${lp[1].toFixed(1)}" r="8" fill="#121315"/></svg>`;
       }
       const a = w.ws.length ? w.ws[0].w : null, z = w.ws.length ? w.ws[w.ws.length - 1].w : null;
       return `<div class="bar"><b id="stPosterBar"></b></div>
@@ -2506,6 +2637,7 @@
       if (!ST.posterOn) return;
       ST.posterOn = false; cancelAnimationFrame(ST.timer);
       $('stPoster').classList.add('gone');
+      stChartGo();
       const pt = ST.pt; setTimeout(() => { if (pt && ST.pt === pt && !ST.posterOn) pt.stop(); }, 600);
     }
     // Цифра недели и линия веса на обложке собираются из частиц. Сам текст остаётся в вёрстке (невидимым),
@@ -2518,9 +2650,9 @@
         const cv = document.createElement('canvas'); cv.className = 'st-pt'; cv.setAttribute('aria-hidden', 'true');
         el.insertBefore(cv, el.firstChild);
         const svg = el.querySelector('svg.sp'), path = svg && svg.querySelector('path'), dot = svg && svg.querySelector('circle');
-        let nt = 0, end = null;
+        let nt = 0, end = null, lut = null, lu, ldn, lsp, base = 0;
         const s = PT.scene(cv, {
-          n: 5200, wrap: true,
+          n: 5200, wrap: true, shimmer: .35,
           shape: (W, H, N) => {
             nt = Math.round(N * .74);
             const nLine = path ? Math.round(nt * .26) : 0, nNum = nt - nLine, cs = getComputedStyle(huge), txt = huge.textContent;
@@ -2535,14 +2667,27 @@
             const out = new Float32Array(nt * 2); out.set(num.pts);
             if (nLine) {
               const L = path.getTotalLength(), M = path.getScreenCTM(), pr = el.getBoundingClientRect(), P = svg.createSVGPoint();
+              // линия на экране (таблица из 240 точек); каждая точка линии течёт по ней слева направо, как потоки фона
+              const NS = 240; lut = new Float32Array((NS + 1) * 2);
+              for (let k = 0; k <= NS; k++) { const q = path.getPointAtLength(k / NS * L); P.x = q.x; P.y = q.y; const r = P.matrixTransform(M); lut[k * 2] = r.x - pr.left; lut[k * 2 + 1] = r.y - pr.top; }
+              lu = new Float32Array(nLine); ldn = new Float32Array(nLine); lsp = new Float32Array(nLine);
               for (let j = 0; j < nLine; j++) {
-                const q = path.getPointAtLength(Math.random() * L); P.x = q.x; P.y = q.y; const r = P.matrixTransform(M);
-                const dn = Math.random() < .7 ? (Math.random() - .5) * 2.4 : Math.pow(Math.random(), 2) * H * .045;
-                out[(nNum + j) * 2] = r.x - pr.left; out[(nNum + j) * 2 + 1] = r.y - pr.top + dn;
+                lu[j] = Math.random(); lsp[j] = .1 + Math.random() * .06;
+                ldn[j] = Math.random() < .7 ? (Math.random() - .5) * 2.4 : Math.pow(Math.random(), 2) * H * .045;
+                const k = Math.round(lu[j] * NS);
+                out[(nNum + j) * 2] = lut[k * 2]; out[(nNum + j) * 2 + 1] = lut[k * 2 + 1] + ldn[j];
               }
+              base = nNum;
               if (dot) { P.x = +dot.getAttribute('cx'); P.y = +dot.getAttribute('cy'); const r = P.matrixTransform(dot.getScreenCTM()); end = [r.x - pr.left, r.y - pr.top]; }
             }
-            return { pts: out };
+            const move = lut ? (k, t, mp) => {
+              if (k < base) return 0;
+              const j = k - base, u = lu[j] + t * lsp[j], f = u - Math.floor(u), x = f * 240, a = x | 0, b = Math.min(240, a + 1), w = x - a;
+              mp[0] = lut[a * 2] + (lut[b * 2] - lut[a * 2]) * w; mp[1] = lut[a * 2 + 1] + (lut[b * 2 + 1] - lut[a * 2 + 1]) * w + ldn[j];
+              const wrapped = Math.floor(u) !== Math.floor(lu[j] + (t - .05) * lsp[j]);
+              return wrapped ? 2 : 1;
+            } : null;
+            return { pts: out, move };
           },
           member: i => i % 4 !== 3,
           spawn: (p, W, H) => p.i % 4 !== 3 ? [Math.random() * W, H + Math.random() * H * .4, 0, -4 - p.r2 * 5] : [Math.random() * W, Math.random() * H, 0, 0],
@@ -2583,8 +2728,20 @@
       if (dir && anim) safeHaptic('selection');
       ST.i = i; stTabs();
       const pg = $('stPage');
-      pg.innerHTML = `<div class="st-card${anim && dir ? ' ' + dir : ''}${anim ? ' draw' : ''}">${ST.views[i].html()}</div>`;
+      pg.innerHTML = `<div class="st-card${anim && dir ? ' ' + dir : ''}">${ST.views[i].html()}</div>`;
       if (anim) pg.scrollTop = 0;
+      stChartGo();
+    }
+    // график рисуется заново, когда карточку впервые видно: не под обложкой и не при тихой пересборке с новыми данными
+    function stChartGo() {
+      const v = ST.views[ST.i], c = $('stPage').querySelector('.st-chart');
+      if (!c || !v || ST.posterOn) return;
+      // искра по линии — когда линия уже нарисована (после тихой пересборки — сразу)
+      const spark = ms => { clearTimeout(ST.skT); ST.skT = setTimeout(() => { if (c.isConnected) c.querySelectorAll('[begin=indefinite]').forEach(a => { try { a.beginElement(); } catch (e) {} }); }, ms); };
+      if (ST.drawn === v.id) { spark(0); return; }
+      ST.drawn = v.id;
+      c.classList.remove('go'); void c.getBoundingClientRect(); c.classList.add('go');
+      spark(1400);
     }
     // «Принял, погнали»: к следующей неделе, после последней — к месяцу
     function stNext() { if (ST.i < ST.views.length - 1) stGo(ST.i + 1); else closeStory(); }
@@ -2594,13 +2751,13 @@
       ST.views = stViews(u, b);
       ST.i = Math.max(0, ST.views.findIndex(v => v.id === id));
       stGo(ST.i, false); $('stPage').scrollTop = top;
-      if (ST.posterOn) { const bar = $('stPosterBar'), wd = bar && bar.style.width; $('stPoster').innerHTML = stPosterHtml(ST.views[ST.i], b); if (wd) $('stPosterBar').style.width = wd; }
+      if (ST.posterOn) { const el = $('stPoster'), bar = $('stPosterBar'), wd = bar && bar.style.width, cv = el.querySelector('.st-pt'); el.innerHTML = stPosterHtml(ST.views[ST.i], b); if (cv) el.insertBefore(cv, el.firstChild); if (wd) $('stPosterBar').style.width = wd; }
     }
     function openStory() {
       const u = globalData[activeUserId];
       if (!u) return;
       safeHaptic('light');
-      ST.u = u; ST.srv = null; ST.prev = null; ST.i = 0;
+      ST.u = u; ST.srv = null; ST.prev = null; ST.i = 0; ST.drawn = null;
       const b = stBuild(u), pm = new Date(b.y, b.m, 0);
       // что уже загружено в фоне — сразу в карточки, без «…»
       const fCur = stFetch(u, stYm(b)), fPrev = b.weeks.length <= 1 ? stFetch(u, stYm({ y: pm.getFullYear(), m: pm.getMonth() })) : null;
@@ -3143,7 +3300,7 @@
     function mtInitDrag(svg) {
       let x0 = null, y0 = 0, cx0 = 0, cy0 = 0, vx = 0, vy = 0, lastX = 0, lastY = 0, lastT = 0, glide = 0, t0 = 0, moved = 0;
       svg.addEventListener('pointerdown', e => {
-        cancelAnimationFrame(glide); MT.follow = false; $('mtHint').classList.add('off');
+        cancelAnimationFrame(glide); MT.follow = false;
         x0 = lastX = e.clientX; y0 = lastY = e.clientY; cx0 = MT.cx; cy0 = MT.cy; vx = vy = 0; lastT = t0 = performance.now(); moved = 0;
         try { svg.setPointerCapture(e.pointerId); } catch (er) {}
       });
@@ -3252,7 +3409,6 @@
       });
       $('mtOthers').innerHTML = html;
       MT.others = others.map(([o]) => o);
-      $('mtHint').textContent = others.length ? 'Гору можно двигать, а на человечка — нажать' : 'Гору можно двигать пальцем';
       [...$('mtOthers').querySelectorAll('.mt-pill')].forEach((g, i) => mtPill(g, others[i][0].name || '', P.other, lifts[i]));
       const [myWx, myLift] = mtWxSvg(t != null && u.weather && u.weather.kind);
       $('mtMeWx').innerHTML = myWx;
@@ -3389,6 +3545,46 @@
       });
       g.globalCompositeOperation = 'source-over';
     }
+    function mtPtHide(on) { $('mtSvg').classList.toggle('pt-hide', on); $('mtView').classList.toggle('pt-text', on); }
+    // надписи: и обычный текст экрана (заголовок, цифры, подсказка), и подписи на горе (лагеря, старт, цель, имена).
+    // Каждое слово рисуем ровно на его месте его же шрифтом
+    // слово на холст ровно на его месте на экране, его же шрифтом (cr — где на экране холст)
+    function ptWord(g, cr, txt, r, cs, px) {
+      if (!r.width || r.bottom < cr.top || r.top > cr.bottom || r.right < cr.left || r.left > cr.right) return;
+      g.font = `${cs.fontStyle} ${cs.fontWeight} ${px}px ${cs.fontFamily}`;
+      if ('letterSpacing' in g) g.letterSpacing = cs.letterSpacing === 'normal' ? '0px' : cs.letterSpacing;
+      const m = g.measureText(txt), asc = m.fontBoundingBoxAscent || px * .8, desc = m.fontBoundingBoxDescent || px * .2;
+      g.fillText(txt, r.left - cr.left, r.top - cr.top + (r.height - asc - desc) / 2 + asc, r.width + 1);
+    }
+    // весь обычный текст внутри root — по словам, чтобы перенос строки не сбивал место
+    function ptWords(g, root, cr) {
+      const rg = document.createRange(), tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.fillStyle = '#000'; g.textBaseline = 'alphabetic';
+      for (let n; (n = tw.nextNode());) {
+        const el = n.parentElement;
+        if (!el || el.closest('svg, canvas, .off, [hidden]') || !n.nodeValue.trim()) continue;
+        const cs = getComputedStyle(el), up = cs.textTransform === 'uppercase';
+        if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+        for (const mm of n.nodeValue.matchAll(/\S+/g)) {
+          rg.setStart(n, mm.index); rg.setEnd(n, mm.index + mm[0].length);
+          ptWord(g, cr, up ? mm[0].toUpperCase() : mm[0], rg.getBoundingClientRect(), cs, parseFloat(cs.fontSize));
+        }
+      }
+    }
+    function mtTexts(g, svg, cr) {
+      const seen = op => op >= .12, word = (...a) => ptWord(g, cr, ...a);
+      ptWords(g, $('mtView'), cr);
+      // подписи на горе
+      svg.querySelectorAll('text').forEach(el => {
+        if (el.closest('defs, [style*="display:none"], [style*="display: none"]') || !el.textContent.trim()) return;
+        let op = 1;
+        for (let e = el; e && e !== svg; e = e.parentNode) op *= e.getAttribute('opacity') == null ? 1 : +e.getAttribute('opacity');
+        const k = el.getScreenCTM();
+        if (!seen(op) || !k) return;
+        const cs = getComputedStyle(el);
+        word(el.textContent.trim(), el.getBoundingClientRect(), cs, parseFloat(cs.fontSize) * Math.hypot(k.a, k.b));
+      });
+    }
     function mtParticles() {
       const view = $('mtView'), svg = $('mtSvg');
       let cv = view.querySelector('.mt-pt');
@@ -3400,28 +3596,32 @@
       MTP.s = PT.scene(cv, {
         n: 9000, nWide: 3, lagK: 1.4,
         shape: (W, H, N) => {
-          const nd = Math.round(N * .3), a = PT.sample(W, H, g => mtSilhouettes(g, svg, cr, false), N - nd, false, .72);
-          const b = PT.sample(W, H, g => mtSilhouettes(g, svg, cr, true), nd, false, .6);
-          if (!a.pts || !b.pts) return a.pts ? a : b;
-          const pts = new Float32Array(N * 2); pts.set(a.pts); pts.set(b.pts, a.pts.length);
+          // доли точек: гора и хребты, мелочи переднего плана, надписи — иначе мелкое и текст тонут
+          const nd = Math.round(N * .26), nt = Math.round(N * .2);
+          const parts = [PT.sample(W, H, g => mtSilhouettes(g, svg, cr, false), N - nd - nt, false, .72),
+            PT.sample(W, H, g => mtSilhouettes(g, svg, cr, true), nd, false, .6),
+            PT.sample(W, H, g => mtTexts(g, svg, cr), nt, false, .3)].filter(r => r.pts);
+          if (!parts.length) return { pts: null };
+          const pts = new Float32Array(parts.reduce((a, r) => a + r.pts.length, 0)); let o = 0;
+          parts.forEach(r => { pts.set(r.pts, o); o += r.pts.length; });
           return { pts };
         },
         lag: (x, y, W, H, r2) => PT.clamp(y / H * .85 + r2 * .15),          // нижние точки встают на место первыми
         spawn: (p, W, H) => PT.ARRIVE.rise(p, W, H),
         gather: t => PT.clamp((t - .15) / 1.7),
         exit: (i, t, x, y, W, H, r1, r2) => t < 2.5 ? null : [(r1 - .5) * .05, -.06 - r2 * .1, PT.clamp(1 - (t - 2.5) / .8)],
-        over: (ctx, W, H, t) => { if (!shown && t >= 2.4) { shown = true; svg.classList.remove('pt-hide'); } },
+        over: (ctx, W, H, t) => { if (!shown && t >= 2.4) { shown = true; mtPtHide(false); } },
         done: t => t > 3.4,
-        stopped: () => svg.classList.remove('pt-hide')
+        stopped: () => mtPtHide(false)
       });
       MTP.s.start();
       if (!MTP.s.alive) return false;
-      svg.classList.add('pt-hide');
+      mtPtHide(true);
       return true;
     }
     function openMountain() {
       if (MT.open) return;
-      MT.open = true; MT.t = null; MT.follow = true; $('mtHint').classList.remove('off');
+      MT.open = true; MT.t = null; MT.follow = true;
       safeHaptic('light');
       $('mtView').classList.add('open');
       navPush(closeMountain);
@@ -3432,10 +3632,10 @@
       renderMountain(...MT.last);
       if (!pt) return;
       // гора уже спрятана; точки берём после первого кадра, когда камера и человечки стоят на своих местах
-      svg.classList.add('pt-hide');
+      mtPtHide(true);
       requestAnimationFrame(() => requestAnimationFrame(() => {
-        if (!MT.open) return svg.classList.remove('pt-hide');
-        try { if (!mtParticles()) svg.classList.remove('pt-hide'); } catch (e) { svg.classList.remove('pt-hide'); }
+        if (!MT.open) return mtPtHide(false);
+        try { if (!mtParticles()) mtPtHide(false); } catch (e) { mtPtHide(false); }
       }));
     }
     function closeMountain() {
