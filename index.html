@@ -24,6 +24,7 @@
       --rule:    #2A3644;
       --volt:    #BDEB5B;   /* лайм, мягче */
       --volt-dim: rgba(189, 235, 91, .13);
+      --pt-a: #BDEB5B; --pt-b: #76E2A8; --pt-c: #5CC8E8;   /* перелив частиц и графика: лайм → мята → бирюза */
       --volt-ink:#121315;
       --down:    #BDEB5B;   /* вес ушёл */
       --up:      #FF8C7A;   /* вес прибавился */
@@ -44,6 +45,7 @@
       --rule:    #E6E0D4;
       --volt:    #64951C;
       --volt-dim: rgba(100, 149, 28, .12);
+      --pt-a: #64951C; --pt-b: #13926E; --pt-c: #1F74B8;
       --volt-ink:#121315;
       --down:    #5E8F1A;
       --up:      #E0503A;
@@ -183,10 +185,14 @@
     /* график рисуется, когда карточку видно (после обложки): линия идёт слева направо, под ней проявляется заливка,
        в конце «выскакивает» точка с волной и подписи веса */
     .st-chart .ar { fill: var(--volt); opacity: .13; }
+    /* после отрисовки график живёт: цвета линии бегут лайм → мята → бирюза, по линии пробегает искра, точка дышит */
+    .st-chart .gs0, .st-chart .gs2 { stop-color: var(--pt-a); } .st-chart .gs1 { stop-color: var(--pt-c); } .st-chart .gsm { stop-color: var(--pt-b); }
+    .st-chart .sk { fill: #fff; opacity: 0; filter: drop-shadow(0 0 4px var(--pt-b)); }
+    html.light .st-chart .sk { fill: var(--pt-c); }
     .st-chart.go .ln { animation: stDraw 1.2s .1s cubic-bezier(.45,0,.2,1) both; }
     .st-chart.go .ar { animation: stArea .7s .8s ease both; }
     .st-chart.go .dt { animation: stPop .45s 1.2s cubic-bezier(.3,1.6,.5,1) both; transform-box: fill-box; transform-origin: center; }
-    .st-chart.go .rp { animation: stRipple 1s 1.3s ease-out both; transform-box: fill-box; transform-origin: center; }
+    .st-chart.go .rp { animation: stRipple 2.2s 1.3s ease-out infinite both; transform-box: fill-box; transform-origin: center; }
     .st-chart .rp { fill: none; stroke: var(--volt); stroke-width: 2; opacity: 0; }
     .st-chart.go .wl { animation: stFadeUp .4s 1.15s ease both; }
     @keyframes stArea { from { opacity: 0; } to { opacity: .13; } }
@@ -2277,7 +2283,7 @@
     // =====================================================================
     const ST_MONTHS = ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'];
     const ST_GEN = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
-    const ST = { u: null, views: [], i: 0, timer: 0, preT: 0, posterT0: 0, posterOpen: 0, posterOn: false, srv: null, prev: null, req: 0 };
+    const ST = { u: null, views: [], i: 0, timer: 0, preT: 0, posterT0: 0, posterOpen: 0, posterOn: false, srv: null, prev: null, req: 0, gid: 0 };
     const ST_POSTER = 4500, ST_POSTER_WAIT = 12000;
     function stDay(ts) { const d = new Date(ts); if (d.getHours() < 4) d.setDate(d.getDate() - 1); d.setHours(0, 0, 0, 0); return d; }
     const stKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -2397,9 +2403,13 @@
       const lastP = pts[pts.length - 1];
       // подпись у точки — над ней; но если соседняя точка выше, линия приходит сверху, и подпись уходит под точку
       const ly = (p, nb) => nb[1] < p[1] - 2 && p[1] + 19 <= 106 ? p[1] + 19 : p[1] - 10;
-      return `<div class="st-chart"><svg viewBox="0 0 300 120">${labels}
-        <path class="ar" d="M${pts.map(p => p.map(v => v.toFixed(1)).join(' ')).join('L')}L${lastP[0].toFixed(1)} 100L${pts[0][0].toFixed(1)} 100Z"/>
-        <polyline class="ln" points="${pts.map(p => p.map(v => v.toFixed(1)).join(',')).join(' ')}" style="--len:${len.toFixed(0)};stroke-dasharray:${len.toFixed(0)}"/>
+      const gid = 'stG' + (++ST.gid), live = !PT.reduce, lineD = 'M' + pts.map(p => p.map(v => v.toFixed(1)).join(' ')).join('L');
+      return `<div class="st-chart"><svg viewBox="0 0 300 120"><defs><linearGradient id="${gid}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="300" y2="0" spreadMethod="reflect">
+          <stop offset="0" class="gs0"/><stop offset=".5" class="gsm"/><stop offset="1" class="gs1"/>
+          ${live ? '<animateTransform attributeName="gradientTransform" type="translate" from="0 0" to="600 0" dur="5s" repeatCount="indefinite"/>' : ''}</linearGradient></defs>${labels}
+        <path class="ar" d="${lineD}L${lastP[0].toFixed(1)} 100L${pts[0][0].toFixed(1)} 100Z" style="fill:url(#${gid})"/>
+        <polyline class="ln" points="${pts.map(p => p.map(v => v.toFixed(1)).join(',')).join(' ')}" style="--len:${len.toFixed(0)};stroke-dasharray:${len.toFixed(0)};stroke:url(#${gid})"/>
+        ${live ? `<circle class="sk" r="3.2"><animateMotion path="${lineD}" dur="3.6s" begin="indefinite" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;.55;1" calcMode="linear"/><animate attributeName="opacity" values="0;1;1;0;0" keyTimes="0;.06;.5;.56;1" dur="3.6s" begin="indefinite" repeatCount="indefinite"/></circle>` : ''}
         <circle class="rp" cx="${lastP[0].toFixed(1)}" cy="${lastP[1].toFixed(1)}" r="5"/>
         <circle class="dt" cx="${lastP[0].toFixed(1)}" cy="${lastP[1].toFixed(1)}" r="5" fill="var(--volt)"/>
         <text class="wl" x="${pts[0][0].toFixed(1)}" y="${ly(pts[0], pts[1]).toFixed(1)}" text-anchor="start">${fmt(ws[0].w)}</text>
@@ -2689,9 +2699,13 @@
     // график рисуется заново, когда карточку впервые видно: не под обложкой и не при тихой пересборке с новыми данными
     function stChartGo() {
       const v = ST.views[ST.i], c = $('stPage').querySelector('.st-chart');
-      if (!c || !v || ST.posterOn || ST.drawn === v.id) return;
+      if (!c || !v || ST.posterOn) return;
+      // искра по линии — когда линия уже нарисована (после тихой пересборки — сразу)
+      const spark = ms => { clearTimeout(ST.skT); ST.skT = setTimeout(() => { if (c.isConnected) c.querySelectorAll('[begin=indefinite]').forEach(a => { try { a.beginElement(); } catch (e) {} }); }, ms); };
+      if (ST.drawn === v.id) { spark(0); return; }
       ST.drawn = v.id;
       c.classList.remove('go'); void c.getBoundingClientRect(); c.classList.add('go');
+      spark(1400);
     }
     // «Принял, погнали»: к следующей неделе, после последней — к месяцу
     function stNext() { if (ST.i < ST.views.length - 1) stGo(ST.i + 1); else closeStory(); }
