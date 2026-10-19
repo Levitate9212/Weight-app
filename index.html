@@ -95,6 +95,13 @@
     html.light #splash.sl { background: #10171E; }
     html.light #splash.sl .sp-small { color: #E9EEF2; }
     html.light #splash.sl .sp-small span { color: #BDEB5B; }
+    /* мягкая подсветка снизу: лайм и бирюза медленно дышат и переливаются под логотипом */
+    #splash.sl::before { content: ""; position: absolute; left: -20%; right: -20%; bottom: 0; height: 46%; pointer-events: none;
+      background: radial-gradient(48% 62% at 34% 100%, rgba(189,235,91,.30), rgba(189,235,91,0) 70%), radial-gradient(52% 70% at 68% 100%, rgba(92,200,232,.26), rgba(92,200,232,0) 72%), radial-gradient(40% 46% at 50% 100%, rgba(118,226,168,.24), rgba(118,226,168,0) 70%);
+      filter: blur(18px); animation: spAurora 7s ease-in-out infinite alternate; transition: opacity .4s ease; }
+    @keyframes spAurora { 0% { transform: translateX(-4%) scaleY(.9); opacity: .75; } 50% { opacity: 1; } 100% { transform: translateX(4%) scaleY(1.08); opacity: .8; } }
+    #splash.sl-out::before { opacity: 0; }
+    @media (prefers-reduced-motion: reduce) { #splash.sl::before { animation: none; } }
     #goalSl { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 40; }
     #splash.sl-out .sp-small { opacity: 0; transition: opacity .3s ease; }
     #splash.sl.leaving { background: transparent; transition: opacity .4s ease, visibility .4s ease; }
@@ -194,11 +201,14 @@
     .st-chart .ar { fill: var(--volt); opacity: .13; }
     /* после отрисовки график живёт: цвета линии бегут лайм → мята → бирюза, по линии пробегает искра, точка дышит */
     .st-chart .gs0, .st-chart .gs2 { stop-color: var(--pt-a); } .st-chart .gs1 { stop-color: var(--pt-c); } .st-chart .gsm { stop-color: var(--pt-b); }
-    .st-chart .silk path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
-    .st-chart .silk .au { stroke: #F2C35B; }
-    html.light .st-chart .silk .au { stroke: #B9831A; }
-    .st-chart .silk .sg { stroke-width: 7; opacity: .28; filter: blur(3px); }
-    html.light .st-chart .silk .sg { opacity: .16; }
+    .st-wait { width: 64%; margin: 4px auto 0; }
+    .st-wait svg { display: block; width: 100%; height: 40px; overflow: visible; }
+    .st-wait .gs0 { stop-color: var(--pt-a); } .st-wait .gsm { stop-color: var(--pt-b); } .st-wait .gs1 { stop-color: var(--pt-c); }
+    .st-wait .silk path, .st-chart .silk path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .silk .au { stroke: #F2C35B; }
+    html.light .silk .au { stroke: #B9831A; }
+    .silk .sg { stroke-width: 7; opacity: .28; filter: blur(3px); }
+    html.light .silk .sg { opacity: .16; }
     .st-chart.go .ln { animation: stDraw 1.2s .1s cubic-bezier(.45,0,.2,1) both; }
     .st-chart.go .ar { animation: stArea .7s .8s ease both; }
     .st-chart.go .dt { animation: stPop .45s 1.2s cubic-bezier(.3,1.6,.5,1) both; transform-box: fill-box; transform-origin: center; }
@@ -3142,7 +3152,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         ${a != null ? `<div class="unit">КГ · ${fmt(a)} → ${fmt(z)}</div>` : ''}
         ${spark}
         <div class="stats"><div><b>${w.ws.length}/7</b><span>замеров</span></div><div><b>${s ? s.workouts : dots}</b><span>${s ? plural(s.workouts, ...ST_W) : ST_W[2]}</span></div>${s && s.distance.km ? `<div><b>${stKm(s.distance.km)}</b><span>км</span></div>` : ''}</div>
-        <div class="say">${s && s.phrases ? esc(s.phrases.cover) : ''}</div>
+        <div class="say">${s && s.phrases ? esc(s.phrases.cover) : ST.srv && ST.srv.failed ? '' : stSilkWait()}</div>
         <div class="hint">Нажми, чтобы открыть неделю</div>`;
     }
     function stPoster(v, b) {
@@ -3162,11 +3172,18 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       h.style.fontSize = ''; h.style.whiteSpace = 'nowrap';
       if (h.scrollWidth > h.clientWidth + 1) h.style.fontSize = (parseFloat(getComputedStyle(h).fontSize) * h.clientWidth / h.scrollWidth * .96).toFixed(1) + 'px';
     }
+    // пока сервер считает тренировки и фразу — на месте фразы течёт шёлковая нить из тех же прядей
+    function stSilkWait() {
+      const gid = 'stG' + (++ST.gid);
+      return `<div class="st-wait" aria-label="Загружаю"><svg viewBox="0 0 300 40"><defs><linearGradient id="${gid}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="300" y2="0" spreadMethod="reflect">
+        <stop offset="0" class="gs0"/><stop offset=".5" class="gsm"/><stop offset="1" class="gs1"/>
+        ${PT.reduce ? '' : '<animateTransform attributeName="gradientTransform" type="translate" from="0 0" to="600 0" dur="3s" repeatCount="indefinite"/>'}</linearGradient></defs>${silkSvg([[60, 20], [240, 20]], gid)}</svg></div>`;
+    }
     function stPosterChart(el) {
       const c = el.querySelector('.st-chart');
-      if (!c) return;
+      if (!c) { silkStart(el); return; }
       c.classList.add('go');
-      silkStart(c);
+      silkStart(el);
     }
     function stPosterHide() {
       if (!ST.posterOn) return;
@@ -3219,7 +3236,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       ST.views = stViews(u, b);
       ST.i = Math.max(0, ST.views.findIndex(v => v.id === id));
       stGo(ST.i, false); $('stPage').scrollTop = top;
-      if (ST.posterOn) { const el = $('stPoster'), bar = $('stPosterBar'), wd = bar && bar.style.width; el.innerHTML = stPosterHtml(ST.views[ST.i], b); stFitHuge(el); if (wd) $('stPosterBar').style.width = wd; const sc = el.querySelector('.st-chart'); if (sc) { sc.classList.add('go'); silkStart(sc); sc.querySelectorAll('.silk').forEach(g => g.__t0 -= 2000); } }
+      if (ST.posterOn) { const el = $('stPoster'), bar = $('stPosterBar'), wd = bar && bar.style.width; el.innerHTML = stPosterHtml(ST.views[ST.i], b); stFitHuge(el); if (wd) $('stPosterBar').style.width = wd; const sc = el.querySelector('.st-chart'); if (sc) sc.classList.add('go'); silkStart(el); sc && sc.querySelectorAll('.silk').forEach(g => g.__t0 -= 2000); }
     }
     function openStory() {
       const u = globalData[activeUserId];
