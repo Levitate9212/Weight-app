@@ -2782,9 +2782,13 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       setTimeout(() => { ACH.busy = false; achFire(); }, 110);
       if (!sc.classList.contains('open')) return;
       const r = t.querySelector('.mw').getBoundingClientRect(), W = innerWidth, H = innerHeight;
-      const tx = r.left + r.width / 2, ty = r.top + r.height / 2, left = tx < W / 2 || (Math.abs(tx - W / 2) < 20 && Math.random() < .5);
-      // из середины края экрана, дугой в медаль
-      const sx = left ? -6 : W + 6, sy = H * (.42 + Math.random() * .16), cx = (sx + tx) / 2, cy = Math.min(sy, ty) - 40 - Math.random() * 50;
+      const tx = r.left + r.width / 2, ty = r.top + r.height / 2;
+      // откуда летит: с боков на разной высоте, снизу, из углов или из центра экрана (не из самой медали) — дугой в медаль
+      const from = [[-6, H * (.3 + Math.random() * .4)], [W + 6, H * (.3 + Math.random() * .4)], [W * (.3 + Math.random() * .4), H + 6],
+        [-6, H + 6], [W + 6, H + 6], [-6, H * .12], [W + 6, H * .12], [W / 2, H / 2]].filter(([x, y]) => Math.hypot(x - tx, y - ty) > 140);
+      const [sx, sy] = from[(Math.random() * from.length) | 0] || [-6, H / 2];
+      const bend = (Math.random() < .5 ? -1 : 1) * (50 + Math.random() * 70), dx = tx - sx, dy = ty - sy, dl = Math.hypot(dx, dy) || 1;
+      const cx = (sx + tx) / 2 - dy / dl * bend, cy = (sy + ty) / 2 + dx / dl * bend;
       const pts = [...Array(25)].map((_, k) => { const u = k / 24, v = 1 - u; return [v * v * sx + 2 * v * u * cx + u * u * tx, v * v * sy + 2 * v * u * cy + u * u * ty]; });
       // холст нитей — поверх экрана медалей, но в body: внутри сдвинутого экрана fixed уезжал бы при прокрутке
       let sv = $('achShots');
