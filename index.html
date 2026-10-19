@@ -1517,22 +1517,29 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           o.v = (o.v || v) + (v - (o.v || v)) * Math.min(1, dt * 1.6);
           o.x += Math.cos(o.a) * o.v * dt; o.y += Math.sin(o.a) * o.v * dt;
           if (rk > 0 && RG.P) {
-            // путь (линия графика): головы бегут по нему слева направо одна за другой, как кометы; дойдя до конца — снова с начала
-            const P = RG.P, u = (k / NL + t * (.13 + .02 * Math.sin(k * 1.7))) % 1, f = u * (P.length / 2 - 1), i = Math.floor(f), w = f - i;
-            const ax0 = P[i * 2], ay0 = P[i * 2 + 1], bx = P[i * 2 + 2], by = P[i * 2 + 3], dx = bx - ax0, dy = by - ay0, dl = Math.hypot(dx, dy) || 1;
-            const wob = .006 * Math.sin(t * 1.3 + k * 2.1) + (k - (NL - 1) / 2) * .0016;
-            const sx = ax0 + dx * w - dy / dl * wob, sy = ay0 + dy * w + dx / dl * wob;
-            if (o.pu != null && u < o.pu) { o.hs.length = 0; o.x = sx; o.y = sy; }
-            o.pu = u;
-            const q = Math.min(1, dt * 14 * rk);
-            o.x += (sx - o.x) * q; o.y += (sy - o.y) * q;
-            const ta = Math.atan2(dy, dx), d = Math.atan2(Math.sin(ta - o.a), Math.cos(ta - o.a)); o.a += d * q; o.tr *= 1 - q;
+            // путь (линия графика): каждая линия лежит на всём графике целиком, чуть в стороне от соседей, и мягко колышется;
+            // пряди сами текут вдоль неё (как на заставке) — линия цельная с первого кадра, без вспышек участками
+            const P = RG.P, N = RG.N, n = P.length / 2, side = (k - (NL - 1) / 2) * .0016;
+            o.hs.length = 0;
+            for (let i = 0; i < n; i++) {
+              const wob = side + .004 * Math.sin(i * .22 - t * 1.3 + k * 2.1);
+              o.hs.push(P[i * 2] + N[i * 2] * wob, P[i * 2 + 1] + N[i * 2 + 1] * wob);
+            }
+            o.x = o.hs[o.hs.length - 2]; o.y = o.hs[o.hs.length - 1];
+            return;
           } else if (rk > 0) {
             // голову тянет к её месту на круге; каждый цвет крутится сам по себе: своя скорость, часть — навстречу,
-            // и свой радиус, который чуть дышит, — кольцо из отдельных цветных колец, а не одно целое
-            if (o.rth == null) { o.rth = k * 6.283 / NL; o.rw = RG.w * (.55 + .9 * ((k * .618) % 1)) * (k % 3 === 1 ? -1 : 1); o.rr = 1 + ((k * 5) % 9 - 4) * .025; }
-            o.rth += o.rw * dt;
-            const th = o.rth, rr = RG.r * o.rr * (1 + .05 * Math.sin(t * (.9 + k * .13) + o.f)), sx = rr * Math.cos(th), sy = rr * Math.sin(th), q = Math.min(1, dt * 6 * rk * rk);
+            // свой радиус и своё поведение — ровный поток, волна лепестками, рывки, эллипс, дыхание внутрь-наружу
+            if (o.rth == null) { o.rth = k * 6.283 / NL; o.rw = RG.w * (.55 + .9 * ((k * .618) % 1)) * (k % 3 === 1 ? -1 : 1); o.rr = 1 + ((k * 5) % 9 - 4) * .025; o.rm = k % 5; }
+            const m = o.rm;
+            o.rth += o.rw * dt * (m === 2 ? 1 + .9 * Math.sin(t * 1.4 + k) : 1);
+            const th = o.rth;
+            let rr = RG.r * o.rr * (1 + .04 * Math.sin(t * (.9 + k * .13) + o.f)), ex = 1, ey = 1, rot = 0;
+            if (m === 1) rr *= 1 + .14 * Math.sin(4 * th + t * 1.5);
+            if (m === 3) { ex = 1.2; ey = .8; rot = t * .5 + k; }
+            if (m === 4) rr *= 1 + .22 * Math.sin(t * .9 + k);
+            const lx = rr * ex * Math.cos(th), ly = rr * ey * Math.sin(th);
+            const sx = lx * Math.cos(rot) - ly * Math.sin(rot), sy = lx * Math.sin(rot) + ly * Math.cos(rot), q = Math.min(1, dt * 6 * rk * rk);
             o.x += (sx - o.x) * q; o.y += (sy - o.y) * q;
             // направление — по касательной, чтобы, когда кольцо отпустит, линия полетела дальше плавно
             const ta = th + (o.rw < 0 ? -1.5708 : 1.5708), d = Math.atan2(Math.sin(ta - o.a), Math.cos(ta - o.a)); o.a += d * q; o.tr *= 1 - q;
@@ -1603,7 +1610,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
             gl.bindBuffer(gl.ARRAY_BUFFER, BUF.t); gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 0, 0);
             gl.bindBuffer(gl.ARRAY_BUFFER, BUF.l); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
             const ns = Math.max(1, Math.min(6, Math.round(dt * 60)));
-            for (let k = 0; k < NL; k++) { for (let i = 0; i < ns; i++) LS.step(k, t - dt + (i + 1) * dt / ns, dt / ns); LS.path(k, (o.trail || .62) + (o.trail ? o.trail * .3 : .22) * Math.sin(t * (.21 + k * .05) + LS.LN[k].f), PA); }
+            for (let k = 0; k < NL; k++) { for (let i = 0; i < ns; i++) LS.step(k, t - dt + (i + 1) * dt / ns, dt / ns); LS.path(k, LS.RG.P ? LS.RG.len : .62 + .22 * Math.sin(t * (.21 + k * .05) + LS.LN[k].f), PA); }
             gl.uniform2f(P.u.R, w, h); gl.uniform1f(P.u.T, t); gl.uniform1f(P.u.M, asg ? ph.M : 0); gl.uniform1f(P.u.TX, asg ? ph.TX : ph.M);
             gl.uniform1f(P.u.KP, o.keep ? 1 : 0); gl.uniform1f(P.u.SC, Math.min(1, W / H * 1.25) * 1.3 * (o.scale || 1));
             gl.uniform4fv(P.u['PA[0]'], PA); gl.uniform3fv(P.u['CC[0]'], PAL.flat()); gl.uniform3fv(P.u.HI, HI);
@@ -1645,10 +1652,14 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
             const pts = o.path(W, H); LS.RG.P = pts ? Float32Array.from(pts.flatMap(p => [(p[0] - W / 2) / H, (H / 2 - p[1]) / H])) : null;
             // график сразу в своей форме: пряди заранее разложены по линии, ничего не слетается
             if (LS.RG.P) {
-              LS.RG.k = 1;
-              // голова сразу встаёт на своё место на линии (длинный шаг), след стирается, и пряди прокручиваются по линии 10 секунд
-              for (let k = 0; k < NL; k++) { LS.step(k, 0, .1); const l = LS.LN[k]; l.hs.length = 0; l.hs.push(l.x, l.y); }
-              for (let i = 1; i <= 600; i++) for (let k = 0; k < NL; k++) LS.step(k, i / 60, 1 / 60);
+              const P = LS.RG.P, n = P.length / 2, N = new Float32Array(n * 2); let len = 0;
+              for (let i = 0; i < n; i++) {
+                const a = Math.max(0, i - 1), b = Math.min(n - 1, i + 1), dx = P[b * 2] - P[a * 2], dy = P[b * 2 + 1] - P[a * 2 + 1], l = Math.hypot(dx, dy) || 1;
+                N[i * 2] = -dy / l; N[i * 2 + 1] = dx / l;
+                if (i) len += Math.hypot(P[i * 2] - P[i * 2 - 2], P[i * 2 + 1] - P[i * 2 - 1]);
+              }
+              LS.RG.N = N; LS.RG.len = len; LS.RG.k = 1;
+              for (let k = 0; k < NL; k++) LS.step(k, 0, 1 / 60);
             }
           }
           shown = false; QS = 1; FT = []; fn = 0;
