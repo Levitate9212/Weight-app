@@ -1037,7 +1037,7 @@
       safeHaptic('light');
       $('errorBox').classList.add('hidden');
       $('splash').classList.remove('gone', 'leaving', 'sl-out');
-      if (SP.s) { SP.exitAt = null; SP.left = null; SP.s.start(); }
+      if (SP.s) { SP.exitAt = null; SP.left = null; SP.loaded = false; SP.s.start(); }
       fetchData();
     }
 
@@ -1418,7 +1418,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const MODES = ['glide', 'snake', 'dart', 'drift', 'chase', 'wave', 'glide', 'wave'];
       function lines(W, H) {
         // каждый запуск — своё начальное расположение: линии разбросаны по всему полю в случайных местах и направлениях
-        const ax = W / H * .5, t0 = Math.random() * 50;
+        const ax = W / H * .5, t0 = Math.random() * 50, RG = { k: 0, th: Math.random() * 6.283, r: Math.min(.2, ax * .55), w: 1.5 };
         const LN = [...Array(NL).keys()].map(k => ({ x: (Math.random() - .5) * ax * 1.3, y: (Math.random() - .5) * .7, a: Math.random() * 6.283, tr: 0, f: Math.random() * 9, g: Math.random() * 9, hs: [], cum: 0 }));
         function pick(o, k) {
           let m; do m = MODES[(Math.random() * MODES.length) | 0]; while (m === o.m);
@@ -1451,10 +1451,20 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           turn = turn * (1 - edge) + ang(hx * .5, hy * .5) * 2 * edge;
           o.cum = o.cum * Math.pow(.6, dt) + o.tr * dt;
           if (Math.abs(o.cum) > 1.6 && Math.sign(turn) === Math.sign(o.cum)) turn *= .15;
+          // кольцо (заставка, пока грузятся данные): у каждой линии своё место на вращающемся круге, она догоняет его
+          // и идёт по кругу; когда данные пришли, кольцо плавно отпускает линии
+          const rk = RG.k;
           turn = Math.max(-1.4, Math.min(1.4, turn));
           o.tr += (turn - o.tr) * Math.min(1, dt * 2.5); o.a += o.tr * dt;
           o.v = (o.v || v) + (v - (o.v || v)) * Math.min(1, dt * 1.6);
           o.x += Math.cos(o.a) * o.v * dt; o.y += Math.sin(o.a) * o.v * dt;
+          if (rk > 0) {
+            // голову тянет к её месту на круге; радиус у каждой линии чуть дышит — кольцо шёлковое, а не циркульное
+            const th = RG.th + k * 6.283 / NL, rr = RG.r * (1 + .07 * Math.sin(t * (.9 + k * .13) + o.f)), sx = rr * Math.cos(th), sy = rr * Math.sin(th), q = Math.min(1, dt * 6 * rk * rk);
+            o.x += (sx - o.x) * q; o.y += (sy - o.y) * q;
+            // направление — по касательной, чтобы, когда кольцо отпустит, линия полетела дальше плавно
+            const ta = th + 1.5708, d = Math.atan2(Math.sin(ta - o.a), Math.cos(ta - o.a)); o.a += d * q; o.tr *= 1 - q;
+          }
           o.hs.push(o.x, o.y); if (o.hs.length > 1600) o.hs.splice(0, o.hs.length - 1200);
         }
         // NP точек от головы назад по следу на равных расстояниях, потом лёгкое сглаживание
@@ -1474,17 +1484,18 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         }
         const pre = 420 + ((Math.random() * 480) | 0);
         for (let i = 0; i < pre; i++) for (let k = 0; k < NL; k++) step(k, i / 60 - 10, 1 / 60);
-        return { LN, step, path };
+        return { LN, step, path, RG };
       }
 
       // сцена. o: mask(g,W,H) — нарисовать фигуру; fly — сколько секунд линии летают; form — сколько стекаются;
       // keep — пряди остаются на фигуре (не растворяются); glow — светиться и в светлой теме (фон тёмный); show() — пора проявлять настоящую картинку;
-      // over(ctx,W,H,t,ph) — дорисовать поверх; done(t) — конец; stopped()
+      // over(ctx,W,H,t,ph) — дорисовать поверх; done(t) — конец; stopped();
+      // ring() — пока true, линии кружат кольцом и сцена не переходит к фигуре (заставка ждёт данные)
       function scene(canvas, o) {
         if (!canvas || !canvas.getContext || !init()) return null;
         const ctx = canvas.getContext('2d'), fly = o.fly == null ? 1.2 : o.fly, form = o.form || 1.6;
         const PA = new Float32Array(NP * NL * 2), e = x => x < 0 ? 0 : x > 1 ? 1 : x * x * (3 - 2 * x);
-        let W = 1, H = 1, dpr = 1, alive = false, raf = 0, t0 = 0, last = 0, asg = null, LS = null, shown = false, QS = 1, FT = [], fn = 0;
+        let W = 1, H = 1, dpr = 1, alive = false, raf = 0, t0 = 0, last = 0, asg = null, LS = null, shown = false, QS = 1, FT = [], fn = 0, hold = 0;
         function size() {
           const r = canvas.getBoundingClientRect(); W = Math.max(1, r.width); H = Math.max(1, r.height); dpr = Math.min(window.devicePixelRatio || 1, 2);
           canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1496,7 +1507,12 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         function frame(now) {
           if (!alive) return;
           if (!canvas.isConnected || !gl) { stop(); return; }
-          const t = (now - t0) / 1000, dt = Math.min(.1, Math.max(.001, (now - last) / 1000)) || 1 / 60; last = now;
+          const tr = (now - t0) / 1000, dt = Math.min(.1, Math.max(.001, (now - last) / 1000)) || 1 / 60; last = now;
+          // кольцо держит сцену перед переходом к фигуре: время сцены стоит, пока ring() true
+          const ringOn = !!(o.ring && o.ring());
+          if (ringOn && tr - hold > fly) hold = tr - fly;
+          const t = tr - hold;
+          if (LS) { const RG = LS.RG; RG.k += ((o.ring && (ringOn || t < fly) ? 1 : 0) - RG.k) * Math.min(1, dt * (ringOn ? 2.2 : 1.6)); if (RG.k < .002) RG.k = 0; RG.th += RG.w * dt; }
           // телефон не успевает — картинка прядей чуть мягче, но без рывков
           FT.push(dt); if (FT.length > 40) { const av = FT.reduce((a, b) => a + b) / FT.length; FT.length = 0; if (++fn > 1 && av > 1 / 40 && QS > .6) QS *= .85; }
           const ph = phase(t);
@@ -1543,16 +1559,16 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         function start() {
           stop(); if (cur && cur !== api && cur.alive) cur.stop(); cur = api; size();
           try { asg = o.mask ? contours(o.mask, W, H) : null; } catch (err) { asg = null; }
-          LS = lines(W, H); shown = false; QS = 1; FT = []; fn = 0;
+          LS = lines(W, H); if (o.ring) LS.RG.k = .75; shown = false; QS = 1; FT = []; fn = 0;
           // след прошлой сцены не нужен
           if (RT) [RT.a, RT.b].forEach(r => { gl.bindFramebuffer(gl.FRAMEBUFFER, r.f); gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT); });
-          t0 = last = performance.now(); alive = true; raf = requestAnimationFrame(frame);
+          hold = 0; t0 = last = performance.now(); alive = true; raf = requestAnimationFrame(frame);
         }
         function stop() {
           const was = alive; alive = false; cancelAnimationFrame(raf);
           if (was) { ctx.clearRect(0, 0, W, H); if (o.stopped) o.stopped(); }
         }
-        const api = { start, stop, time: () => (performance.now() - t0) / 1000, get alive() { return alive; } };
+        const api = { start, stop, time: () => (performance.now() - t0) / 1000 - hold, get alive() { return alive; } };
         return api;
       }
       return { scene, PAL, ink, css };
@@ -1585,7 +1601,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
 
     // Заставка из частиц: фраза дня собирается из потока, а при входе в приложение разлетается.
     // Каждый раз другое появление и уход, подряд не повторяются. Если что-то не так — остаётся прежняя заставка.
-    const SP = { s: null, exitAt: null, inK: 'dust', outK: 'blast', lay: null, sl: false, ready: 0, left: null };
+    const SP = { s: null, exitAt: null, inK: 'dust', outK: 'blast', lay: null, sl: false, ready: 0, left: null, loaded: false };
     // насколько фраза уже «чёткая»: точки встают ровно в буквы к 1,25 с, затем за 0,55 с плавно проявляется текст;
     // на выходе за четверть секунды снова уходит в точки
     const spCrisp = t => {
@@ -1618,6 +1634,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       SP.ready = FLY + FORM + .9;   // фраза чёткая и немного стоит, чтобы её успели прочитать
       const s = SL.scene(cv, {
         fly: FLY, form: FORM, glow: true,
+        // пока данные грузятся, пряди кружат кольцом в центре (вместо загрузки); пришли — кольцо раскручивается в фразу
+        ring: () => !SP.loaded,
         mask: (g, W, H) => { L = layout(g, W, H); text(g, W, '#000'); },
         over: (ctx, W, H, t, ph) => {
           if (!L) return;
@@ -1716,6 +1734,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     function hideSplash(then) {
       const sp = $('splash');
       if (sp.classList.contains('gone')) { if (then) then(); return; }
+      SP.loaded = true;
       if (SP.s && SP.s.alive && SP.sl) {
         // пряди успевают стать чёткой фразой, потом от неё разливается фон приложения, и заставка уходит
         const wait = Math.max(0, SP.ready - SP.s.time()) * 1000;
