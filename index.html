@@ -1521,8 +1521,9 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
             // пряди сами текут вдоль неё (как на заставке) — линия цельная с первого кадра, без вспышек участками
             const P = RG.P, N = RG.N, n = P.length / 2, side = (k - (NL - 1) / 2) * .0016;
             o.hs.length = 0;
-            for (let i = 0; i < n; i++) {
-              const wob = side + .004 * Math.sin(i * .22 - t * 1.3 + k * 2.1);
+            // голова — в начале графика: пряди текут справа налево (так хочет Вадим)
+            for (let i = n - 1; i >= 0; i--) {
+              const wob = side + .004 * Math.sin(i * .22 + t * 1.3 + k * 2.1);
               o.hs.push(P[i * 2] + N[i * 2] * wob, P[i * 2 + 1] + N[i * 2 + 1] * wob);
             }
             o.x = o.hs[o.hs.length - 2]; o.y = o.hs[o.hs.length - 1];
