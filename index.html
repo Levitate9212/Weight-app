@@ -181,6 +181,39 @@
     .st-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin: 0 -16px; padding: 0 16px 8px; scrollbar-width: none; touch-action: pan-y; }
     .st-scroll::-webkit-scrollbar { display: none; }
     .st-card { display: flex; flex-direction: column; gap: 10px; }
+    /* неделя — сторис из экранов: полоски сверху, на экране одна мысль, всё по центру, в стиле заставки */
+    .st-deck { min-height: 100%; display: flex; flex-direction: column; }
+    .st-segs { display: flex; gap: 4px; margin: 0 0 6px; flex: none; }
+    .st-segs i { flex: 1; height: 3px; border-radius: 2px; background: var(--rule); overflow: hidden; }
+    .st-segs b { display: block; height: 100%; width: 0; background: var(--volt); }
+    .st-slide { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 14px; padding: 12px 0 18px; }
+    .st-slide.in-r { animation: stInR .35s cubic-bezier(.3,.8,.3,1) both; } .st-slide.in-l { animation: stInL .35s cubic-bezier(.3,.8,.3,1) both; }
+    .st-slide > .st-k { letter-spacing: .18em; }
+    .st-huge { font-family: var(--num); font-weight: 800; font-size: clamp(84px, 30vw, 128px); line-height: .85; letter-spacing: -.02em; font-variant-numeric: tabular-nums;
+      background-image: linear-gradient(90deg, var(--pt-a), var(--pt-b) 70%); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
+    .st-huge small { font-size: .34em; letter-spacing: 0; }
+    .st-unit { font-family: var(--num); font-weight: 700; font-size: 20px; color: var(--muted); letter-spacing: .02em; margin-top: -4px; }
+    .st-say { font-family: Montserrat, var(--text); font-weight: 600; font-size: 15px; line-height: 1.4; text-transform: uppercase; letter-spacing: .02em; max-width: 30ch; margin-top: 6px; }
+    .st-say.g { font-size: 17px; background-image: linear-gradient(90deg, var(--pt-a), var(--pt-b) 70%); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
+    .st-slide .st-tiles, .st-slide .st-plan, .st-wos { width: 100%; text-align: left; }
+    .st-wos { background: var(--panel); border-radius: 20px; padding: 14px 16px; }
+    .st-slide .st-close { width: 100%; margin-top: 10px; }
+    .st-slide .st-sleep.big { width: 100%; height: 130px; }
+    .st-slide .st-sleep.big i { border-radius: 10px; }
+    .st-medal1 svg, .st-medal1 img { width: 170px; height: 170px; display: block; filter: drop-shadow(0 10px 40px color-mix(in srgb, var(--pt-a) 35%, transparent)); }
+    .st-mt { font-family: var(--num); font-weight: 800; font-size: 36px; line-height: 1; max-width: 16ch;
+      background-image: linear-gradient(90deg, var(--pt-a), var(--pt-b) 70%); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
+    .st-slide .st-medals { justify-content: center; }
+    /* дни — бусины на шёлковой нити */
+    .st-beads { position: relative; width: 100%; aspect-ratio: 300 / 170; margin-top: 4px; }
+    .st-beads.st-chart svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+    .st-beads .bd { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .st-beads .bd b { font-family: var(--num); font-size: 16px; font-weight: 700; }
+    .st-beads .bd small { font-size: 11px; font-weight: 600; color: var(--muted); }
+    .st-beads .bd i { width: 14px; height: 14px; border-radius: 50%; background: var(--volt); box-shadow: 0 0 0 4px color-mix(in srgb, var(--volt) 22%, transparent); display: grid; place-items: center; }
+    .st-beads .bd.wo i { width: 28px; height: 28px; box-shadow: none; }
+    .st-beads .bd.wo i svg { width: 18px; height: 18px; position: static; }
+    .st-beads .bd.off b { color: var(--muted); } .st-beads .bd.off i { background: var(--panel2); box-shadow: none; }
     .st-card.in-l { animation: stInL .35s cubic-bezier(.3,.8,.3,1) both; } .st-card.in-r { animation: stInR .35s cubic-bezier(.3,.8,.3,1) both; }
     @keyframes stInL { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
     @keyframes stInR { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
@@ -1252,7 +1285,6 @@
     // Один WebGL на всё приложение: рисуем на скрытом холсте и копируем на холст сцены.
     // Нет WebGL — scene() возвращает null, и сцена идёт прежними частицами.
     // =====================================================================
-    const SLV = { v: 0 };   // вариант светлых прядей: 0 — сочные, 1 — пастель
     const SL = (() => {
       const NSTR = 189, NSEG = 80, NL = 9, NP = 20, SPC = .0016;
       // лайм, бирюза, золото, мята, жёлто-зелёный, голубой, светлая мята, светло-жёлтый, тёмная мята
@@ -1300,7 +1332,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R, px=3.2/R;
  pv=clamp(pv*DK-vec3(1./255.),0.,1.); pv=pv==pv?pv:vec3(0.);
  gl_FragColor=vec4(max(pv,texture2D(CU,uv).rgb),1.);}`;
       // показ на прозрачном холсте: в тёмной теме — свечение, в светлой — насыщенная краска
-      const FSS = `precision highp float; uniform sampler2D FB; uniform vec2 R; uniform float LT,AL,VR;
+      const FSS = `precision highp float; uniform sampler2D FB; uniform vec2 R; uniform float LT,AL;
 void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
  for(int i=0;i<8;i++){float a=float(i)*.785+.39; vec2 o=vec2(cos(a),sin(a))/R;
   g+=texture2D(FB,uv+o*6.).rgb*.55+texture2D(FB,uv+o*16.).rgb*.45;}
@@ -1308,9 +1340,9 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
  vec3 cg=b+g/8.*.25; float lb=max(b.r,max(b.g,b.b)), lg=max(g.r,max(g.g,g.b))/8.;
  float lm=max(cg.r,max(cg.g,cg.b)); vec3 hu=cg/max(lm,1e-4); float mn=min(hu.r,min(hu.g,hu.b));
  vec3 ik=clamp(hu-.45*mn,0.,1.);
- // светлая тема: яркая цветная нить + светлый цветной ореол (VR 0 — сочнее; 1 — пастель, ещё светлее)
- float ac=1.-exp(-lb*2.2), ah=(1.-exp(-lg*1.3))*mix(.45,.55,VR);
- vec3 cc=mix(ik*.9,mix(ik,vec3(1.),.18),VR), ch=mix(ik,vec3(1.),mix(.3,.45,VR));
+ // светлая тема: яркая цветная нить + светлый цветной ореол (выбор Вадима — «светлая А»)
+ float ac=1.-exp(-lb*2.2), ah=(1.-exp(-lg*1.3))*.45;
+ vec3 cc=ik*.9, ch=mix(ik,vec3(1.),.3);
  float al=ac+ah*(1.-ac); vec3 lc=cc*ac+ch*ah*(1.-ac);
  gl_FragColor=mix(vec4(col,a),vec4(lc,al),LT)*AL;}`;
       let gl = null, cv = null, PR = null, BUF = null, RT = null, broken = false, cur = null;   // cur — идущая сцена: WebGL один, сцена тоже одна
@@ -1577,7 +1609,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
             gl.useProgram(PR.S.p); gl.bindFramebuffer(gl.FRAMEBUFFER, null);
             gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
             gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, RT.b.t); gl.uniform1i(PR.S.u.FB, 1);
-            gl.uniform2f(PR.S.u.R, w, h); gl.uniform1f(PR.S.u.LT, o.glow || PT.isDark() ? 0 : 1); if (PR.S.u.VR) gl.uniform1f(PR.S.u.VR, SLV.v); gl.uniform1f(PR.S.u.AL, ph.A);
+            gl.uniform2f(PR.S.u.R, w, h); gl.uniform1f(PR.S.u.LT, o.glow || PT.isDark() ? 0 : 1); gl.uniform1f(PR.S.u.AL, ph.A);
             gl.drawArrays(gl.TRIANGLES, 0, 3);
             gl.activeTexture(gl.TEXTURE0);
             const sw = RT.a; RT.a = RT.b; RT.b = sw;
@@ -3124,6 +3156,36 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
             ${wait || p ? `<div class="st-box"><p class="st-k">Вывод тренера</p>${p ? `<p class="st-verdict">${esc(p.verdict)}</p>` : stCoach('', true)}</div>` : ''}
             ${p && p.plan && p.plan.length ? `<div class="st-box"><p class="st-k">План на новую неделю</p><div class="st-plan">${p.plan.map((t, n) => `<div><span>${n + 1}</span>${esc(t)}</div>`).join('')}</div></div>` : ''}
             <button class="st-close" onclick="stNext()">Принял, погнали</button>`;
+        }, slides: () => {
+          // неделя — сторис из экранов после обложки: на каждом одна мысль, всё по центру
+          const S = [], say = (t, g) => t ? `<p class="st-say${g ? ' g' : ''}">${esc(t)}</p>` : '';
+          const sl = s && s.sleep && s.sleep.nights >= 3 ? s.sleep : null;
+          const bs = s && s.distance && s.distance.bySport ? Object.values(s.distance.bySport) : [];
+          const km = s && s.distance && s.distance.km, mins = bs.reduce((a, x) => a + (x.min || 0), 0);
+          if (wait || (s && (s.workouts || km)))
+            S.push(`<p class="st-k">Движение за неделю</p>
+              <div class="st-huge">${wait ? '…' : km ? `${stKm(km)}<small> км</small>` : s.workouts}</div>
+              <div class="st-unit">${wait ? 'считаю тренировки' : `${stWord(s.workouts, ...ST_W)}${mins ? ' · ' + stMin(mins) : ''}`}</div>
+              ${failed ? '' : stTiles(s && s.distance, s ? s.workouts : 0, wait)}${say(p && p.workouts)}`);
+          if (s && s.list && s.list.length) S.push(`<p class="st-k">Тренировки недели</p><div class="st-wos">${s.list.map(stWoCard).join('')}</div>`);
+          S.push(`<p class="st-k">Неделя по дням</p>${stBeads(w, s)}${say(p && p.days)}`);
+          if (sl) {
+            const top = Math.max(600, ...s.days.map(d => d.sleepMin || 0)), bd = new Date(sl.best.date + 'T12:00:00');
+            const bars = s.days.map((d, k) => `<div><i class="${d.sleepMin == null ? '' : d.date === sl.best.date ? 'best' : d.sleepMin < 360 ? 'low' : ''}" style="height:${d.sleepMin == null ? 0 : Math.round(d.sleepMin / top * 100)}%"></i>${ST_DAYS[k].toLowerCase()}</div>`).join('');
+            S.push(`<p class="st-k">Сон</p><div class="st-huge">${Math.floor(sl.avg / 60)}:${String(sl.avg % 60).padStart(2, '0')}</div>
+              <div class="st-unit">в среднем · ${stWord(sl.nights, 'ночь', 'ночи', 'ночей')}</div><div class="st-sleep big">${bars}</div>
+              <p class="st-sub">Лучшая ночь ${ST_WEEKDAY_ACC[bd.getDay()]}, ${stHm(sl.best.min)}${sl.debt ? ` · недосып до 8 ч: ${stHm(sl.debt)}` : ''}</p>${say(p && p.sleep)}`);
+          }
+          if (w.medals.length) {
+            const [m0, ...more] = w.medals;
+            S.push(`<p class="st-k">${w.medals.length > 1 ? 'Медали недели' : 'Медаль недели'}</p><div class="st-medal1">${medalPic(m0)}</div>
+              <div class="st-mt">${esc(m0.title)}</div>
+              ${more.length ? `<div class="st-medals">${more.slice(0, 7).map(md => `<div class="md">${medalPic(md)}${esc(md.title)}</div>`).join('')}</div>` : ''}`);
+          }
+          S.push(`${wait || p ? `<p class="st-k">Вывод тренера</p>${p ? say(p.verdict, true) : stCoach('', true)}` : ''}
+            ${p && p.plan && p.plan.length ? `<p class="st-k" style="margin-top:12px">План на новую неделю</p><div class="st-plan">${p.plan.map((t, n) => `<div><span>${n + 1}</span>${esc(t)}</div>`).join('')}</div>` : ''}
+            <button class="st-close" onclick="stNext()">Принял, погнали</button>`);
+          return S;
         } });
       });
       V.push({ id: 'month', tab: stCap(ST_MONTHS[b.m]), html: () => {
@@ -3157,6 +3219,24 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           <button class="st-close" onclick="closeStory()">Закрыть</button>` });
       }
       return V;
+    }
+    // дни недели — бусины на шёлковой нити: высота — вес, день с тренировкой — цветная бусина со значком
+    function stBeads(w, s) {
+      const days = [...Array(7)].map((_, d) => {
+        const day = new Date(w.from); day.setDate(day.getDate() + d);
+        const e = w.ws.filter(x => +x.d === +day).pop(), sd = s && s.days && s.days[d], wo = sd && sd.workouts && sd.workouts[0];
+        return { d, w: e ? e.w : null, m: wo ? (wo.sport ? stSport(wo.sport) : { c: 'var(--volt)', ic: null }) : null };
+      });
+      const ws = days.filter(x => x.w != null).map(x => x.w), lo = ws.length ? Math.min(...ws) : 0, hi = ws.length ? Math.max(...ws) : 1, pad = Math.max(.3, (hi - lo) * .2);
+      const X = d => 18 + d * 264 / 6, Y = v => v == null ? 92 : 44 + (hi + pad - v) / (hi - lo + 2 * pad) * 96;
+      const pts = days.filter(x => x.w != null).map(x => [X(x.d), Y(x.w)]);
+      const gid = 'stG' + (++ST.gid);
+      const svg = pts.length > 1 ? `<svg viewBox="0 0 300 170" preserveAspectRatio="none"><defs><linearGradient id="${gid}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="300" y2="0" spreadMethod="reflect">
+          <stop offset="0" class="gs0"/><stop offset=".5" class="gsm"/><stop offset="1" class="gs1"/>
+          ${PT.reduce ? '' : '<animateTransform attributeName="gradientTransform" type="translate" from="0 0" to="600 0" dur="5s" repeatCount="indefinite"/>'}</linearGradient></defs>${silkSvg(pts, gid)}</svg>` : '';
+      const beads = days.map(x => `<div class="bd${x.w == null ? ' off' : ''}${x.m ? ' wo' : ''}" style="left:${(X(x.d) / 3).toFixed(2)}%;top:${(Y(x.w) / 1.7).toFixed(2)}%">
+          <b>${x.w == null ? '—' : fmt(x.w)}</b><i${x.m ? ` style="background:${x.m.c}"` : ''}>${x.m && x.m.ic ? stIcon(x.m.ic, '') : ''}</i><small>${ST_DAYS[x.d].toLowerCase()}</small></div>`).join('');
+      return `<div class="st-beads st-chart go">${svg}${beads}</div>`;
     }
     // яркая обложка: вес недели крупно, мини-график, замеры, тренировки, километры
     function stPosterHtml(v, b) {
@@ -3220,10 +3300,14 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       ST.posterOn = false; cancelAnimationFrame(ST.timer);
       $('stPoster').classList.add('gone');
       stChartGo();
+      if (ST.sl) { ST.dt0 = performance.now(); ST.dlast = 0; }
       const pt = ST.pt; setTimeout(() => { if (pt && ST.pt === pt && !ST.posterOn) pt.stop(); }, 600);
     }
     function stTick(now) {
       if (!ST.posterOn) return;
+      // палец держит — обложка на паузе
+      if (ST.hold) { ST.posterT0 += now - (ST.plast || now); ST.plast = now; ST.timer = requestAnimationFrame(stTick); return; }
+      ST.plast = now;
       // пока сервер не прислал тренировки и км — обложка ждёт, полоска не бежит (но не дольше 12 с)
       const wait = !ST.srv && now - ST.posterOpen < ST_POSTER_WAIT, bw = $('stPosterBar');
       if (bw) bw.parentNode.classList.toggle('wait', wait);
@@ -3242,10 +3326,43 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const dir = i > ST.i ? 'in-r' : i < ST.i ? 'in-l' : '';
       if (dir && anim) safeHaptic('selection');
       ST.i = i; stTabs();
-      const pg = $('stPage');
-      pg.innerHTML = `<div class="st-card${anim && dir ? ' ' + dir : ''}">${ST.views[i].html()}</div>`;
+      const pg = $('stPage'), v = ST.views[i];
+      if (v.slides) { ST.sl = v.slides(); ST.si = 0; stDeck(anim ? dir || 'in' : ''); return; }
+      ST.sl = null; cancelAnimationFrame(ST.dk);
+      pg.innerHTML = `<div class="st-card${anim && dir ? ' ' + dir : ''}">${v.html()}</div>`;
       if (anim) pg.scrollTop = 0;
       stChartGo();
+    }
+    // экраны недели после обложки: полоски сверху (обложка — первая), экран листается сам; держишь палец — пауза;
+    // тап справа — дальше, слева — назад; на последнем экране не листается
+    const ST_SLIDE = 7000;
+    function stDeck(anim) {
+      const pg = $('stPage'), n = ST.sl.length;
+      ST.si = Math.max(0, Math.min(n - 1, ST.si));
+      pg.innerHTML = `<div class="st-deck"><div class="st-segs"><i><b style="width:100%"></b></i>${ST.sl.map((_, k) => `<i><b style="width:${k < ST.si ? 100 : 0}%"></b></i>`).join('')}</div>
+        <div class="st-slide${anim ? ' ' + (anim === 'in-l' ? 'in-l' : 'in-r') : ''}">${ST.sl[ST.si]}</div></div>`;
+      pg.scrollTop = 0;
+      silkStart(pg);
+      ST.dt0 = performance.now(); ST.dpause = 0;
+      cancelAnimationFrame(ST.dk); ST.dk = requestAnimationFrame(stDeckTick);
+    }
+    function stDeckTick(now) {
+      if (!ST.sl || !$('story').classList.contains('open')) return;
+      // пока обложка на экране или палец держит — время экрана стоит
+      if (ST.posterOn || ST.hold) ST.dt0 += now - (ST.dlast || now);
+      ST.dlast = now;
+      const last = ST.si >= ST.sl.length - 1, k = last ? 1 : Math.min(1, (now - ST.dt0) / ST_SLIDE);
+      const b = $('stPage').querySelectorAll('.st-segs b')[ST.si + 1];
+      if (b) b.style.width = (last && !ST.posterOn ? 100 : ST.posterOn ? 0 : k * 100).toFixed(1) + '%';
+      if (k >= 1 && !last) { ST.si++; stDeck('in-r'); return; }
+      ST.dk = requestAnimationFrame(stDeckTick);
+    }
+    function stSlide(d) {
+      if (!ST.sl) return;
+      const j = ST.si + d;
+      if (j < 0) return;
+      if (j >= ST.sl.length) { stNext(); return; }
+      safeHaptic('selection'); ST.si = j; stDeck(d > 0 ? 'in-r' : 'in-l');
     }
     // график рисуется заново, когда карточку впервые видно: не под обложкой и не при тихой пересборке с новыми данными
     function stChartGo() {
@@ -3265,7 +3382,9 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const id = ST.views[ST.i] && ST.views[ST.i].id, top = $('stPage').scrollTop;
       ST.views = stViews(u, b);
       ST.i = Math.max(0, ST.views.findIndex(v => v.id === id));
-      stGo(ST.i, false); $('stPage').scrollTop = top;
+      const v = ST.views[ST.i];
+      if (v.slides && ST.sl) { ST.sl = v.slides(); stDeck(''); }
+      else { stGo(ST.i, false); $('stPage').scrollTop = top; }
       if (ST.posterOn) { const el = $('stPoster'), bar = $('stPosterBar'), wd = bar && bar.style.width, cv = el.querySelector('.st-pt'); el.innerHTML = stPosterHtml(ST.views[ST.i], b); stFitHuge(el); if (cv) el.insertBefore(cv, el.firstChild); if (wd) $('stPosterBar').style.width = wd; const sc = el.querySelector('.st-chart'); if (sc) sc.classList.add('go'); silkStart(el); sc && sc.querySelectorAll('.silk').forEach(g => g.__t0 -= 2000); }
     }
     function openStory() {
@@ -3306,7 +3425,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       });
     }
     function closeStory() {
-      ST.req++; ST.posterOn = false;
+      ST.req++; ST.posterOn = false; ST.hold = false; cancelAnimationFrame(ST.dk);
       if (ST.pt) { ST.pt.stop(); ST.pt = null; }
       $('story').classList.remove('open'); $('story').setAttribute('aria-hidden', 'true');
       cancelAnimationFrame(ST.timer);
@@ -3314,8 +3433,23 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     }
     // обложка: тап — открыть неделю. Карточка: свайп вбок — соседняя, свайп вниз сверху — закрыть
     (() => {
-      $('stPoster').addEventListener('click', e => { if (!e.target.closest('button')) stPosterHide(); });
+      // держишь палец — пауза; короткий тап — дальше (слева — назад)
+      const press = (node, tap) => {
+        let t0 = 0, x = 0, y = 0, ht = 0, down = false;
+        node.addEventListener('pointerdown', e => { if (e.target.closest('button, a, .st-wos')) return; down = true; t0 = performance.now(); x = e.clientX; y = e.clientY; clearTimeout(ht); ht = setTimeout(() => { if (down) ST.hold = true; }, 220); });
+        const up = (e, ok) => {
+          if (!down) return; down = false; clearTimeout(ht);
+          const held = ST.hold; ST.hold = false;
+          if (!ok || held || performance.now() - t0 > 400 || Math.hypot(e.clientX - x, e.clientY - y) > 12) return;
+          const r = node.getBoundingClientRect(); tap(e.clientX - r.left < r.width / 3 ? -1 : 1);
+        };
+        node.addEventListener('pointerup', e => up(e, true));
+        node.addEventListener('pointercancel', e => up(e, false));
+        node.addEventListener('contextmenu', e => e.preventDefault());
+      };
+      press($('stPoster'), d => { if (d > 0) stPosterHide(); });
       const el = $('stPage');
+      press(el, d => { if (ST.sl) stSlide(d); });
       let x0 = 0, y0 = 0, top0 = 0, on = false;
       el.addEventListener('touchstart', e => { const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; top0 = el.scrollTop; on = true; }, { passive: true });
       el.addEventListener('touchend', e => {
