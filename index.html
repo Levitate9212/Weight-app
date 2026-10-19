@@ -1620,7 +1620,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           // фон разлился до краёв — только теперь заставка становится прозрачной (в этом же кадре, а не по таймеру:
           // пока телефон занят отрисовкой приложения, таймер опаздывает, и под тающим фоном мелькала тёмная заставка)
           if (D >= 1 && SP.left == null) { SP.left = t; sp.classList.add('leaving'); }
-          const out = SP.left == null ? 0 : e((t - SP.left - .1) / .5);
+          const out = SP.left == null ? 0 : e((t - SP.left - .05) / .35);
           if (out >= 1 && !sp.classList.contains('gone')) sp.classList.add('gone');
           if (D > 0) {
             // «рассвет»: фон приложения расходится кругом от фразы до краёв, потом тает, и видно приложение
@@ -1629,7 +1629,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
             gr.addColorStop(0, `rgba(${c},${1 - out})`); gr.addColorStop(1, `rgba(${c},0)`);
             ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
           }
-          const k = ph.TX * (1 - out), TD = x < 0 ? 0 : e((x - .05) / .45);
+          // фраза тает, пока фон ещё разливается, — к открытию приложения её уже нет и она не висит поверх
+          const k = ph.TX * (1 - (x < 0 ? 0 : e((x - .55) / .4))) * (1 - out), TD = x < 0 ? 0 : e((x - .05) / .45);
           if (k < .01) return;
           ctx.globalAlpha = k; text(ctx, W, grad(ctx, W, bright));
           // на песке буквы темнеют до лайма и бирюзы, чтобы читались
@@ -3030,13 +3031,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     // яркая обложка: вес недели крупно, мини-график, замеры, тренировки, километры
     function stPosterHtml(v, b) {
       const w = v.week, s = ST.srv && ST.srv.weeks ? ST.srv.weeks.find(x => x.from === w.key) : null, dots = ST.srv && ST.srv.failed ? '—' : '…';
-      let spark = '';
-      if (w.ws.length > 1) {
-        const lo = Math.min(...w.ws.map(e => e.w)), hi = Math.max(...w.ws.map(e => e.w)), r = Math.max(.4, hi - lo);
-        const pts = w.ws.map(e => [8 + (e.d - w.from) / DAY_MS / 6 * 324, 10 + (hi - e.w) / r * 70]);
-        const d = smoothD(pts), lp = pts[pts.length - 1];
-        spark = `<svg class="sp" viewBox="0 0 340 90"><path d="${d}" pathLength="100" fill="none" stroke="#121315" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" style="--len:100;stroke-dasharray:100"/><circle cx="${lp[0].toFixed(1)}" cy="${lp[1].toFixed(1)}" r="8" fill="#121315"/></svg>`;
-      }
+      // график — тот же живой, что в карточке недели: рисуется, бегут цвета, по линии пробегает искра, точка дышит
+      const spark = stChart(w);
       const a = w.ws.length ? w.ws[0].w : null, z = w.ws.length ? w.ws[w.ws.length - 1].w : null;
       return `<div class="bar"><b id="stPosterBar"></b></div>
         <div class="st-head"><span class="t">Неделя ${w.i + 1} · ${stRange(w.from, w.to)}</span><button class="st-x" onclick="closeStory()" aria-label="Закрыть">×</button></div>
@@ -3053,8 +3049,15 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       if (!v || !v.week) { el.className = 'st-poster off'; return; }
       el.className = 'st-poster'; el.innerHTML = stPosterHtml(v, b); void el.offsetWidth; el.classList.add('in');
       stPosterParticles(el);
+      stPosterChart(el);
       ST.posterT0 = ST.posterOpen = performance.now(); ST.posterOn = true;
       cancelAnimationFrame(ST.timer); ST.timer = requestAnimationFrame(stTick);
+    }
+    function stPosterChart(el) {
+      const c = el.querySelector('.st-chart');
+      if (!c) return;
+      c.classList.add('go');
+      clearTimeout(ST.pskT); ST.pskT = setTimeout(() => { if (c.isConnected) c.querySelectorAll('[begin=indefinite]').forEach(a => { try { a.beginElement(); } catch (e) {} }); }, 1400);
     }
     function stPosterHide() {
       if (!ST.posterOn) return;
@@ -3174,7 +3177,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       ST.views = stViews(u, b);
       ST.i = Math.max(0, ST.views.findIndex(v => v.id === id));
       stGo(ST.i, false); $('stPage').scrollTop = top;
-      if (ST.posterOn) { const el = $('stPoster'), bar = $('stPosterBar'), wd = bar && bar.style.width, cv = el.querySelector('.st-pt'); el.innerHTML = stPosterHtml(ST.views[ST.i], b); if (cv) el.insertBefore(cv, el.firstChild); if (wd) $('stPosterBar').style.width = wd; }
+      if (ST.posterOn) { const el = $('stPoster'), bar = $('stPosterBar'), wd = bar && bar.style.width, cv = el.querySelector('.st-pt'); el.innerHTML = stPosterHtml(ST.views[ST.i], b); if (cv) el.insertBefore(cv, el.firstChild); if (wd) $('stPosterBar').style.width = wd; el.querySelectorAll('.st-chart [begin=indefinite]').forEach(x => { try { x.beginElement(); } catch (e) {} }); }
     }
     function openStory() {
       const u = globalData[activeUserId];
