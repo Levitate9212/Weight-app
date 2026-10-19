@@ -201,10 +201,7 @@
     .st-chart .ar { fill: var(--volt); opacity: .13; }
     /* после отрисовки график живёт: цвета линии бегут лайм → мята → бирюза, по линии пробегает искра, точка дышит */
     .st-chart .gs0, .st-chart .gs2 { stop-color: var(--pt-a); } .st-chart .gs1 { stop-color: var(--pt-c); } .st-chart .gsm { stop-color: var(--pt-b); }
-    .st-wait { width: 64%; margin: 4px auto 0; }
-    .st-wait svg { display: block; width: 100%; height: 40px; overflow: visible; }
-    .st-wait .gs0 { stop-color: var(--pt-a); } .st-wait .gsm { stop-color: var(--pt-b); } .st-wait .gs1 { stop-color: var(--pt-c); }
-    .st-wait .silk path, .st-chart .silk path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .st-chart .silk path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
     .silk .au { stroke: #F2C35B; }
     html.light .silk .au { stroke: #B9831A; }
     .silk .sg { stroke-width: 7; opacity: .28; filter: blur(3px); }
@@ -3152,7 +3149,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         ${a != null ? `<div class="unit">КГ · ${fmt(a)} → ${fmt(z)}</div>` : ''}
         ${spark}
         <div class="stats"><div><b>${w.ws.length}/7</b><span>замеров</span></div><div><b>${s ? s.workouts : dots}</b><span>${s ? plural(s.workouts, ...ST_W) : ST_W[2]}</span></div>${s && s.distance.km ? `<div><b>${stKm(s.distance.km)}</b><span>км</span></div>` : ''}</div>
-        <div class="say">${s && s.phrases ? esc(s.phrases.cover) : ST.srv && ST.srv.failed ? '' : stSilkWait()}</div>
+        <div class="say">${s && s.phrases ? esc(s.phrases.cover) : ''}</div>
         <div class="hint">Нажми, чтобы открыть неделю</div>`;
     }
     function stPoster(v, b) {
@@ -3171,13 +3168,6 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       if (!h) return;
       h.style.fontSize = ''; h.style.whiteSpace = 'nowrap';
       if (h.scrollWidth > h.clientWidth + 1) h.style.fontSize = (parseFloat(getComputedStyle(h).fontSize) * h.clientWidth / h.scrollWidth * .96).toFixed(1) + 'px';
-    }
-    // пока сервер считает тренировки и фразу — на месте фразы течёт шёлковая нить из тех же прядей
-    function stSilkWait() {
-      const gid = 'stG' + (++ST.gid);
-      return `<div class="st-wait" aria-label="Загружаю"><svg viewBox="0 0 300 40"><defs><linearGradient id="${gid}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="300" y2="0" spreadMethod="reflect">
-        <stop offset="0" class="gs0"/><stop offset=".5" class="gsm"/><stop offset="1" class="gs1"/>
-        ${PT.reduce ? '' : '<animateTransform attributeName="gradientTransform" type="translate" from="0 0" to="600 0" dur="3s" repeatCount="indefinite"/>'}</linearGradient></defs>${silkSvg([[60, 20], [240, 20]], gid)}</svg></div>`;
     }
     function stPosterChart(el) {
       const c = el.querySelector('.st-chart');
