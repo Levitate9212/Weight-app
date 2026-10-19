@@ -453,6 +453,10 @@
     #mtSvg.silky #mtDone { opacity: .35; stroke-width: 1.4; }
     /* весь путь до вершины — тихая шёлковая тропа (вместо пунктира), пройденное — яркая нить поверх */
     #mtTrailG { opacity: .5; }
+    .mt-camp.pop { animation: campPop .55s cubic-bezier(.3,1.6,.5,1); transform-box: fill-box; transform-origin: 50% 70%; }
+    .mt-camp.pop .tg { animation: campFlash 1.2s ease both; }
+    @keyframes campPop { 0% { transform: scale(1); } 40% { transform: scale(1.35); } 100% { transform: none; } }
+    @keyframes campFlash { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: .55; } }
     #mtTrailG .sl-a { stroke: #DDE3EA; } #mtTrailG .sl-b { stroke: #9FB3C8; }
     #mtSvg > g, #mtSvg > path, #mtSvg > image, #mtSvg > line, #mtSvg > text { transition: opacity .7s ease; }
     #mtSvg #mtSkyG > g, #mtSvg #mtSkyG > circle[cx="330"] { transition: opacity .7s ease; }
@@ -2781,28 +2785,39 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const t = ACH.q.shift(), sc = $('achScreen');
       setTimeout(() => { ACH.busy = false; achFire(); }, 110);
       if (!sc.classList.contains('open')) return;
-      const r = t.querySelector('.mw').getBoundingClientRect(), W = innerWidth, H = innerHeight;
-      const tx = r.left + r.width / 2, ty = r.top + r.height / 2;
-      // откуда летит: с боков на разной высоте, снизу, из углов или из центра экрана (не из самой медали) — дугой в медаль
-      const from = [[-6, H * (.3 + Math.random() * .4)], [W + 6, H * (.3 + Math.random() * .4)], [W * (.3 + Math.random() * .4), H + 6],
-        [-6, H + 6], [W + 6, H + 6], [-6, H * .12], [W + 6, H * .12], [W / 2, H / 2]].filter(([x, y]) => Math.hypot(x - tx, y - ty) > 140);
-      const [sx, sy] = from[(Math.random() * from.length) | 0] || [-6, H / 2];
-      const bend = (Math.random() < .5 ? -1 : 1) * (50 + Math.random() * 70), dx = tx - sx, dy = ty - sy, dl = Math.hypot(dx, dy) || 1;
-      const cx = (sx + tx) / 2 - dy / dl * bend, cy = (sy + ty) / 2 + dx / dl * bend;
-      const pts = [...Array(25)].map((_, k) => { const u = k / 24, v = 1 - u; return [v * v * sx + 2 * v * u * cx + u * u * tx, v * v * sy + 2 * v * u * cy + u * u * ty]; });
+      const W = innerWidth, H = innerHeight;
+      // цель — центр медали в каждом кадре: листаешь, пока нить летит, — она догоняет медаль, а не бьёт в старое место
+      const mw = t.querySelector('.mw'), aim = () => { const q = mw.getBoundingClientRect(); return [q.left + q.width / 2, q.top + q.height / 2]; };
       // холст нитей — поверх экрана медалей, но в body: внутри сдвинутого экрана fixed уезжал бы при прокрутке
       let sv = $('achShots');
       if (!sv) { document.body.insertAdjacentHTML('beforeend', '<svg id="achShots" aria-hidden="true"></svg>'); sv = $('achShots'); }
       sv.setAttribute('viewBox', `0 0 ${W} ${H}`);
-      sv.insertAdjacentHTML('beforeend', silkRaw(pts, { n: 6, a: .8, w: 1.5 }));
+      // попала — медаль переворачивается в цвет
+      silkShot(sv, [0, 0, W, H], aim, 1, () => { t.classList.replace('dim', 'lit'); safeHaptic('soft'); });
+    }
+    // шёлковая нить выстреливает дугой в цель aim() → [x, y] (цель может двигаться) из случайного места видимой области v = [x, y, w, h]:
+    // с боков на разной высоте, снизу, из углов или из центра (не из самой цели). k — масштаб (единиц на пиксель)
+    function silkShot(sv, v, aim, k, hit) {
+      const [X, Y, W, H] = v, rnd = Math.random;
+      let [tx, ty] = aim();
+      const from = [[X - 6 * k, Y + H * (.3 + rnd() * .4)], [X + W + 6 * k, Y + H * (.3 + rnd() * .4)], [X + W * (.3 + rnd() * .4), Y + H + 6 * k],
+        [X - 6 * k, Y + H + 6 * k], [X + W + 6 * k, Y + H + 6 * k], [X - 6 * k, Y + H * .12], [X + W + 6 * k, Y + H * .12], [X + W / 2, Y + H / 2]]
+        .filter(([x, y]) => Math.hypot(x - tx, y - ty) > 140 * k);
+      const [sx, sy] = from[(rnd() * from.length) | 0] || [X - 6 * k, Y + H / 2];
+      const bend = (rnd() < .5 ? -1 : 1) * (50 + rnd() * 70) * k, dx = tx - sx, dy = ty - sy, dl = Math.hypot(dx, dy) || 1;
+      // изгиб — сбоку от прямой, на том же месте относительно цели, пока она едет
+      const ox = -dy / dl * bend, oy = dx / dl * bend;
+      const arc = () => { const cx = (sx + tx) / 2 + ox, cy = (sy + ty) / 2 + oy; return [...Array(25)].map((_, i) => { const u = i / 24, w = 1 - u; return [w * w * sx + 2 * w * u * cx + u * u * tx, w * w * sy + 2 * w * u * cy + u * u * ty]; }); };
+      sv.insertAdjacentHTML('beforeend', silkRaw(arc(), { n: 6, a: .8 * k, w: 1.5 * k }));
       const g = sv.lastElementChild, t0 = performance.now(), D = 340;
       g.__u = 0; silkStart(g);
       const st = now => {
         if (!g.isConnected) return;
-        const k = Math.min(1, (now - t0) / D); g.__u = 1 - Math.pow(1 - k, 2);
-        if (k < 1) return requestAnimationFrame(st);
-        // попала — медаль переворачивается в цвет, нить гаснет
-        t.classList.replace('dim', 'lit'); safeHaptic('soft');
+        const q = Math.min(1, (now - t0) / D); g.__u = 1 - Math.pow(1 - q, 2);
+        const [nx, ny] = aim();
+        if (Math.abs(nx - tx) + Math.abs(ny - ty) > .5) { tx = nx; ty = ny; silkGeo(g, arc()); }
+        if (q < 1) return requestAnimationFrame(st);
+        if (hit) hit();
         g.style.transition = 'opacity .45s ease'; g.style.opacity = 0;
         setTimeout(() => g.remove(), 500);
       };
@@ -4019,6 +4034,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         <path id="mtDone" d="" fill="none" stroke="${P.me}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
         ${calm() ? '' : silkRaw([MT_TRAIL[0], MT_TRAIL[0]], { n: 7, a: .9, w: 1.7, full: true, id: 'mtSilk' })}
         ${camps}
+        <g id="mtShots"></g>
         <text id="mtStartT" x="${MT_TRAIL[0][0] - 4}" y="${MT_TRAIL[0][1] + 22}" font-size="13" font-weight="600" fill="${P.start}" font-family="Golos Text, system-ui, sans-serif"></text>
         <line x1="${fx}" y1="${fy}" x2="${fx}" y2="${fy - 24}" stroke="${P.pole}" stroke-width="1.6"/>
         <path id="mtFlag" d="M${fx} ${fy - 24}L${fx + 18} ${fy - 19}L${fx} ${fy - 14}Z" fill="#F2B53A"/>
@@ -4121,6 +4137,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       $('mtTorch').setAttribute('transform', `translate(${(-sw).toFixed(2)} 0)`);
     }
     function mtDraw(t, reached, walking) {
+      MT.drawT = t;
       const pts = [];
       for (let k = 0; k <= 80; k++) pts.push(mtAt(t * k / 80).slice(0, 2).map(v => v.toFixed(1)).join(' '));
       $('mtDone').setAttribute('d', 'M' + pts.join('L'));
@@ -4264,14 +4281,18 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const t = Math.max(0, Math.min(1, done / total));
       // лагерь горит, если медаль «Путь к цели» уже получена, или тропа до него дошла
       const earned = new Set(((u.medals && u.medals.catalog) || []).filter(m => m.status === 'earned').map(m => m.key));
-      const reached = (c, tt) => earned.has('path_' + c) || tt * 100 >= c - 1e-6;
+      const reached0 = (c, tt) => earned.has('path_' + c) || tt * 100 >= c - 1e-6;
       mtStats(start, goal, current, true);
       // человечек идёт по тропе: при открытии и смене человека — от подножия
       const from = (MT.user !== u || MT.t == null) ? 0 : MT.t;
       MT.user = u; MT.t = t;
       mtCompany(u, t);
       cancelAnimationFrame(MT.raf);
-      if (calm() || Math.abs(t - from) < 0.002) { MT.face = mtAt(t)[2]; mtDraw(t, reached, false); return; }
+      // лагерь загорается, когда в него попадают шёлковые нити (человечек дошёл); пройденные раньше горят сразу
+      const hit = new Set(MT_CAMPS.filter(c => from * 100 >= c - 1e-6)), shots = !calm() && !!$('mtShots');
+      let fin = !shots;
+      const reached = (c, tt) => reached0(c, tt) && (fin || hit.has(c));
+      if (calm() || Math.abs(t - from) < 0.002) { fin = true; MT.face = mtAt(t)[2]; mtDraw(t, reached, false); return; }
       // Время идёт по кадрам, а не по часам: пока гора собирается и экран выезжает, кадры
       // бывают по полсекунды, и раньше человечек стоял, а потом рывком догонял. Долгий кадр
       // засчитывается как обычный (не больше 34 мс). Старт — после короткой паузы, разгон и торможение плавные.
@@ -4281,16 +4302,33 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         el += last == null ? 0 : Math.min(now - last, 34); last = now;
         const k = Math.max(0, Math.min(1, el / dur)), e = k < .5 ? 2 * k * k : 1 - Math.pow(2 - 2 * k, 2) / 2;
         const cur = from + (t - from) * e;
-        // лёгкий щелчок, когда человечек проходит лагерь; на вершине — «успех»
-        if (MT_CAMPS.some(c => (prevT * 100 < c - 1e-6) !== (cur * 100 < c - 1e-6))) safeHaptic('soft');
+        // дошёл до лагеря — в него бьют нити, и он загорается со щелчком; на вершине — «успех»
+        MT_CAMPS.forEach(c => { if (prevT * 100 < c - 1e-6 && cur * 100 >= c - 1e-6 && !hit.has(c)) mtCampShot(c, () => { hit.add(c); safeHaptic('soft'); if (!MT.walk) mtDraw(MT.drawT, reached, false); }); });
+        if (shots && MT_CAMPS.some(c => prevT * 100 >= c - 1e-6 && cur * 100 < c - 1e-6)) safeHaptic('soft');
         if (k >= 1 && t >= 1 && from < 1) safeHaptic('success');
-        prevT = cur;
+        if (k >= 1) setTimeout(() => { if (MT.t === t && !fin) { fin = true; mtDraw(MT.drawT, reached, false); } }, 900);
+        prevT = cur; MT.walk = k < 1;
         mtDraw(cur, reached, el > 0 && k < 1);
         if (k < 1) MT.raf = requestAnimationFrame(step);
       };
       MT.raf = requestAnimationFrame(step);
     }
     const MTP = { wait: 0 };
+    // три шёлковые нити из разных краёв экрана бьют в лагерь; когда первая долетела — лагерь вспыхивает
+    function mtCampShot(c, onHit) {
+      const g = document.querySelector(`.mt-camp[data-c="${c}"]`), box = $('mtShots');
+      if (!g || !box) return onHit();
+      const tg = g.querySelector('.tg'), tx = +tg.getAttribute('cx'), ty = +tg.getAttribute('cy') - 2;
+      let done = false;
+      for (let n = 0; n < 3; n++) setTimeout(() => {
+        if (!MT.open) return;
+        silkShot(box, [MT.cx, MT.cy, MT.visW, MT.visH], () => [tx, ty], MT_K, () => {
+          if (done) return;
+          done = true; onHit();
+          g.classList.remove('pop'); void g.getBBox(); g.classList.add('pop');
+        });
+      }, n * 80);
+    }
     // слово на холст ровно на его месте на экране, его же шрифтом (cr — где на экране холст)
     function ptWord(g, cr, txt, r, cs, px) {
       if (!r.width || r.bottom < cr.top || r.top > cr.bottom || r.right < cr.left || r.left > cr.right) return;
