@@ -91,6 +91,13 @@
       font-family: var(--num); font-weight: 800; font-size: 20px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink); }
     .sp-small span { color: var(--volt); }
     #splash.pt .sp-small { display: block; }
+    /* заставка из прядей: в светлой теме она тёмная (пряди светятся только на тёмном), а при входе разливается песок */
+    html.light #splash.sl { background: #10171E; }
+    html.light #splash.sl .sp-small { color: #E9EEF2; }
+    html.light #splash.sl .sp-small span { color: #BDEB5B; }
+    #goalSl { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 40; }
+    #splash.sl-out .sp-small { opacity: 0; transition: opacity .3s ease; }
+    #splash.sl.leaving { background: transparent; transition: opacity .4s ease, visibility .4s ease; }
     /* уход: фон заставки тает, под ней уже приложение, а частицы разлетаются поверх */
     #splash.leaving { background: transparent; pointer-events: none; transition: background .45s ease, opacity .4s ease, visibility .4s ease; }
     #splash.leaving .sp-small { opacity: 0; transition: opacity .3s ease; }
@@ -1026,7 +1033,7 @@
     function retryFetch() {
       safeHaptic('light');
       $('errorBox').classList.add('hidden');
-      $('splash').classList.remove('gone', 'leaving');
+      $('splash').classList.remove('gone', 'leaving', 'sl-out');
       if (SP.s) { SP.exitAt = null; SP.s.start(); }
       fetchData();
     }
@@ -1221,6 +1228,331 @@
       return { scene, sample, ARRIVE, EXIT, pick, clamp, ease, isDark, reduce, ramp };
     })();
 
+    // =====================================================================
+    // ПРЯДИ (как в демо «Магический портал»): девять светящихся шёлковых линий
+    // летают по экрану, потом каждая прядь течёт на контур фигуры (буквы, силуэт
+    // горы, медаль) и растворяется, а на её месте проявляется настоящая картинка.
+    // Один WebGL на всё приложение: рисуем на скрытом холсте и копируем на холст сцены.
+    // Нет WebGL — scene() возвращает null, и сцена идёт прежними частицами.
+    // =====================================================================
+    const SL = (() => {
+      const NSTR = 189, NSEG = 80, NL = 9, NP = 20, SPC = .0016;
+      // лайм, бирюза, золото, мята, жёлто-зелёный, голубой, светлая мята, светло-жёлтый, тёмная мята
+      const PAL = [[.66, .95, .14], [.15, .92, .80], [1, .82, .25], [.40, 1, .55], [.88, 1, .45], [.55, .85, 1], [.75, 1, .85], [.95, .95, .55], [.30, .80, .65]], HI = [.97, 1, .88];
+      // в светлой теме те же цвета, но как насыщенная краска на светлом фоне
+      const ink = v => { const m = Math.max(...v, 1e-4), h = v.map(x => x / m), mn = Math.min(...h); return h.map(x => Math.max(0, x - .6 * mn) * .78); };
+      const css = v => `rgb(${v.map(x => Math.round(Math.min(1, x) * 255))})`;
+      const VS = 'attribute vec2 v;void main(){gl_Position=vec4(v,0.,1.);}';
+      // пряди — полоски треугольников вдоль пути своей линии; путь — след «головы» (Catmull-Rom, без изломов).
+      // M — насколько прядь уже перетекла на контур фигуры (b — точка контура и нормаль), TX — растворение на фигуре
+      const VSL = `attribute vec3 a; attribute vec4 b; uniform float M,TX,KP; uniform vec2 R; uniform float T,SC; uniform vec3 CC[${NL}]; uniform vec4 PA[${NP * NL / 2}];
+varying vec3 vc; varying float vx,vf,vh;
+float h1(float x){return fract(sin(x*91.37+3.1)*43758.5453);}
+vec2 gp(float id){vec4 p=PA[int(floor(id/2.))]; return mod(id,2.)<.5?p.xy:p.zw;}
+vec2 pp(float k,float u){float x=clamp(u,0.,1.)*${NP - 1}.; float i=min(floor(x),${NP - 2}.), f=x-i, b=k*${NP}.;
+ vec2 p0=gp(b+max(i-1.,0.)), p1=gp(b+i), p2=gp(b+i+1.), p3=gp(b+min(i+2.,${NP - 1}.));
+ return .5*(2.*p1+(p2-p0)*f+(2.*p0-5.*p1+4.*p2-p3)*f*f+(3.*p1-p0-3.*p2+p3)*f*f*f);}
+void main(){float fi=a.x,s=a.y,sd=a.z;
+ float A=h1(fi),B=h1(fi+.37),Cc=h1(fi+.71),E=h1(fi+1.13),G=h1(fi+1.57),K=h1(fi+2.03);
+ float k=mod(fi,${NL}.);
+ float dir=B<.15?-1.:1., uc=-.35+1.7*fract(Cc+T*(.04+.07*A)*dir), len=.25+.4*E, u=uc+(s-.5)*len;
+ vec2 c=pp(k,u), tg=pp(k,u+.02)-pp(k,u-.02); tg=length(tg)>1e-6?normalize(tg):vec2(1.,0.); vec2 nm=vec2(-tg.y,tg.x);
+ float bw=.045*SC*(.45+.55*(1.-clamp(u,0.,1.)*.6));
+ float off=bw*((G-.5)*1.4+.45*sin(u*5.+T*(.5+A)+fi))+.02*SC*sin(u*6.-T*1.6+k*2.);
+ off+=K>.68?(1.-s)*(1.-s)*(.06+.06*A)*SC*(B>.5?1.:-.6):0.;
+ float m=clamp((M-h1(fi+4.1)*.3-(1.-s)*.3)/.4,0.,1.); m=m*m*(3.-2.*m);
+ c=mix(c,b.xy,m); nm=normalize(mix(nm,b.zw,m)+vec2(1e-5)); off*=1.-m*.9;
+ float w=(1.+1.3*G*G)*(1.+.2*m), qw=mix(6.,2.5,m), hw=w*qw;
+ vec2 q=c+nm*off+nm*sd*hw/R.y;
+ gl_Position=vec4(q.x*2.*R.y/R.x,q.y*2.,0.,1.);
+ vx=sd*qw;
+ float sn=max(sin(3.1416*s),0.); sn=sqrt(sn)*sqrt(sqrt(sn));
+ vf=.8*sn*(.35+.65*Cc)*(K>.68?.75:1.)*smoothstep(-.02,.12,u)*smoothstep(1.02,.7,u);
+ vf=mix(vf,.4*sn*(.6+.4*Cc),m)*(1.-m*m*(.85-.55*KP))*(1.-TX);
+ vec3 own=CC[int(k+.5)], nx=CC[int(mod(k+1.,${NL}.)+.5)]; vc=mix(own,nx,step(.8,E)*.35);
+ float hs=max(0.,sin(u*7.+fi+T*.7)); hs*=hs; hs*=hs; hs*=hs*hs;
+ vh=(.25*s+hs*step(.55,A)*1.2)*(1.-m);}`;
+      const FSL = `precision mediump float; uniform vec3 HI; varying vec3 vc; varying float vx,vf,vh;
+void main(){float x=vx, core=exp(-x*x), e=max(1.-abs(x)/6.,0.), glow=exp(-x*x/60.)*e*e;
+ gl_FragColor=vec4((vc*(core*.85+glow*.12)+HI*core*vh)*vf,1.);}`;
+      // след: прошлый кадр, чуть размытый и угасающий, — пряди тянут за собой мягкий шлейф
+      const FSF = `precision highp float; uniform sampler2D PV,CU; uniform vec2 R; uniform float DK;
+void main(){vec2 uv=gl_FragCoord.xy/R, px=3.2/R;
+ vec3 pv=(texture2D(PV,uv+vec2(px.x,0.)).rgb+texture2D(PV,uv-vec2(px.x,0.)).rgb+texture2D(PV,uv+vec2(0.,px.y)).rgb+texture2D(PV,uv-vec2(0.,px.y)).rgb)*.25;
+ pv=clamp(pv*DK-vec3(1./255.),0.,1.); pv=pv==pv?pv:vec3(0.);
+ gl_FragColor=vec4(max(pv,texture2D(CU,uv).rgb),1.);}`;
+      // показ на прозрачном холсте: в тёмной теме — свечение, в светлой — насыщенная краска
+      const FSS = `precision highp float; uniform sampler2D FB; uniform vec2 R; uniform float LT,AL;
+void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
+ for(int i=0;i<8;i++){float a=float(i)*.785+.39; vec2 o=vec2(cos(a),sin(a))/R;
+  g+=texture2D(FB,uv+o*6.).rgb*.55+texture2D(FB,uv+o*16.).rgb*.45;}
+ vec3 col=1.-exp(-(b+g/8.*.9)*1.3); float a=max(col.r,max(col.g,col.b));
+ vec3 cg=b+g/8.*.25; float lb=max(b.r,max(b.g,b.b)), lg=max(g.r,max(g.g,g.b))/8.;
+ float lm=max(cg.r,max(cg.g,cg.b)); vec3 hu=cg/max(lm,1e-4); float mn=min(hu.r,min(hu.g,hu.b));
+ vec3 ik=clamp(hu-.6*mn,0.,1.)*.78; float al=clamp(1.-exp(-(lb*1.7+lg*.45)),0.,.92);
+ gl_FragColor=mix(vec4(col,a),vec4(ik*al,al),LT)*AL;}`;
+      let gl = null, cv = null, PR = null, BUF = null, RT = null, broken = false, cur = null;   // cur — идущая сцена: WebGL один, сцена тоже одна
+      const TB = new Float32Array(NSTR * (NSEG + 1) * 8);
+      function init() {
+        if (gl) return !gl.isContextLost();
+        if (broken) return false;
+        try {
+          cv = document.createElement('canvas');
+          gl = cv.getContext('webgl', { alpha: true, premultipliedAlpha: true, antialias: false, depth: false, stencil: false });
+          if (!gl) throw 0;
+          const sh = (t, s) => { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw gl.getShaderInfoLog(o); return o; };
+          const mk = (vs, fs) => {
+            const p = gl.createProgram(); gl.attachShader(p, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(p, sh(gl.FRAGMENT_SHADER, fs));
+            gl.bindAttribLocation(p, 0, vs === VS ? 'v' : 'a'); if (vs !== VS) gl.bindAttribLocation(p, 1, 'b'); gl.linkProgram(p);
+            if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw gl.getProgramInfoLog(p);
+            const u = {}, n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
+            for (let i = 0; i < n; i++) { const nm = gl.getActiveUniform(p, i).name; u[nm] = gl.getUniformLocation(p, nm); }
+            return { p, u };
+          };
+          PR = { L: mk(VSL, FSL), F: mk(VS, FSF), S: mk(VS, FSS) };
+          const lv = new Float32Array(NSTR * (NSEG + 1) * 6), li = new Uint16Array(NSTR * NSEG * 6);
+          for (let i = 0, v = 0, x = 0; i < NSTR; i++) for (let k = 0; k <= NSEG; k++) {
+            const b = (i * (NSEG + 1) + k) * 2; lv.set([i, k / NSEG, -1, i, k / NSEG, 1], v); v += 6;
+            if (k < NSEG) { li.set([b, b + 1, b + 2, b + 1, b + 3, b + 2], x); x += 6; }
+          }
+          BUF = { q: gl.createBuffer(), l: gl.createBuffer(), t: gl.createBuffer(), i: gl.createBuffer(), n: li.length };
+          gl.bindBuffer(gl.ARRAY_BUFFER, BUF.q); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+          gl.bindBuffer(gl.ARRAY_BUFFER, BUF.l); gl.bufferData(gl.ARRAY_BUFFER, lv, gl.STATIC_DRAW);
+          gl.bindBuffer(gl.ARRAY_BUFFER, BUF.t); gl.bufferData(gl.ARRAY_BUFFER, TB, gl.DYNAMIC_DRAW);
+          gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, BUF.i); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, li, gl.STATIC_DRAW);
+          cv.addEventListener('webglcontextlost', e => { e.preventDefault(); gl = null; RT = null; broken = true; });
+          return true;
+        } catch (e) { gl = null; broken = true; return false; }
+      }
+      function rt(w, h) {
+        const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+        [gl.TEXTURE_MIN_FILTER, gl.TEXTURE_MAG_FILTER].forEach(k => gl.texParameteri(gl.TEXTURE_2D, k, gl.LINEAR));
+        [gl.TEXTURE_WRAP_S, gl.TEXTURE_WRAP_T].forEach(k => gl.texParameteri(gl.TEXTURE_2D, k, gl.CLAMP_TO_EDGE));
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        const f = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, f); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t, 0);
+        gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT); gl.bindFramebuffer(gl.FRAMEBUFFER, null); return { t, f };
+      }
+      function targets(w, h) {
+        if (!RT || RT.w !== w || RT.h !== h) {
+          if (RT) [RT.c, RT.a, RT.b].forEach(r => { gl.deleteTexture(r.t); gl.deleteFramebuffer(r.f); });
+          RT = { w, h, c: rt(w, h), a: rt(w, h), b: rt(w, h) };
+        }
+      }
+
+      // контуры фигуры: рисуем её в маску, обводим «бегущими квадратами», сглаживаем и ставим точки с равным шагом.
+      // Каждому заметному контуру хотя бы одна прядь, остальные — по длине контура
+      function contours(draw, W, H) {
+        const k = W * H > 260000 ? 1.5 : 2, mw = Math.round(W * k), mh = Math.round(H * k);
+        // фигуру рисуем в натуральную величину (помощники сами ставят свою трансформацию), потом увеличиваем — края мягкие
+        const m1 = document.createElement('canvas'); m1.width = Math.round(W); m1.height = Math.round(H);
+        const g1 = m1.getContext('2d', { willReadFrequently: true }); g1.fillStyle = '#000'; draw(g1, W, H);
+        const mc = document.createElement('canvas'); mc.width = mw; mc.height = mh;
+        const c = mc.getContext('2d', { willReadFrequently: true }); c.imageSmoothingEnabled = true; c.imageSmoothingQuality = 'high'; c.drawImage(m1, 0, 0, mw, mh);
+        const al = c.getImageData(0, 0, mw, mh).data, A = (x, y) => al[(y * mw + x) * 4 + 3];
+        const P = new Map(), adj = new Map(), pt = (id, x, y) => { if (!P.has(id)) P.set(id, [x, y]); return id; };
+        const lerp = (a, b) => { const d = b - a; return d ? (128 - a) / d : .5; };
+        const E = {
+          t: (x, y) => pt(x + y * mw * 2, x + lerp(A(x, y), A(x + 1, y)), y),
+          b: (x, y) => pt(x + (y + 1) * mw * 2, x + lerp(A(x, y + 1), A(x + 1, y + 1)), y + 1),
+          l: (x, y) => pt(-1 - (x + y * mw), x, y + lerp(A(x, y), A(x, y + 1))),
+          r: (x, y) => pt(-1 - (x + 1 + y * mw), x + 1, y + lerp(A(x + 1, y), A(x + 1, y + 1)))
+        };
+        const TAB = { 1: ['lb'], 2: ['br'], 3: ['lr'], 4: ['tr'], 5: ['lt', 'br'], 6: ['tb'], 7: ['lt'], 8: ['lt'], 9: ['tb'], 10: ['tr', 'lb'], 11: ['tr'], 12: ['lr'], 13: ['br'], 14: ['lb'] };
+        const link = (a, b) => { (adj.get(a) || adj.set(a, []).get(a)).push(b); (adj.get(b) || adj.set(b, []).get(b)).push(a); };
+        // пустые и сплошные строки пропускаем сразу
+        for (let y = 0; y < mh - 1; y++) {
+          let any = false, all = true;
+          for (let x = 0; x < mw; x++) { const v = A(x, y) > 127 || A(x, y + 1) > 127, w = A(x, y) > 127 && A(x, y + 1) > 127; any = any || v; all = all && w; if (any && !all) break; }
+          if (!any || all) continue;
+          for (let x = 0; x < mw - 1; x++) {
+            const cs = (A(x, y) > 127 ? 8 : 0) | (A(x + 1, y) > 127 ? 4 : 0) | (A(x + 1, y + 1) > 127 ? 2 : 0) | (A(x, y + 1) > 127 ? 1 : 0);
+            const tb = TAB[cs]; if (tb) for (const sg of tb) link(E[sg[0]](x, y), E[sg[1]](x, y));
+          }
+        }
+        const seen = new Set(); let out = [];
+        for (const st of adj.keys()) {
+          if (seen.has(st)) continue;
+          const ch = []; let cur = st, prev = null;
+          while (cur != null && !seen.has(cur)) { seen.add(cur); ch.push(P.get(cur)); const nx = adj.get(cur).find(n => n !== prev && !seen.has(n)); prev = cur; cur = nx; }
+          if (ch.length < 12) continue;
+          let pts = ch.map(p => [(p[0] / k - W / 2) / H, (H / 2 - p[1] / k) / H]);
+          for (let it = 0; it < 7; it++) pts = pts.map((p, i) => { const a = pts[(i - 1 + pts.length) % pts.length], b = pts[(i + 1) % pts.length]; return [(a[0] + 2 * p[0] + b[0]) / 4, (a[1] + 2 * p[1] + b[1]) / 4]; });
+          let len = 0; const cum = [0];
+          for (let i = 1; i <= pts.length; i++) { const a = pts[i - 1], b = pts[i % pts.length]; len += Math.hypot(b[0] - a[0], b[1] - a[1]); cum.push(len); }
+          const n = Math.max(8, Math.round(len / SPC)), rs = new Float32Array(n * 2); let j = 0;
+          for (let i = 0; i < n; i++) {
+            const d = i / n * len; while (cum[j + 1] < d) j++;
+            const f = (d - cum[j]) / (cum[j + 1] - cum[j] || 1), a = pts[j], b = pts[(j + 1) % pts.length];
+            rs[i * 2] = a[0] + (b[0] - a[0]) * f; rs[i * 2 + 1] = a[1] + (b[1] - a[1]) * f;
+          }
+          out.push({ p: rs, n, len });
+        }
+        if (!out.length) return null;
+        out.sort((a, b) => b.len - a.len); out = out.slice(0, 120);
+        const tot = out.reduce((a, c) => a + c.len, 0), cnt = out.map(() => 1), left = NSTR - out.length;
+        out.forEach((c, i) => { cnt[i] += Math.floor(Math.max(0, left) * c.len / tot); });
+        let rest = NSTR - cnt.reduce((a, b) => a + b, 0); for (let i = 0; rest > 0; i = (i + 1) % out.length, rest--) cnt[i]++;
+        const asg = [];
+        out.forEach((c, i) => { for (let j = 0; j < cnt[i]; j++) asg.push({ c, a: (j + Math.random() * .4) / cnt[i] * c.len, l: Math.min(c.len * .95, c.len / cnt[i] * 2.3), v: (Math.random() < .5 ? -1 : 1) * (.002 + Math.random() * .002) }); });
+        for (let i = asg.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0, x = asg[i]; asg[i] = asg[j]; asg[j] = x; }
+        return asg.slice(0, NSTR);
+      }
+      // точки контура для каждой вершины каждой пряди; на фигуре пряди медленно ползут вдоль своего контура
+      function fill(asg, t) {
+        for (let i = 0; i < NSTR; i++) {
+          const g = asg[i % asg.length], p = g.c.p, n = g.c.n;
+          for (let k = 0; k <= NSEG; k++) {
+            let d = (g.a + g.v * t + g.l * k / NSEG) / SPC; d = ((d % n) + n) % n;
+            const i0 = Math.floor(d), f = d - i0, a = i0 * 2, b = ((i0 + 1) % n) * 2, x = p[a] + (p[b] - p[a]) * f, y = p[a + 1] + (p[b + 1] - p[a + 1]) * f;
+            let tx = p[b] - p[a], ty = p[b + 1] - p[a + 1]; const tl = Math.hypot(tx, ty) || 1; tx /= tl; ty /= tl;
+            const o = (i * (NSEG + 1) + k) * 8; TB[o] = TB[o + 4] = x; TB[o + 1] = TB[o + 5] = y; TB[o + 2] = TB[o + 6] = -ty; TB[o + 3] = TB[o + 7] = tx;
+          }
+        }
+      }
+
+      // голова линии летает хаотично, плавно меняя манеру (плывёт, змейка, рывок, дрейф, догонялки, волна);
+      // у каждой линии свой гуляющий «дом», от соседей она отворачивает, долго кружить в одну сторону не может
+      const MODES = ['glide', 'snake', 'dart', 'drift', 'chase', 'wave', 'glide', 'wave'];
+      function lines(W, H) {
+        const LN = [...Array(NL).keys()].map(k => ({ x: (k - 4) * .055, y: ((k * 4) % NL - 4) * .08, a: k * .7 + Math.random() * 6.3, tr: 0, f: Math.random() * 9, g: Math.random() * 9, hs: [], cum: 0 }));
+        const ax = W / H * .5, t0 = Math.random() * 50;
+        function pick(o, k) {
+          let m; do m = MODES[(Math.random() * MODES.length) | 0]; while (m === o.m);
+          o.m = m; o.mt = 0; o.md = m === 'dart' ? 1.2 + Math.random() : m === 'drift' ? 2 + Math.random() * 2 : 3 + Math.random() * 4;
+          o.sg = Math.random() < .5 ? -1 : 1; o.tg = (k + 1 + ((Math.random() * (NL - 1)) | 0)) % NL;
+        }
+        function step(k, t, dt) {
+          const o = LN[k]; t += t0;
+          if (!o.m || (o.mt += dt) > o.md) pick(o, k);
+          let turn = 0, v = .17;
+          switch (o.m) {
+            case 'glide': turn = .35 * Math.sin(t * .5 + o.f); v = .16; break;
+            case 'snake': turn = 1.5 * Math.sin(o.mt * 2.6); v = .18; break;
+            case 'dart': turn = .2 * Math.sin(t * 2 + o.g); v = .42; break;
+            case 'drift': turn = .6 * Math.sin(t * .8 + o.f); v = .05; break;
+            case 'chase': { const p = LN[o.tg], w = Math.atan2(p.y - o.y, p.x - o.x);
+              turn = Math.atan2(Math.sin(w - o.a), Math.cos(w - o.a)) * 1.4; v = .24;
+              if (Math.hypot(p.x - o.x, p.y - o.y) < .14) o.mt = o.md; break; }
+            case 'wave': turn = .9 * Math.sin(o.mt * 1.1) * o.sg; v = .17; break;
+          }
+          const hx = ax * .7 * Math.sin(t * .05 * (1 + k * .23) + k * 2.51), hy = .38 * Math.sin(t * .043 * (1 + k * .17) + k * 1.73 + 1);
+          const ang = (x, y) => { const w = Math.atan2(y - o.y, x - o.x); return Math.atan2(Math.sin(w - o.a), Math.cos(w - o.a)); };
+          const hd = Math.hypot(hx - o.x, hy - o.y);
+          if (o.m !== 'chase') turn += ang(hx, hy) * .7 * Math.min(1, hd / .25);
+          for (let j = 0; j < NL; j++) {
+            if (j === k) continue; const p = LN[j], dd = Math.hypot(p.x - o.x, p.y - o.y);
+            if (dd < .26 && !(o.m === 'chase' && o.tg === j)) turn -= ang(p.x, p.y) * (1 - dd / .26) * 1.5;
+          }
+          const out = Math.max(Math.abs(o.x) / (ax * .8), Math.abs(o.y) / .42), edge = Math.max(0, Math.min(1, (out - .55) / .4));
+          turn = turn * (1 - edge) + ang(hx * .5, hy * .5) * 2 * edge;
+          o.cum = o.cum * Math.pow(.6, dt) + o.tr * dt;
+          if (Math.abs(o.cum) > 1.6 && Math.sign(turn) === Math.sign(o.cum)) turn *= .15;
+          turn = Math.max(-1.4, Math.min(1.4, turn));
+          o.tr += (turn - o.tr) * Math.min(1, dt * 2.5); o.a += o.tr * dt;
+          o.v = (o.v || v) + (v - (o.v || v)) * Math.min(1, dt * 1.6);
+          o.x += Math.cos(o.a) * o.v * dt; o.y += Math.sin(o.a) * o.v * dt;
+          o.hs.push(o.x, o.y); if (o.hs.length > 1600) o.hs.splice(0, o.hs.length - 1200);
+        }
+        // NP точек от головы назад по следу на равных расстояниях, потом лёгкое сглаживание
+        function path(k, L, PA) {
+          const h = LN[k].hs, st = L / (NP - 1), b = k * NP * 2; let i = h.length - 2, px = h[i], py = h[i + 1], acc = 0, need = st, j = 1;
+          PA[b] = px; PA[b + 1] = py;
+          while (j < NP && i >= 2) {
+            const qx = h[i - 2], qy = h[i - 1], sl = Math.hypot(qx - px, qy - py);
+            if (acc + sl >= need) { const f = (need - acc) / sl; PA[b + j * 2] = px + (qx - px) * f; PA[b + j * 2 + 1] = py + (qy - py) * f; j++; need += st; continue; }
+            acc += sl; px = qx; py = qy; i -= 2;
+          }
+          for (; j < NP; j++) { PA[b + j * 2] = PA[b + j * 2 - 2]; PA[b + j * 2 + 1] = PA[b + j * 2 - 1]; }
+          for (let it = 0; it < 2; it++) for (let d = 0; d < 2; d++) {
+            let pv = PA[b + d];
+            for (let q = 1; q < NP - 1; q++) { const o = b + q * 2 + d, cur = PA[o]; PA[o] = .25 * pv + .5 * cur + .25 * PA[o + 2]; pv = cur; }
+          }
+        }
+        for (let k = 0; k < NL; k++) for (let i = 0; i < 600; i++) step(k, i / 60 - 10, 1 / 60);
+        return { LN, step, path };
+      }
+
+      // сцена. o: mask(g,W,H) — нарисовать фигуру; fly — сколько секунд линии летают; form — сколько стекаются;
+      // keep — пряди остаются на фигуре (не растворяются); glow — светиться и в светлой теме (фон тёмный); show() — пора проявлять настоящую картинку;
+      // over(ctx,W,H,t,ph) — дорисовать поверх; done(t) — конец; stopped()
+      function scene(canvas, o) {
+        if (!canvas || !canvas.getContext || !init()) return null;
+        const ctx = canvas.getContext('2d'), fly = o.fly == null ? 1.2 : o.fly, form = o.form || 1.6;
+        const PA = new Float32Array(NP * NL * 2), e = x => x < 0 ? 0 : x > 1 ? 1 : x * x * (3 - 2 * x);
+        let W = 1, H = 1, dpr = 1, alive = false, raf = 0, t0 = 0, last = 0, asg = null, LS = null, shown = false, QS = 1, FT = [], fn = 0;
+        function size() {
+          const r = canvas.getBoundingClientRect(); W = Math.max(1, r.width); H = Math.max(1, r.height); dpr = Math.min(window.devicePixelRatio || 1, 2);
+          canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+        function phase(t) {
+          const M = e((t - fly) / form), TX = o.keep ? 0 : e((t - fly - form * .45) / (form * .8));
+          return { M, TX, A: e(t / .35) };
+        }
+        function frame(now) {
+          if (!alive) return;
+          if (!canvas.isConnected || !gl) { stop(); return; }
+          const t = (now - t0) / 1000, dt = Math.min(.1, Math.max(.001, (now - last) / 1000)) || 1 / 60; last = now;
+          // телефон не успевает — картинка прядей чуть мягче, но без рывков
+          FT.push(dt); if (FT.length > 40) { const av = FT.reduce((a, b) => a + b) / FT.length; FT.length = 0; if (++fn > 1 && av > 1 / 40 && QS > .6) QS *= .85; }
+          const ph = phase(t);
+          if (!shown && ph.TX > 0) { shown = true; if (o.show) o.show(); }
+          ctx.clearRect(0, 0, W, H);
+          // когда пряди растворились и след погас, WebGL больше не нужен
+          if (o.keep || t < fly + form * 1.25 + .9) {
+            const s = dpr * .85 * QS, w = Math.max(2, Math.round(W * s)), h = Math.max(2, Math.round(H * s));
+            if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+            targets(w, h);
+            gl.viewport(0, 0, w, h); gl.enableVertexAttribArray(0);
+            gl.bindFramebuffer(gl.FRAMEBUFFER, RT.c.f); gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT);
+            const P = PR.L; gl.useProgram(P.p);
+            if (ph.M > 0 && asg) { fill(asg, t); gl.bindBuffer(gl.ARRAY_BUFFER, BUF.t); gl.bufferData(gl.ARRAY_BUFFER, TB, gl.DYNAMIC_DRAW); }
+            gl.bindBuffer(gl.ARRAY_BUFFER, BUF.t); gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 0, 0);
+            gl.bindBuffer(gl.ARRAY_BUFFER, BUF.l); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+            const ns = Math.max(1, Math.min(6, Math.round(dt * 60)));
+            for (let k = 0; k < NL; k++) { for (let i = 0; i < ns; i++) LS.step(k, t - dt + (i + 1) * dt / ns, dt / ns); LS.path(k, .62 + .22 * Math.sin(t * (.21 + k * .05) + LS.LN[k].f), PA); }
+            gl.uniform2f(P.u.R, w, h); gl.uniform1f(P.u.T, t); gl.uniform1f(P.u.M, asg ? ph.M : 0); gl.uniform1f(P.u.TX, asg ? ph.TX : ph.M);
+            gl.uniform1f(P.u.KP, o.keep ? 1 : 0); gl.uniform1f(P.u.SC, Math.min(1, W / H * 1.25) * 1.3 * (o.scale || 1));
+            gl.uniform4fv(P.u['PA[0]'], PA); gl.uniform3fv(P.u['CC[0]'], PAL.flat()); gl.uniform3fv(P.u.HI, HI);
+            gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
+            gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, BUF.i); gl.drawElements(gl.TRIANGLES, BUF.n, gl.UNSIGNED_SHORT, 0);
+            gl.disable(gl.BLEND); gl.disableVertexAttribArray(1);
+            gl.bindBuffer(gl.ARRAY_BUFFER, BUF.q); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+            gl.useProgram(PR.F.p); gl.bindFramebuffer(gl.FRAMEBUFFER, RT.b.f);
+            gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, RT.a.t); gl.uniform1i(PR.F.u.PV, 1);
+            gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, RT.c.t); gl.uniform1i(PR.F.u.CU, 2);
+            gl.uniform2f(PR.F.u.R, w, h); gl.uniform1f(PR.F.u.DK, Math.pow(.88, dt * 60));
+            gl.drawArrays(gl.TRIANGLES, 0, 3);
+            gl.useProgram(PR.S.p); gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+            gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
+            gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, RT.b.t); gl.uniform1i(PR.S.u.FB, 1);
+            gl.uniform2f(PR.S.u.R, w, h); gl.uniform1f(PR.S.u.LT, o.glow || PT.isDark() ? 0 : 1); gl.uniform1f(PR.S.u.AL, ph.A);
+            gl.drawArrays(gl.TRIANGLES, 0, 3);
+            gl.activeTexture(gl.TEXTURE0);
+            const sw = RT.a; RT.a = RT.b; RT.b = sw;
+            ctx.drawImage(cv, 0, 0, W, H);
+          }
+          if (o.over) o.over(ctx, W, H, t, ph);
+          if (o.done ? o.done(t) : !o.keep && t > fly + form * 1.25 + .9) { stop(); return; }
+          raf = requestAnimationFrame(frame);
+        }
+        function start() {
+          stop(); if (cur && cur !== api && cur.alive) cur.stop(); cur = api; size();
+          try { asg = o.mask ? contours(o.mask, W, H) : null; } catch (err) { asg = null; }
+          LS = lines(W, H); shown = false; QS = 1; FT = []; fn = 0;
+          // след прошлой сцены не нужен
+          if (RT) [RT.a, RT.b].forEach(r => { gl.bindFramebuffer(gl.FRAMEBUFFER, r.f); gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT); });
+          t0 = last = performance.now(); alive = true; raf = requestAnimationFrame(frame);
+        }
+        function stop() {
+          const was = alive; alive = false; cancelAnimationFrame(raf);
+          if (was) { ctx.clearRect(0, 0, W, H); if (o.stopped) o.stopped(); }
+        }
+        const api = { start, stop, time: () => (performance.now() - t0) / 1000, get alive() { return alive; } };
+        return api;
+      }
+      return { scene, PAL, ink, css };
+    })();
+
     // Фраза на заставке: каждый раз новая, подряд не повторяется
     const SPLASH_LINES = [
       'Шаг за шагом к своей форме',
@@ -1248,16 +1580,73 @@
 
     // Заставка из частиц: фраза дня собирается из потока, а при входе в приложение разлетается.
     // Каждый раз другое появление и уход, подряд не повторяются. Если что-то не так — остаётся прежняя заставка.
-    const SP = { s: null, exitAt: null, inK: 'dust', outK: 'blast', lay: null };
+    const SP = { s: null, exitAt: null, inK: 'dust', outK: 'blast', lay: null, sl: false, ready: 0 };
     // насколько фраза уже «чёткая»: точки встают ровно в буквы к 1,25 с, затем за 0,55 с плавно проявляется текст;
     // на выходе за четверть секунды снова уходит в точки
     const spCrisp = t => {
       const c = u => { const v = PT.clamp((u - 1.25) / .55); return v * v * (3 - 2 * v); };
       return SP.exitAt == null ? c(t) : PT.clamp(c(SP.exitAt) - (t - SP.exitAt) * 4);
     };
+    // Заставка из прядей: линии летают, стекаются во фразу дня, и она становится чёткой. При входе в приложение
+    // от фразы кругом разливается фон приложения, и под ним открывается само приложение. В светлой теме заставка
+    // тёмная, а разливается песок. Обе темы ведут себя одинаково, меняются только цвета.
+    function splashStrands(sp, cv, line, FONT, FW) {
+      if (calm()) return false;
+      let L = null;
+      const e = x => x < 0 ? 0 : x > 1 ? 1 : x * x * (3 - 2 * x);
+      const layout = (g, W, H) => {
+        const words = line.toUpperCase().split(' '); let fs = Math.min(W * .085, 46), lines = [];
+        for (; fs > 12; fs--) {
+          g.font = `${FW} ${fs}px ${FONT}`; lines = []; let cur = '';
+          for (const w of words) { const t = cur ? cur + ' ' + w : w; if (g.measureText(t).width > W * .84 && cur) { lines.push(cur); cur = w; } else cur = t; }
+          lines.push(cur); if (lines.length <= 3) break;
+        }
+        return { lines, fs, cy: H * .45 };
+      };
+      const text = (g, W, fill) => {
+        g.font = `${FW} ${L.fs}px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = fill;
+        L.lines.forEach((l, i) => g.fillText(l, W / 2, L.cy + (i - (L.lines.length - 1) / 2) * L.fs * 1.2));
+      };
+      const grad = (g, W, c) => { const r = g.createLinearGradient(W * .1, L.cy - L.fs * 2, W * .9, L.cy + L.fs * 2); r.addColorStop(0, c[0]); r.addColorStop(.5, c[3]); r.addColorStop(1, c[1]); return r; };
+      const bright = SL.PAL.map(SL.css), day = SL.PAL.map(v => SL.css(SL.ink(v)));
+      const FLY = 1.4, FORM = 1.6;
+      SP.ready = FLY + FORM + .9;   // фраза чёткая и немного стоит, чтобы её успели прочитать
+      const s = SL.scene(cv, {
+        fly: FLY, form: FORM, glow: true,
+        mask: (g, W, H) => { L = layout(g, W, H); text(g, W, '#000'); },
+        over: (ctx, W, H, t, ph) => {
+          if (!L) return;
+          const x = SP.exitAt == null ? -1 : t - SP.exitAt, D = x < 0 ? 0 : e(x), out = x < 0 ? 0 : e((x - 1.05) / .5);
+          if (D > 0) {
+            // «рассвет»: фон приложения расходится кругом от фразы до краёв, потом тает, и видно приложение
+            const R = Math.max(W, H), r = D * 1.3 * R, f = (.08 + .14 * (1 - D)) * R, c = PT.isDark() ? '23,33,43' : '244,241,234';
+            const gr = ctx.createRadialGradient(W / 2, L.cy, Math.max(0, r - f), W / 2, L.cy, r);
+            gr.addColorStop(0, `rgba(${c},${1 - out})`); gr.addColorStop(1, `rgba(${c},0)`);
+            ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
+          }
+          const k = ph.TX * (1 - out), TD = x < 0 ? 0 : e((x - .05) / .45);
+          if (k < .01) return;
+          ctx.globalAlpha = k; text(ctx, W, grad(ctx, W, bright));
+          // на песке буквы темнеют до лайма и бирюзы, чтобы читались
+          if (!PT.isDark() && TD > 0) { ctx.globalAlpha = k * TD; text(ctx, W, grad(ctx, W, day)); }
+          ctx.globalAlpha = 1;
+        },
+        done: t => SP.exitAt != null && t - SP.exitAt > 1.6
+      });
+      if (!s) return false;
+      SP.s = s; SP.sl = true; SP.exitAt = null;
+      cv.setAttribute('aria-label', line);
+      sp.classList.add('pt', 'sl');
+      const font = document.fonts && document.fonts.load ? document.fonts.load(`${FW} 80px ${FONT}`) : Promise.resolve();
+      const page = document.readyState === 'loading' ? new Promise(r => document.addEventListener('DOMContentLoaded', r)) : Promise.resolve();
+      const go = () => { if (SP.s && !sp.classList.contains('gone')) SP.s.start(); };
+      page.then(() => Promise.race([font, new Promise(r => setTimeout(r, 700))])).then(go, go);
+      return true;
+    }
     function splashParticles() {
       const sp = $('splash'), cv = $('spPt'), line = ($('splashNote') || {}).textContent || '';
       if (!cv || !line || !cv.getContext) return;
+      try { if (splashStrands(sp, cv, line, 'Montserrat, "Golos Text", system-ui, -apple-system, sans-serif', 600)) return; } catch (e) { SP.s = null; SP.sl = false; sp.classList.remove('sl'); }
       try {
         SP.inK = PT.pick(PT.ARRIVE, 'sp_in'); SP.outK = PT.pick(PT.EXIT, 'sp_out'); SP.exitAt = null;
         cv.setAttribute('aria-label', line);
@@ -1314,6 +1703,18 @@
     function hideSplash(then) {
       const sp = $('splash');
       if (sp.classList.contains('gone')) { if (then) then(); return; }
+      if (SP.s && SP.s.alive && SP.sl) {
+        // пряди успевают стать чёткой фразой, потом от неё разливается фон приложения, и заставка уходит
+        const wait = Math.max(0, SP.ready - SP.s.time()) * 1000;
+        setTimeout(() => {
+          SP.exitAt = SP.s.time();
+          if (then) then();
+          sp.classList.add('sl-out');
+          setTimeout(() => sp.classList.add('leaving'), 1000);
+          setTimeout(() => sp.classList.add('gone'), 1700);
+        }, wait);
+        return;
+      }
       if (SP.s && SP.s.alive) {
         // фраза успевает собраться, потом разлетается, а под ней уже открыто приложение
         const wait = Math.max(0, 2.2 - SP.s.time()) * 1000;   // успеть собраться и стать чётким текстом
@@ -2269,7 +2670,8 @@
               else { g.beginPath(); g.arc(x + r.width / 2, y + r.height / 2, r.width * .44, 0, 7); g.fill(); }
             });
           };
-          ACP.s = PT.scene(cv, {
+          // пряди обводят медали и надписи витрины, потом проявляется настоящая витрина; нет WebGL — частицы
+          ACP.s = SL.scene(cv, { fly: .5, form: 1.2, mask: g => { shape(g, 'pics'); shape(g, 'text'); }, show, stopped: show }) || PT.scene(cv, {
             n: 7000, nWide: 3, lagK: 1.4, snap: true,
             shape: (W, H, N) => {
               const nt = Math.round(N * .35), a = PT.sample(W, H, g => shape(g, 'pics'), N - nt, false, .55), b = PT.sample(W, H, g => shape(g, 'text'), nt, false, .55);
@@ -2666,7 +3068,32 @@
         el.insertBefore(cv, el.firstChild);
         const svg = el.querySelector('svg.sp'), path = svg && svg.querySelector('path'), dot = svg && svg.querySelector('circle');
         let nt = 0, end = null, lut = null, lu, ldn, lsp, base = 0;
-        const s = PT.scene(cv, {
+        // пряди ложатся на цифру недели и линию веса и так и остаются на них — ползут вдоль контуров и переливаются
+        const sl = SL.scene(cv, {
+          fly: .5, form: 1.5, keep: true,
+          mask: g => {
+            const cs = getComputedStyle(huge), txt = huge.textContent;
+            g.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`; g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+            if ('letterSpacing' in g) g.letterSpacing = cs.letterSpacing;
+            const fz = parseFloat(cs.fontSize), m = g.measureText(txt), asc = m.fontBoundingBoxAscent || fz * .8, desc = m.fontBoundingBoxDescent || fz * .2;
+            const lh = parseFloat(cs.lineHeight) || fz;
+            g.fillText(txt, huge.offsetLeft, huge.offsetTop + (lh - asc - desc) / 2 + asc);
+            if (!path) return;
+            const L = path.getTotalLength(), M = path.getScreenCTM(), pr = el.getBoundingClientRect(), P = svg.createSVGPoint();
+            g.beginPath();
+            for (let k = 0; k <= 160; k++) { const q = path.getPointAtLength(k / 160 * L); P.x = q.x; P.y = q.y; const r = P.matrixTransform(M); k ? g.lineTo(r.x - pr.left, r.y - pr.top) : g.moveTo(r.x - pr.left, r.y - pr.top); }
+            g.lineWidth = 3; g.lineCap = g.lineJoin = 'round'; g.strokeStyle = '#000'; g.stroke();
+            if (dot) { P.x = +dot.getAttribute('cx'); P.y = +dot.getAttribute('cy'); const r = P.matrixTransform(dot.getScreenCTM()); end = [r.x - pr.left, r.y - pr.top]; }
+          },
+          over: (ctx, W, H, t, ph) => {
+            if (!end || ph.M < .85) return;
+            const r = W * .011 * (1 + .25 * Math.sin(t * 3)), ramp = PT.ramp();
+            ctx.globalAlpha = PT.clamp((ph.M - .85) / .15); ctx.fillStyle = ramp[ramp.length - 1];
+            ctx.beginPath(); ctx.arc(end[0], end[1], r, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1;
+          },
+          done: () => !cv.isConnected || el.classList.contains('off')
+        });
+        const s = sl || PT.scene(cv, {
           n: 5200, wrap: true, shimmer: .35,
           shape: (W, H, N) => {
             nt = Math.round(N * .74);
@@ -3608,7 +4035,12 @@
       const cr = cv.getBoundingClientRect();
       if (!cr.width) return false;
       let shown = false;
-      MTP.s = PT.scene(cv, {
+      // пряди обводят хребты, человечков и подписи, потом проявляется настоящая гора; нет WebGL — частицы
+      MTP.s = SL.scene(cv, {
+        fly: .6, form: 1.4,
+        mask: g => { mtSilhouettes(g, svg, cr, false); mtSilhouettes(g, svg, cr, true); mtTexts(g, svg, cr); },
+        show: () => mtPtHide(false), stopped: () => mtPtHide(false)
+      }) || PT.scene(cv, {
         n: 9000, nWide: 3, lagK: 1.4, snap: true,
         shape: (W, H, N) => {
           // доли точек: гора и хребты, мелочи переднего плана, надписи — иначе мелкое и текст тонут
@@ -3972,7 +4404,27 @@
         const cx = zr.left + zr.width / 2 - sr.left, cy = zr.top + zr.height / 2 - sr.top, z = zr.width / 240, inK = PT.pick(PT.ARRIVE, 'aw_in');
         const T_FORM = 1.75;
         let shown = false;
-        C.pt = PT.scene(cv, {
+        const reveal = () => {
+          zoom.style.transition = 'opacity .3s ease'; zoom.style.opacity = '';
+          tw.from = -360; tw.dur = 900; tw.scaleFrom = .9; tw.t0 = performance.now();
+          safeHaptic('medium');
+        };
+        // пряди вихрем собираются в контур медали и её светлых частей, потом проявляется сама монета
+        C.pt = SL.scene(cv, {
+          fly: .4, form: 1.3, show: reveal,
+          mask: (g, W, H) => {
+            const x = cx - 124 * z, y = cy - 124 * z, sz = 248 * z;
+            g.drawImage(img, x, y, sz, sz);
+            const X = Math.max(0, Math.floor(x)), Y = Math.max(0, Math.floor(y)), w = Math.min(Math.ceil(sz), Math.floor(W) - X), h = Math.min(Math.ceil(sz), Math.floor(H) - Y);
+            if (w < 2 || h < 2) return;
+            // внутри монеты оставляем светлое: края тёмных деталей тоже становятся контурами
+            const im = g.getImageData(X, Y, w, h), d = im.data, L = [];
+            for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 128) L.push(d[i] * .3 + d[i + 1] * .59 + d[i + 2] * .11);
+            L.sort((a, b) => a - b); const thr = L.length ? L[(L.length * .4) | 0] : 0;
+            for (let i = 0; i < d.length; i += 4) d[i + 3] = d[i + 3] > 128 && d[i] * .3 + d[i + 1] * .59 + d[i + 2] * .11 >= thr ? 255 : 0;
+            g.putImageData(im, X, Y);
+          }
+        }) || PT.scene(cv, {
           n: 7000,
           shape: (W, H, N) => PT.sample(W, H, g => g.drawImage(img, cx - 124 * z, cy - 124 * z, 248 * z, 248 * z), N, true, .18),
           spawn: (p, W, H) => PT.ARRIVE[inK](p, W, H, cx, cy),
@@ -3984,10 +4436,7 @@
           },
           over: (ctx, W, H, t) => {
             if (shown || t < T_FORM) return;
-            shown = true;
-            zoom.style.transition = 'opacity .3s ease'; zoom.style.opacity = '';
-            tw.from = -360; tw.dur = 900; tw.scaleFrom = .9; tw.t0 = performance.now();
-            safeHaptic('medium');
+            shown = true; reveal();
           },
           done: t => t > T_FORM + 1.1
         });
@@ -4222,6 +4671,30 @@
       navPush(closeMedalSheet);
     }
 
+    // Цель взята: один раз на человека и цель пряди слетаются на цифру веса и растворяются в ней
+    function goalStrands(goal, w) {
+      if (calm()) return;
+      const key = `goal_sl_${activeUserId}_${goal}`;
+      try { if (localStorage.getItem(key)) return; } catch (e) { return; }
+      let tries = 0;
+      const go = () => {
+        const el = $('currWeight'), r = el && el.getBoundingClientRect();
+        // ждём, пока уйдёт заставка
+        if (!$('splash').classList.contains('gone')) { if (++tries < 12) setTimeout(go, 700); return; }
+        if (!r || !r.width) return;
+        try { localStorage.setItem(key, '1'); } catch (e) { return; }
+        let cv = $('goalSl');
+        if (!cv) { cv = document.createElement('canvas'); cv.id = 'goalSl'; cv.setAttribute('aria-hidden', 'true'); document.body.appendChild(cv); }
+        const s = SL.scene(cv, {
+          fly: .9, form: 1.3,
+          mask: g => { const cs = getComputedStyle(el); ptWord(g, { left: 0, top: 0, right: innerWidth, bottom: innerHeight }, fmt(w), el.getBoundingClientRect(), cs, parseFloat(cs.fontSize)); },
+          show: () => safeHaptic('success')
+        });
+        if (s) s.start();
+      };
+      setTimeout(go, 1200);
+    }
+
     function renderDashboard() {
       $('errorBox').classList.add('hidden');
       const u = globalData[activeUserId];
@@ -4276,6 +4749,7 @@
         const goalDone = reached || leftKg === 0;
         $('goalEtaLabel').textContent = goalDone ? 'Цель взята' : 'Цель будет взята:';
         if (goalDone) $('goalEtaText').innerHTML = GOAL_ICON;
+        if (goalDone && !past) goalStrands(goal, target.weight);
         else $('goalEtaText').textContent = calculateGoalETA(all, goal, target.weight);
         renderMountain(u, start, goal, target.weight);
       } else {
