@@ -1252,7 +1252,7 @@
     // Один WebGL на всё приложение: рисуем на скрытом холсте и копируем на холст сцены.
     // Нет WebGL — scene() возвращает null, и сцена идёт прежними частицами.
     // =====================================================================
-    const SLV = { v: 0 };   // вариант светлых прядей: 0 — акварель, 1 — глубокие цвета
+    const SLV = { v: 0 };   // вариант светлых прядей: 0 — сочные, 1 — пастель
     const SL = (() => {
       const NSTR = 189, NSEG = 80, NL = 9, NP = 20, SPC = .0016;
       // лайм, бирюза, золото, мята, жёлто-зелёный, голубой, светлая мята, светло-жёлтый, тёмная мята
@@ -1307,10 +1307,10 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
  vec3 col=1.-exp(-(b+g/8.*.9)*1.3); float a=max(col.r,max(col.g,col.b));
  vec3 cg=b+g/8.*.25; float lb=max(b.r,max(b.g,b.b)), lg=max(g.r,max(g.g,g.b))/8.;
  float lm=max(cg.r,max(cg.g,cg.b)); vec3 hu=cg/max(lm,1e-4); float mn=min(hu.r,min(hu.g,hu.b));
- vec3 ik=clamp(hu-.6*mn,0.,1.); vec3 jw=ik*ik*.8+ik*.2;
- // светлая тема: тонкая насыщенная нить + мягкий цветной ореол (VR 0 — акварель, ореол шире и светлее; 1 — глубокие цвета, чётче)
- float ac=1.-exp(-lb*mix(2.2,2.8,VR)), ah=(1.-exp(-lg*1.3))*mix(.42,.16,VR);
- vec3 cc=jw*mix(.72,.58,VR), ch=mix(mix(ik,vec3(1.),.18)*.85,jw*.9,VR);
+ vec3 ik=clamp(hu-.45*mn,0.,1.);
+ // светлая тема: яркая цветная нить + светлый цветной ореол (VR 0 — сочнее; 1 — пастель, ещё светлее)
+ float ac=1.-exp(-lb*2.2), ah=(1.-exp(-lg*1.3))*mix(.45,.55,VR);
+ vec3 cc=mix(ik*.9,mix(ik,vec3(1.),.18),VR), ch=mix(ik,vec3(1.),mix(.3,.45,VR));
  float al=ac+ah*(1.-ac); vec3 lc=cc*ac+ch*ah*(1.-ac);
  gl_FragColor=mix(vec4(col,a),vec4(lc,al),LT)*AL;}`;
       let gl = null, cv = null, PR = null, BUF = null, RT = null, broken = false, cur = null;   // cur — идущая сцена: WebGL один, сцена тоже одна
