@@ -184,8 +184,15 @@
     /* неделя — сторис из экранов: полоски сверху, на экране одна мысль, всё по центру, в стиле заставки */
     .st-deck { min-height: 100%; display: flex; flex-direction: column; }
     .st-segs { display: flex; gap: 4px; margin: 0 0 6px; flex: none; }
-    .st-segs i { flex: 1; height: 3px; border-radius: 2px; background: var(--rule); overflow: hidden; }
-    .st-segs b { display: block; height: 100%; width: 0; background: var(--volt); }
+    .st-segs i { flex: 1; height: 14px; display: flex; align-items: center; cursor: pointer; }
+    .st-segs b { display: block; width: 100%; height: 3px; border-radius: 2px; background: var(--rule); transition: background .25s; }
+    .st-segs i.on b { background: var(--volt); }
+    .st-pn { display: flex; align-items: center; justify-content: center; gap: 22px; flex: none; padding-top: 4px; font-size: 13px; font-weight: 600; color: var(--muted); }
+    .st-pn button { width: 44px; height: 36px; border-radius: 14px; background: var(--panel); color: var(--ink); font-size: 24px; line-height: 1; }
+    .st-pn button:disabled { opacity: .3; }
+    .st-beads .st-pt { position: absolute; left: -16px; top: -30px; width: calc(100% + 32px); height: calc(100% + 60px); pointer-events: none; }
+    .st-beads.sl .silk { visibility: hidden; }
+    .st-beads .bd { z-index: 1; }
     .st-slide { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 14px; padding: 12px 0 18px; }
     .st-slide.in-r { animation: stInR .35s cubic-bezier(.3,.8,.3,1) both; } .st-slide.in-l { animation: stInL .35s cubic-bezier(.3,.8,.3,1) both; }
     .st-slide > .st-k { letter-spacing: .18em; }
@@ -324,7 +331,7 @@
       padding: calc(14px + env(safe-area-inset-top, 0px)) 24px calc(24px + env(safe-area-inset-bottom, 0px)); transition: transform .45s cubic-bezier(.5,0,.3,1), opacity .45s; }
     .st-poster.gone { transform: translateY(-100%); opacity: .6; pointer-events: none; }
     .st-poster.off { display: none; }
-    .st-poster .bar { height: 3px; border-radius: 2px; background: rgba(0,0,0,.18); overflow: hidden; }
+    .st-poster .bar { visibility: hidden; height: 3px; border-radius: 2px; background: rgba(0,0,0,.18); overflow: hidden; }
     .st-poster .bar b { display: block; height: 100%; width: 0; background: #121315; }
     .st-poster .bar.wait { animation: stBarWait 1.1s ease-in-out infinite alternate; }
     @keyframes stBarWait { from { opacity: 1; } to { opacity: .35; } }
@@ -1622,7 +1629,9 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         function start() {
           stop(); if (cur && cur !== api && cur.alive) cur.stop(); cur = api; size();
           try { asg = o.mask ? contours(o.mask, W, H) : null; } catch (err) { asg = null; }
-          LS = lines(W, H); if (o.ring) LS.RG.k = .75;
+          LS = lines(W, H);
+          // кольцо уже собрано к первому кадру: линии заранее прокручены по кругу (раньше их стягивало издалека, и след ломался)
+          if (o.ring) { const RG = LS.RG; RG.k = 1; for (let i = 0; i < 300; i++) { RG.th += RG.w / 60; for (let k = 0; k < NL; k++) LS.step(k, i / 60, 1 / 60); } }
           // путь в пикселях холста → координаты линий (единица — высота, центр в середине, y вверх)
           if (o.path) { const pts = o.path(W, H); LS.RG.P = pts ? Float32Array.from(pts.flatMap(p => [(p[0] - W / 2) / H, (H / 2 - p[1]) / H])) : null; }
           shown = false; QS = 1; FT = []; fn = 0;
@@ -3261,8 +3270,9 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       // цифра — чистая, без частиц и прядей (Вадим: пряди, собирающиеся в кучу, на обложке не нужны)
       if (ST.pt) { ST.pt.stop(); ST.pt = null; }
       stPosterChart(el);
+      // обложка стоит, пока не нажмёшь (без таймера — решение Вадима 19.10)
       ST.posterT0 = ST.posterOpen = performance.now(); ST.posterOn = true;
-      cancelAnimationFrame(ST.timer); ST.timer = requestAnimationFrame(stTick);
+      cancelAnimationFrame(ST.timer);
     }
     // цифра недели во всю ширину, но не шире экрана: «−10,4» уменьшается, пока не влезет
     function stFitHuge(el) {
@@ -3277,30 +3287,35 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       if (!c) return;
       c.classList.add('go');
       silkStart(el);
-      if (calm()) return;
-      // линия веса на обложке — тот же светящийся шёлк, что на заставке: пряди влетают, ложатся на линию и текут по ней.
-      // Нет WebGL — остаётся SVG-шёлк
-      const g = c.querySelector('.silk');
-      if (!g) return;
+      // линия веса на обложке — тот же светящийся шёлк, что на заставке
+      const s = slLine(el, c, { trail: .2, scale: .55, done: () => el.classList.contains('off') });
+      if (s) ST.pt = s;
+    }
+    // Светящиеся пряди заставки бегут по линии графика (SVG-шёлк c.silk), как кометы. Холст — в host, под текстом.
+    // Нет WebGL или анимации выключены — остаётся SVG-шёлк
+    function slLine(host, c, o) {
+      const g = c.querySelector('.silk'), svg = c.querySelector('svg');
+      if (!g || !svg || calm()) return null;
       const cv = document.createElement('canvas'); cv.className = 'st-pt'; cv.setAttribute('aria-hidden', 'true');
-      el.insertBefore(cv, el.firstChild);
+      host.insertBefore(cv, host.firstChild);
       const s = SL.scene(cv, {
-        fly: 1e5, keep: true, trail: .2, scale: .55,
+        fly: 1e5, keep: true, trail: o.trail, scale: o.scale,
         path: () => {
-          const svg = c.querySelector('svg'), M = svg.getScreenCTM(), pr = el.getBoundingClientRect(), P = svg.createSVGPoint();
-          return g.dataset.c.split(' ').map(q => { const [x, y] = q.split(',').map(Number); P.x = x; P.y = y; const r = P.matrixTransform(M); return [r.x - pr.left, r.y - pr.top]; });
+          const M = svg.getScreenCTM(), cr = cv.getBoundingClientRect(), P = svg.createSVGPoint();
+          return g.dataset.c.split(' ').map(q => { const [x, y] = q.split(',').map(Number); P.x = x; P.y = y; const r = P.matrixTransform(M); return [r.x - cr.left, r.y - cr.top]; });
         },
-        done: () => !cv.isConnected || el.classList.contains('off')
+        done: () => !cv.isConnected || (o.done && o.done())
       });
-      if (!s) { cv.remove(); return; }
-      el.classList.add('sl'); ST.pt = s; s.start();
+      if (!s) { cv.remove(); return null; }
+      host.classList.add('sl'); s.start();
+      return s;
     }
     function stPosterHide() {
       if (!ST.posterOn) return;
       ST.posterOn = false; cancelAnimationFrame(ST.timer);
       $('stPoster').classList.add('gone');
       stChartGo();
-      if (ST.sl) { ST.dt0 = performance.now(); ST.dlast = 0; }
+      if (ST.sl) setTimeout(stDeckSilk, 650);
       const pt = ST.pt; setTimeout(() => { if (pt && ST.pt === pt && !ST.posterOn) pt.stop(); }, 600);
     }
     function stTick(now) {
@@ -3333,30 +3348,25 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       if (anim) pg.scrollTop = 0;
       stChartGo();
     }
-    // экраны недели после обложки: полоски сверху (обложка — первая), экран листается сам; держишь палец — пауза;
-    // тап справа — дальше, слева — назад; на последнем экране не листается
-    const ST_SLIDE = 7000;
+    // экраны недели после обложки листаются руками, без таймера: свайп или тап справа — дальше, слева — назад;
+    // полоски сверху показывают, где ты, и по ним можно перейти на любой экран. Неделю выбираешь во вкладках сверху
     function stDeck(anim) {
       const pg = $('stPage'), n = ST.sl.length;
       ST.si = Math.max(0, Math.min(n - 1, ST.si));
-      pg.innerHTML = `<div class="st-deck"><div class="st-segs"><i><b style="width:100%"></b></i>${ST.sl.map((_, k) => `<i><b style="width:${k < ST.si ? 100 : 0}%"></b></i>`).join('')}</div>
-        <div class="st-slide${anim ? ' ' + (anim === 'in-l' ? 'in-l' : 'in-r') : ''}">${ST.sl[ST.si]}</div></div>`;
+      pg.innerHTML = `<div class="st-deck"><div class="st-segs">${ST.sl.map((_, k) => `<i class="${k <= ST.si ? 'on' : ''}" onclick="stSlideTo(${k})"><b></b></i>`).join('')}</div>
+        <div class="st-slide${anim ? ' ' + (anim === 'in-l' ? 'in-l' : 'in-r') : ''}">${ST.sl[ST.si]}</div>
+        <div class="st-pn"><button onclick="stSlide(-1)" ${ST.si ? '' : 'disabled'} aria-label="Назад">‹</button><span>${ST.si + 1} / ${n}</span><button onclick="stSlide(1)" ${ST.si < n - 1 ? '' : 'disabled'} aria-label="Дальше">›</button></div></div>`;
       pg.scrollTop = 0;
       silkStart(pg);
-      ST.dt0 = performance.now(); ST.dpause = 0;
-      cancelAnimationFrame(ST.dk); ST.dk = requestAnimationFrame(stDeckTick);
+      stDeckSilk();
     }
-    function stDeckTick(now) {
-      if (!ST.sl || !$('story').classList.contains('open')) return;
-      // пока обложка на экране или палец держит — время экрана стоит
-      if (ST.posterOn || ST.hold) ST.dt0 += now - (ST.dlast || now);
-      ST.dlast = now;
-      const last = ST.si >= ST.sl.length - 1, k = last ? 1 : Math.min(1, (now - ST.dt0) / ST_SLIDE);
-      const b = $('stPage').querySelectorAll('.st-segs b')[ST.si + 1];
-      if (b) b.style.width = (last && !ST.posterOn ? 100 : ST.posterOn ? 0 : k * 100).toFixed(1) + '%';
-      if (k >= 1 && !last) { ST.si++; stDeck('in-r'); return; }
-      ST.dk = requestAnimationFrame(stDeckTick);
+    // линия на экране дней — светящиеся пряди, как на заставке (пока обложка на экране, её сцену не трогаем)
+    function stDeckSilk() {
+      const c = $('stPage').querySelector('.st-beads');
+      if (!c || ST.posterOn) return;
+      slLine(c, c, { trail: .9, scale: .7 });
     }
+    function stSlideTo(k) { if (ST.sl && k !== ST.si) { const d = k > ST.si ? 'in-r' : 'in-l'; ST.si = k; safeHaptic('selection'); stDeck(d); } }
     function stSlide(d) {
       if (!ST.sl) return;
       const j = ST.si + d;
@@ -3436,7 +3446,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       // держишь палец — пауза; короткий тап — дальше (слева — назад)
       const press = (node, tap) => {
         let t0 = 0, x = 0, y = 0, ht = 0, down = false;
-        node.addEventListener('pointerdown', e => { if (e.target.closest('button, a, .st-wos')) return; down = true; t0 = performance.now(); x = e.clientX; y = e.clientY; clearTimeout(ht); ht = setTimeout(() => { if (down) ST.hold = true; }, 220); });
+        node.addEventListener('pointerdown', e => { if (e.target.closest('button, a, .st-wos, .st-segs')) return; down = true; t0 = performance.now(); x = e.clientX; y = e.clientY; clearTimeout(ht); ht = setTimeout(() => { if (down) ST.hold = true; }, 220); });
         const up = (e, ok) => {
           if (!down) return; down = false; clearTimeout(ht);
           const held = ST.hold; ST.hold = false;
@@ -3447,7 +3457,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         node.addEventListener('pointercancel', e => up(e, false));
         node.addEventListener('contextmenu', e => e.preventDefault());
       };
-      press($('stPoster'), d => { if (d > 0) stPosterHide(); });
+      press($('stPoster'), () => stPosterHide());
       const el = $('stPage');
       press(el, d => { if (ST.sl) stSlide(d); });
       let x0 = 0, y0 = 0, top0 = 0, on = false;
@@ -3455,7 +3465,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       el.addEventListener('touchend', e => {
         if (!on) return; on = false;
         const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0;
-        if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) stGo(ST.i + (dx < 0 ? 1 : -1));
+        if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) { if (ST.sl) stSlide(dx < 0 ? 1 : -1); else stGo(ST.i + (dx < 0 ? 1 : -1)); }
         else if (dy > 110 && top0 <= 0 && Math.abs(dy) > Math.abs(dx)) closeStory();
       }, { passive: true });
     })();
