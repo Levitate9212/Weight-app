@@ -92,9 +92,9 @@
     .sp-small span { color: var(--volt); }
     #splash.pt .sp-small { display: block; }
     /* заставка из прядей: в светлой теме она тёмная (пряди светятся только на тёмном), а при входе разливается песок */
-    html.light #splash.sl { background: #10171E; }
-    html.light #splash.sl .sp-small { color: #E9EEF2; }
-    html.light #splash.sl .sp-small span { color: #BDEB5B; }
+    /* светлая заставка — песок, как само приложение днём */
+    html.light #splash.sl { background: #F4F1EA; }
+    html.light #splash.sl .sp-small span { color: #5E8F17; }
     /* мягкая подсветка снизу: лайм и бирюза медленно дышат и переливаются под логотипом */
     #splash.sl::before { content: ""; position: absolute; left: -20%; right: -20%; bottom: 0; height: 46%; pointer-events: none;
       background: radial-gradient(48% 62% at 34% 100%, rgba(189,235,91,.30), rgba(189,235,91,0) 70%), radial-gradient(52% 70% at 68% 100%, rgba(92,200,232,.26), rgba(92,200,232,0) 72%), radial-gradient(40% 46% at 50% 100%, rgba(118,226,168,.24), rgba(118,226,168,0) 70%);
@@ -201,6 +201,9 @@
     .st-chart .ar { fill: var(--volt); opacity: .13; }
     /* после отрисовки график живёт: цвета линии бегут лайм → мята → бирюза, по линии пробегает искра, точка дышит */
     .st-chart .gs0, .st-chart .gs2 { stop-color: var(--pt-a); } .st-chart .gs1 { stop-color: var(--pt-c); } .st-chart .gsm { stop-color: var(--pt-b); }
+    /* обложка: линию веса рисуют светящиеся пряди на холсте под текстом, SVG-шёлк прячем (точка и подписи остаются) */
+    .st-poster .st-pt { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+    .st-poster.sl .st-chart .silk { visibility: hidden; }
     .st-chart .silk path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
     .silk .au { stroke: #F2C35B; }
     html.light .silk .au { stroke: #B9831A; }
@@ -1249,6 +1252,7 @@
     // Один WebGL на всё приложение: рисуем на скрытом холсте и копируем на холст сцены.
     // Нет WebGL — scene() возвращает null, и сцена идёт прежними частицами.
     // =====================================================================
+    const SLV = { v: 0 };   // вариант светлых прядей: 0 — акварель, 1 — глубокие цвета
     const SL = (() => {
       const NSTR = 189, NSEG = 80, NL = 9, NP = 20, SPC = .0016;
       // лайм, бирюза, золото, мята, жёлто-зелёный, голубой, светлая мята, светло-жёлтый, тёмная мята
@@ -1296,15 +1300,19 @@ void main(){vec2 uv=gl_FragCoord.xy/R, px=3.2/R;
  pv=clamp(pv*DK-vec3(1./255.),0.,1.); pv=pv==pv?pv:vec3(0.);
  gl_FragColor=vec4(max(pv,texture2D(CU,uv).rgb),1.);}`;
       // показ на прозрачном холсте: в тёмной теме — свечение, в светлой — насыщенная краска
-      const FSS = `precision highp float; uniform sampler2D FB; uniform vec2 R; uniform float LT,AL;
+      const FSS = `precision highp float; uniform sampler2D FB; uniform vec2 R; uniform float LT,AL,VR;
 void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
  for(int i=0;i<8;i++){float a=float(i)*.785+.39; vec2 o=vec2(cos(a),sin(a))/R;
   g+=texture2D(FB,uv+o*6.).rgb*.55+texture2D(FB,uv+o*16.).rgb*.45;}
  vec3 col=1.-exp(-(b+g/8.*.9)*1.3); float a=max(col.r,max(col.g,col.b));
  vec3 cg=b+g/8.*.25; float lb=max(b.r,max(b.g,b.b)), lg=max(g.r,max(g.g,g.b))/8.;
  float lm=max(cg.r,max(cg.g,cg.b)); vec3 hu=cg/max(lm,1e-4); float mn=min(hu.r,min(hu.g,hu.b));
- vec3 ik=clamp(hu-.6*mn,0.,1.)*.78; float al=clamp(1.-exp(-(lb*1.7+lg*.45)),0.,.92);
- gl_FragColor=mix(vec4(col,a),vec4(ik*al,al),LT)*AL;}`;
+ vec3 ik=clamp(hu-.6*mn,0.,1.); vec3 jw=ik*ik*.8+ik*.2;
+ // светлая тема: тонкая насыщенная нить + мягкий цветной ореол (VR 0 — акварель, ореол шире и светлее; 1 — глубокие цвета, чётче)
+ float ac=1.-exp(-lb*mix(2.2,2.8,VR)), ah=(1.-exp(-lg*1.3))*mix(.42,.16,VR);
+ vec3 cc=jw*mix(.72,.58,VR), ch=mix(mix(ik,vec3(1.),.18)*.85,jw*.9,VR);
+ float al=ac+ah*(1.-ac); vec3 lc=cc*ac+ch*ah*(1.-ac);
+ gl_FragColor=mix(vec4(col,a),vec4(lc,al),LT)*AL;}`;
       let gl = null, cv = null, PR = null, BUF = null, RT = null, broken = false, cur = null;   // cur — идущая сцена: WebGL один, сцена тоже одна
       const TB = new Float32Array(NSTR * (NSEG + 1) * 8);
       function init() {
@@ -1469,7 +1477,18 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           o.tr += (turn - o.tr) * Math.min(1, dt * 2.5); o.a += o.tr * dt;
           o.v = (o.v || v) + (v - (o.v || v)) * Math.min(1, dt * 1.6);
           o.x += Math.cos(o.a) * o.v * dt; o.y += Math.sin(o.a) * o.v * dt;
-          if (rk > 0) {
+          if (rk > 0 && RG.P) {
+            // путь (линия графика): головы бегут по нему слева направо одна за другой, как кометы; дойдя до конца — снова с начала
+            const P = RG.P, u = (k / NL + t * (.13 + .02 * Math.sin(k * 1.7))) % 1, f = u * (P.length / 2 - 1), i = Math.floor(f), w = f - i;
+            const ax0 = P[i * 2], ay0 = P[i * 2 + 1], bx = P[i * 2 + 2], by = P[i * 2 + 3], dx = bx - ax0, dy = by - ay0, dl = Math.hypot(dx, dy) || 1;
+            const wob = .006 * Math.sin(t * 1.3 + k * 2.1) + (k - (NL - 1) / 2) * .0016;
+            const sx = ax0 + dx * w - dy / dl * wob, sy = ay0 + dy * w + dx / dl * wob;
+            if (o.pu != null && u < o.pu) { o.hs.length = 0; o.x = sx; o.y = sy; }
+            o.pu = u;
+            const q = Math.min(1, dt * 14 * rk);
+            o.x += (sx - o.x) * q; o.y += (sy - o.y) * q;
+            const ta = Math.atan2(dy, dx), d = Math.atan2(Math.sin(ta - o.a), Math.cos(ta - o.a)); o.a += d * q; o.tr *= 1 - q;
+          } else if (rk > 0) {
             // голову тянет к её месту на круге; радиус у каждой линии чуть дышит — кольцо шёлковое, а не циркульное
             const th = RG.th + k * 6.283 / NL, rr = RG.r * (1 + .07 * Math.sin(t * (.9 + k * .13) + o.f)), sx = rr * Math.cos(th), sy = rr * Math.sin(th), q = Math.min(1, dt * 6 * rk * rk);
             o.x += (sx - o.x) * q; o.y += (sy - o.y) * q;
@@ -1501,7 +1520,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       // сцена. o: mask(g,W,H) — нарисовать фигуру; fly — сколько секунд линии летают; form — сколько стекаются;
       // keep — пряди остаются на фигуре (не растворяются); glow — светиться и в светлой теме (фон тёмный); show() — пора проявлять настоящую картинку;
       // over(ctx,W,H,t,ph) — дорисовать поверх; done(t) — конец; stopped();
-      // ring() — пока true, линии кружат кольцом и сцена не переходит к фигуре (заставка ждёт данные)
+      // ring() — пока true, линии кружат кольцом и сцена не переходит к фигуре (заставка ждёт данные);
+      // path(W,H) — точки линии в пикселях: головы линий бегут по ней, и пряди текут вдоль неё; trail — длина прядей
       function scene(canvas, o) {
         if (!canvas || !canvas.getContext || !init()) return null;
         const ctx = canvas.getContext('2d'), fly = o.fly == null ? 1.2 : o.fly, form = o.form || 1.6;
@@ -1523,7 +1543,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           const ringOn = !!(o.ring && o.ring());
           if (ringOn && tr - hold > fly) hold = tr - fly;
           const t = tr - hold;
-          if (LS) { const RG = LS.RG; RG.k += ((o.ring && (ringOn || t < fly) ? 1 : 0) - RG.k) * Math.min(1, dt * (ringOn ? 2.2 : 1.6)); if (RG.k < .002) RG.k = 0; RG.th += RG.w * dt; }
+          if (LS) { const RG = LS.RG; RG.k += ((o.path || (o.ring && (ringOn || t < fly)) ? 1 : 0) - RG.k) * Math.min(1, dt * (ringOn ? 2.2 : 1.6)); if (RG.k < .002) RG.k = 0; RG.th += RG.w * dt; }
           // телефон не успевает — картинка прядей чуть мягче, но без рывков
           FT.push(dt); if (FT.length > 40) { const av = FT.reduce((a, b) => a + b) / FT.length; FT.length = 0; if (++fn > 1 && av > 1 / 40 && QS > .6) QS *= .85; }
           const ph = phase(t);
@@ -1541,7 +1561,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
             gl.bindBuffer(gl.ARRAY_BUFFER, BUF.t); gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 0, 0);
             gl.bindBuffer(gl.ARRAY_BUFFER, BUF.l); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
             const ns = Math.max(1, Math.min(6, Math.round(dt * 60)));
-            for (let k = 0; k < NL; k++) { for (let i = 0; i < ns; i++) LS.step(k, t - dt + (i + 1) * dt / ns, dt / ns); LS.path(k, .62 + .22 * Math.sin(t * (.21 + k * .05) + LS.LN[k].f), PA); }
+            for (let k = 0; k < NL; k++) { for (let i = 0; i < ns; i++) LS.step(k, t - dt + (i + 1) * dt / ns, dt / ns); LS.path(k, (o.trail || .62) + (o.trail ? o.trail * .3 : .22) * Math.sin(t * (.21 + k * .05) + LS.LN[k].f), PA); }
             gl.uniform2f(P.u.R, w, h); gl.uniform1f(P.u.T, t); gl.uniform1f(P.u.M, asg ? ph.M : 0); gl.uniform1f(P.u.TX, asg ? ph.TX : ph.M);
             gl.uniform1f(P.u.KP, o.keep ? 1 : 0); gl.uniform1f(P.u.SC, Math.min(1, W / H * 1.25) * 1.3 * (o.scale || 1));
             gl.uniform4fv(P.u['PA[0]'], PA); gl.uniform3fv(P.u['CC[0]'], PAL.flat()); gl.uniform3fv(P.u.HI, HI);
@@ -1557,7 +1577,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
             gl.useProgram(PR.S.p); gl.bindFramebuffer(gl.FRAMEBUFFER, null);
             gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
             gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, RT.b.t); gl.uniform1i(PR.S.u.FB, 1);
-            gl.uniform2f(PR.S.u.R, w, h); gl.uniform1f(PR.S.u.LT, o.glow || PT.isDark() ? 0 : 1); gl.uniform1f(PR.S.u.AL, ph.A);
+            gl.uniform2f(PR.S.u.R, w, h); gl.uniform1f(PR.S.u.LT, o.glow || PT.isDark() ? 0 : 1); if (PR.S.u.VR) gl.uniform1f(PR.S.u.VR, SLV.v); gl.uniform1f(PR.S.u.AL, ph.A);
             gl.drawArrays(gl.TRIANGLES, 0, 3);
             gl.activeTexture(gl.TEXTURE0);
             const sw = RT.a; RT.a = RT.b; RT.b = sw;
@@ -1570,7 +1590,10 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         function start() {
           stop(); if (cur && cur !== api && cur.alive) cur.stop(); cur = api; size();
           try { asg = o.mask ? contours(o.mask, W, H) : null; } catch (err) { asg = null; }
-          LS = lines(W, H); if (o.ring) LS.RG.k = .75; shown = false; QS = 1; FT = []; fn = 0;
+          LS = lines(W, H); if (o.ring) LS.RG.k = .75;
+          // путь в пикселях холста → координаты линий (единица — высота, центр в середине, y вверх)
+          if (o.path) { const pts = o.path(W, H); LS.RG.P = pts ? Float32Array.from(pts.flatMap(p => [(p[0] - W / 2) / H, (H / 2 - p[1]) / H])) : null; }
+          shown = false; QS = 1; FT = []; fn = 0;
           // след прошлой сцены не нужен
           if (RT) [RT.a, RT.b].forEach(r => { gl.bindFramebuffer(gl.FRAMEBUFFER, r.f); gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT); });
           hold = 0; t0 = last = performance.now(); alive = true; raf = requestAnimationFrame(frame);
@@ -1644,7 +1667,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const FLY = 1.4, FORM = 1.6;
       SP.ready = FLY + FORM + .9;   // фраза чёткая и немного стоит, чтобы её успели прочитать
       const s = SL.scene(cv, {
-        fly: FLY, form: FORM, glow: true,
+        fly: FLY, form: FORM,
         // пока данные грузятся, пряди кружат кольцом в центре (вместо загрузки); пришли — кольцо раскручивается в фразу
         ring: () => !SP.loaded,
         mask: (g, W, H) => { L = layout(g, W, H); text(g, W, '#000'); },
@@ -1664,11 +1687,10 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
             ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
           }
           // фраза тает, пока фон ещё разливается, — к открытию приложения её уже нет и она не висит поверх
-          const k = ph.TX * (1 - (x < 0 ? 0 : e((x - .55) / .4))) * (1 - out), TD = x < 0 ? 0 : e((x - .05) / .45);
+          const k = ph.TX * (1 - (x < 0 ? 0 : e((x - .55) / .4))) * (1 - out);
           if (k < .01) return;
-          ctx.globalAlpha = k; text(ctx, W, grad(ctx, W, bright));
-          // на песке буквы темнеют до лайма и бирюзы, чтобы читались
-          if (!PT.isDark() && TD > 0) { ctx.globalAlpha = k * TD; text(ctx, W, grad(ctx, W, day)); }
+          // на песке буквы сразу глубокие лайм и бирюза, чтобы читались
+          ctx.globalAlpha = k; text(ctx, W, grad(ctx, W, PT.isDark() ? bright : day));
           ctx.globalAlpha = 1;
         },
         done: t => SP.left != null && t - SP.left > .75,
@@ -3171,9 +3193,27 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     }
     function stPosterChart(el) {
       const c = el.querySelector('.st-chart');
-      if (!c) { silkStart(el); return; }
+      if (ST.pt) { ST.pt.stop(); ST.pt = null; }
+      if (!c) return;
       c.classList.add('go');
       silkStart(el);
+      if (calm()) return;
+      // линия веса на обложке — тот же светящийся шёлк, что на заставке: пряди влетают, ложатся на линию и текут по ней.
+      // Нет WebGL — остаётся SVG-шёлк
+      const g = c.querySelector('.silk');
+      if (!g) return;
+      const cv = document.createElement('canvas'); cv.className = 'st-pt'; cv.setAttribute('aria-hidden', 'true');
+      el.insertBefore(cv, el.firstChild);
+      const s = SL.scene(cv, {
+        fly: 1e5, keep: true, trail: .2, scale: .55,
+        path: () => {
+          const svg = c.querySelector('svg'), M = svg.getScreenCTM(), pr = el.getBoundingClientRect(), P = svg.createSVGPoint();
+          return g.dataset.c.split(' ').map(q => { const [x, y] = q.split(',').map(Number); P.x = x; P.y = y; const r = P.matrixTransform(M); return [r.x - pr.left, r.y - pr.top]; });
+        },
+        done: () => !cv.isConnected || el.classList.contains('off')
+      });
+      if (!s) { cv.remove(); return; }
+      el.classList.add('sl'); ST.pt = s; s.start();
     }
     function stPosterHide() {
       if (!ST.posterOn) return;
@@ -3226,7 +3266,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       ST.views = stViews(u, b);
       ST.i = Math.max(0, ST.views.findIndex(v => v.id === id));
       stGo(ST.i, false); $('stPage').scrollTop = top;
-      if (ST.posterOn) { const el = $('stPoster'), bar = $('stPosterBar'), wd = bar && bar.style.width; el.innerHTML = stPosterHtml(ST.views[ST.i], b); stFitHuge(el); if (wd) $('stPosterBar').style.width = wd; const sc = el.querySelector('.st-chart'); if (sc) sc.classList.add('go'); silkStart(el); sc && sc.querySelectorAll('.silk').forEach(g => g.__t0 -= 2000); }
+      if (ST.posterOn) { const el = $('stPoster'), bar = $('stPosterBar'), wd = bar && bar.style.width, cv = el.querySelector('.st-pt'); el.innerHTML = stPosterHtml(ST.views[ST.i], b); stFitHuge(el); if (cv) el.insertBefore(cv, el.firstChild); if (wd) $('stPosterBar').style.width = wd; const sc = el.querySelector('.st-chart'); if (sc) sc.classList.add('go'); silkStart(el); sc && sc.querySelectorAll('.silk').forEach(g => g.__t0 -= 2000); }
     }
     function openStory() {
       const u = globalData[activeUserId];
