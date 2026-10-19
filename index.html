@@ -1034,7 +1034,7 @@
       safeHaptic('light');
       $('errorBox').classList.add('hidden');
       $('splash').classList.remove('gone', 'leaving', 'sl-out');
-      if (SP.s) { SP.exitAt = null; SP.s.start(); }
+      if (SP.s) { SP.exitAt = null; SP.left = null; SP.s.start(); }
       fetchData();
     }
 
@@ -1580,7 +1580,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
 
     // Заставка из частиц: фраза дня собирается из потока, а при входе в приложение разлетается.
     // Каждый раз другое появление и уход, подряд не повторяются. Если что-то не так — остаётся прежняя заставка.
-    const SP = { s: null, exitAt: null, inK: 'dust', outK: 'blast', lay: null, sl: false, ready: 0 };
+    const SP = { s: null, exitAt: null, inK: 'dust', outK: 'blast', lay: null, sl: false, ready: 0, left: null };
     // насколько фраза уже «чёткая»: точки встают ровно в буквы к 1,25 с, затем за 0,55 с плавно проявляется текст;
     // на выходе за четверть секунды снова уходит в точки
     const spCrisp = t => {
@@ -1616,7 +1616,12 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         mask: (g, W, H) => { L = layout(g, W, H); text(g, W, '#000'); },
         over: (ctx, W, H, t, ph) => {
           if (!L) return;
-          const x = SP.exitAt == null ? -1 : t - SP.exitAt, D = x < 0 ? 0 : e(x), out = x < 0 ? 0 : e((x - 1.05) / .5);
+          const x = SP.exitAt == null ? -1 : t - SP.exitAt, D = x < 0 ? 0 : e(x);
+          // фон разлился до краёв — только теперь заставка становится прозрачной (в этом же кадре, а не по таймеру:
+          // пока телефон занят отрисовкой приложения, таймер опаздывает, и под тающим фоном мелькала тёмная заставка)
+          if (D >= 1 && SP.left == null) { SP.left = t; sp.classList.add('leaving'); }
+          const out = SP.left == null ? 0 : e((t - SP.left - .1) / .5);
+          if (out >= 1 && !sp.classList.contains('gone')) sp.classList.add('gone');
           if (D > 0) {
             // «рассвет»: фон приложения расходится кругом от фразы до краёв, потом тает, и видно приложение
             const R = Math.max(W, H), r = D * 1.3 * R, f = (.08 + .14 * (1 - D)) * R, c = PT.isDark() ? '23,33,43' : '244,241,234';
@@ -1631,7 +1636,9 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           if (!PT.isDark() && TD > 0) { ctx.globalAlpha = k * TD; text(ctx, W, grad(ctx, W, day)); }
           ctx.globalAlpha = 1;
         },
-        done: t => SP.exitAt != null && t - SP.exitAt > 1.6
+        done: t => SP.left != null && t - SP.left > .75,
+        // сцену остановили раньше времени — заставку всё равно убираем, без тёмного экрана
+        stopped: () => { if (SP.exitAt != null) sp.classList.add('leaving', 'gone'); }
       });
       if (!s) return false;
       SP.s = s; SP.sl = true; SP.exitAt = null;
@@ -1707,11 +1714,11 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         // пряди успевают стать чёткой фразой, потом от неё разливается фон приложения, и заставка уходит
         const wait = Math.max(0, SP.ready - SP.s.time()) * 1000;
         setTimeout(() => {
-          SP.exitAt = SP.s.time();
+          SP.exitAt = SP.s.time(); SP.left = null;
           if (then) then();
           sp.classList.add('sl-out');
-          setTimeout(() => sp.classList.add('leaving'), 1000);
-          setTimeout(() => sp.classList.add('gone'), 1700);
+          // запасной выход, если кадры совсем встали
+          setTimeout(() => sp.classList.add('leaving', 'gone'), 6000);
         }, wait);
         return;
       }
@@ -2670,8 +2677,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
               else { g.beginPath(); g.arc(x + r.width / 2, y + r.height / 2, r.width * .44, 0, 7); g.fill(); }
             });
           };
-          // пряди обводят медали и надписи витрины, потом проявляется настоящая витрина; нет WebGL — частицы
-          ACP.s = SL.scene(cv, { fly: .5, form: 1.2, mask: g => { shape(g, 'pics'); shape(g, 'text'); }, show, stopped: show }) || PT.scene(cv, {
+          ACP.s = PT.scene(cv, {
             n: 7000, nWide: 3, lagK: 1.4, snap: true,
             shape: (W, H, N) => {
               const nt = Math.round(N * .35), a = PT.sample(W, H, g => shape(g, 'pics'), N - nt, false, .55), b = PT.sample(W, H, g => shape(g, 'text'), nt, false, .55);
@@ -3068,32 +3074,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         el.insertBefore(cv, el.firstChild);
         const svg = el.querySelector('svg.sp'), path = svg && svg.querySelector('path'), dot = svg && svg.querySelector('circle');
         let nt = 0, end = null, lut = null, lu, ldn, lsp, base = 0;
-        // пряди ложатся на цифру недели и линию веса и так и остаются на них — ползут вдоль контуров и переливаются
-        const sl = SL.scene(cv, {
-          fly: .5, form: 1.5, keep: true,
-          mask: g => {
-            const cs = getComputedStyle(huge), txt = huge.textContent;
-            g.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`; g.textAlign = 'left'; g.textBaseline = 'alphabetic';
-            if ('letterSpacing' in g) g.letterSpacing = cs.letterSpacing;
-            const fz = parseFloat(cs.fontSize), m = g.measureText(txt), asc = m.fontBoundingBoxAscent || fz * .8, desc = m.fontBoundingBoxDescent || fz * .2;
-            const lh = parseFloat(cs.lineHeight) || fz;
-            g.fillText(txt, huge.offsetLeft, huge.offsetTop + (lh - asc - desc) / 2 + asc);
-            if (!path) return;
-            const L = path.getTotalLength(), M = path.getScreenCTM(), pr = el.getBoundingClientRect(), P = svg.createSVGPoint();
-            g.beginPath();
-            for (let k = 0; k <= 160; k++) { const q = path.getPointAtLength(k / 160 * L); P.x = q.x; P.y = q.y; const r = P.matrixTransform(M); k ? g.lineTo(r.x - pr.left, r.y - pr.top) : g.moveTo(r.x - pr.left, r.y - pr.top); }
-            g.lineWidth = 3; g.lineCap = g.lineJoin = 'round'; g.strokeStyle = '#000'; g.stroke();
-            if (dot) { P.x = +dot.getAttribute('cx'); P.y = +dot.getAttribute('cy'); const r = P.matrixTransform(dot.getScreenCTM()); end = [r.x - pr.left, r.y - pr.top]; }
-          },
-          over: (ctx, W, H, t, ph) => {
-            if (!end || ph.M < .85) return;
-            const r = W * .011 * (1 + .25 * Math.sin(t * 3)), ramp = PT.ramp();
-            ctx.globalAlpha = PT.clamp((ph.M - .85) / .15); ctx.fillStyle = ramp[ramp.length - 1];
-            ctx.beginPath(); ctx.arc(end[0], end[1], r, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1;
-          },
-          done: () => !cv.isConnected || el.classList.contains('off')
-        });
-        const s = sl || PT.scene(cv, {
+        const s = PT.scene(cv, {
           n: 5200, wrap: true, shimmer: .35,
           shape: (W, H, N) => {
             nt = Math.round(N * .74);
@@ -4035,12 +4016,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const cr = cv.getBoundingClientRect();
       if (!cr.width) return false;
       let shown = false;
-      // пряди обводят хребты, человечков и подписи, потом проявляется настоящая гора; нет WebGL — частицы
-      MTP.s = SL.scene(cv, {
-        fly: .6, form: 1.4,
-        mask: g => { mtSilhouettes(g, svg, cr, false); mtSilhouettes(g, svg, cr, true); mtTexts(g, svg, cr); },
-        show: () => mtPtHide(false), stopped: () => mtPtHide(false)
-      }) || PT.scene(cv, {
+      MTP.s = PT.scene(cv, {
         n: 9000, nWide: 3, lagK: 1.4, snap: true,
         shape: (W, H, N) => {
           // доли точек: гора и хребты, мелочи переднего плана, надписи — иначе мелкое и текст тонут
