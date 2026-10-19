@@ -257,6 +257,7 @@
     html.light .silk .au { stroke: #B9831A; }
     .silk .sg { stroke-width: 7; opacity: .28; filter: blur(3px); }
     .silk.thin path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .silk .sg.sh { stroke: var(--volt); opacity: .22; filter: blur(4px); }
     .silk .sl-a { stroke: var(--volt); } .silk .sl-b { stroke: #4FD1B5; }
     html.light .silk .sl-b { stroke: #12937A; }
     html.light .silk .sg { opacity: .16; }
@@ -456,7 +457,13 @@
     .mt-camp.pop { animation: campPop .55s cubic-bezier(.3,1.6,.5,1); transform-box: fill-box; transform-origin: 50% 70%; }
     .mt-camp.pop .tg { animation: campFlash 1.2s ease both; }
     @keyframes campPop { 0% { transform: scale(1); } 40% { transform: scale(1.35); } 100% { transform: none; } }
-    @keyframes campFlash { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: .55; } }
+    @keyframes campFlash { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: .9; } }
+    .mt-burst circle { transform-box: fill-box; transform-origin: center; }
+    .mt-burst .bf { animation: burstF 1.1s ease-out both; }
+    .mt-burst .br { animation: burstR .9s cubic-bezier(.2,.7,.3,1) both; }
+    .mt-burst .b2 { animation-delay: .12s; }
+    @keyframes burstF { 0% { opacity: 0; transform: scale(.4); } 18% { opacity: 1; transform: scale(1.25); } 100% { opacity: 0; transform: scale(1.7); } }
+    @keyframes burstR { 0% { opacity: 1; transform: scale(.6); } 100% { opacity: 0; transform: scale(5); } }
     #mtTrailG .sl-a { stroke: #DDE3EA; } #mtTrailG .sl-b { stroke: #9FB3C8; }
     #mtSvg > g, #mtSvg > path, #mtSvg > image, #mtSvg > line, #mtSvg > text { transition: opacity .7s ease; }
     #mtSvg #mtSkyG > g, #mtSvg #mtSkyG > circle[cx="330"] { transition: opacity .7s ease; }
@@ -2808,7 +2815,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       // изгиб — сбоку от прямой, на том же месте относительно цели, пока она едет
       const ox = -dy / dl * bend, oy = dx / dl * bend;
       const arc = () => { const cx = (sx + tx) / 2 + ox, cy = (sy + ty) / 2 + oy; return [...Array(25)].map((_, i) => { const u = i / 24, w = 1 - u; return [w * w * sx + 2 * w * u * cx + u * u * tx, w * w * sy + 2 * w * u * cy + u * u * ty]; }); };
-      sv.insertAdjacentHTML('beforeend', silkRaw(arc(), { n: 6, a: .8 * k, w: 1.5 * k }));
+      // пучок: много тонких прядей разной яркости и мягкий шёлковый отлив под ними
+      sv.insertAdjacentHTML('beforeend', silkRaw(arc(), { n: 14, a: 1.25 * k, w: 1.05 * k, sheen: 9 * k }));
       const g = sv.lastElementChild, t0 = performance.now(), D = 340;
       g.__u = 0; silkStart(g);
       const st = now => {
@@ -3093,6 +3101,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     function silkRaw(pts, o = {}) {
       const f = v => v.toFixed(1), n = o.n || 7;
       let h = `<g class="silk thin" data-c="${pts.map(p => f(p[0]) + ',' + f(p[1])).join(' ')}"${o.a ? ` data-a="${o.a}"` : ''}${o.loop ? ' data-loop="1"' : ''}${o.full ? ' data-full="1"' : ''}${o.id ? ` id="${o.id}"` : ''}>`;
+      if (o.sheen) h += `<path class="sg sh" style="stroke-width:${o.sheen}"/>`;
       for (let j = 0; j < n; j++) {
         const gold = j % 4 === 2, w = ((o.w || 1) * (.55 + (j * 7 % 5) * .14)).toFixed(2), op = (.5 + (j * 3 % 6) * .09).toFixed(2);
         h += `<path class="sl${gold ? ' au' : o.gid ? '' : j % 2 ? ' sl-b' : ' sl-a'}" style="${!gold && o.gid ? `stroke:url(#${o.gid});` : ''}stroke-width:${w};opacity:${op}"/>`;
@@ -3973,6 +3982,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           <linearGradient id="mtMid" gradientUnits="userSpaceOnUse" x1="0" y1="430" x2="0" y2="820"><stop offset="0" stop-color="${P.mid[0]}"/><stop offset="1" stop-color="${P.mid[1]}"/></linearGradient>
           <linearGradient id="mtMist" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${P.mist}" stop-opacity="0"/><stop offset="1" stop-color="${P.mist}" stop-opacity=".85"/></linearGradient>
           <radialGradient id="mtMoon"><stop offset="0" stop-color="${day ? '#FFF1B8' : '#F2F3F0'}" stop-opacity="${day ? .6 : .22}"/><stop offset="1" stop-color="${day ? '#FFF1B8' : '#F2F3F0'}" stop-opacity="0"/></radialGradient>
+          <radialGradient id="mtBurst"><stop offset="0" stop-color="#FFF6D6" stop-opacity="1"/><stop offset=".35" stop-color="#FFC94D" stop-opacity=".75"/><stop offset="1" stop-color="#FF8A2E" stop-opacity="0"/></radialGradient>
           <radialGradient id="mtFireGlow"><stop offset="0" stop-color="#FFB547" stop-opacity=".75"/><stop offset=".4" stop-color="#FF7A2E" stop-opacity=".3"/><stop offset="1" stop-color="#FF7A2E" stop-opacity="0"/></radialGradient>
           <linearGradient id="mtShade" x1=".8" y1="0" x2=".2" y2="1"><stop offset="0" stop-color="${P.shade[0]}" stop-opacity="${P.shade[1]}"/><stop offset=".55" stop-color="${P.shade[0]}" stop-opacity="${P.shade[2]}"/><stop offset="1" stop-color="${P.shade[0]}" stop-opacity=".05"/></linearGradient>
           <linearGradient id="mtSnow" gradientUnits="userSpaceOnUse" x1="0" y1="210" x2="0" y2="720"><stop offset="0" stop-color="${P.snow[0]}"/><stop offset=".6" stop-color="${P.snow[1]}"/><stop offset="1" stop-color="${P.snow[2]}"/></linearGradient>
@@ -4161,7 +4171,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         const P = mtPal();
         tb.setAttribute('fill', on ? P.meBack : P.triOff); tb.setAttribute('stroke', on ? P.me : P.triOffS);
         tw.setAttribute('fill', on ? '#FFE08A' : P.triOffS); tw.setAttribute('opacity', on ? 1 : .45);
-        g.querySelector('.tg').setAttribute('opacity', on ? .55 : 0);
+        g.querySelector('.tg').setAttribute('opacity', on ? .9 : 0);
         txt.setAttribute('fill', on ? P.campOn : P.campOff);
       });
     }
@@ -4326,6 +4336,9 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           if (done) return;
           done = true; onHit();
           g.classList.remove('pop'); void g.getBBox(); g.classList.add('pop');
+          // вспышка: тёплый свет разливается и кольцо света расходится от лагеря
+          box.insertAdjacentHTML('beforeend', `<g class="mt-burst"><circle class="bf" cx="${tx}" cy="${ty}" r="34" fill="url(#mtBurst)"/><circle class="br" cx="${tx}" cy="${ty}" r="12" fill="none" stroke="#FFE7A3" stroke-width="2.4"/><circle class="br b2" cx="${tx}" cy="${ty}" r="12" fill="none" stroke="#C6FF3D" stroke-width="1.6"/></g>`);
+          const b = box.lastElementChild; setTimeout(() => b.remove(), 1300);
         });
       }, n * 80);
     }
