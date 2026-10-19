@@ -582,8 +582,7 @@
     #achScreen .m-tile.lit .mw { animation: achFlip .65s cubic-bezier(.3,1.25,.5,1) both; }
     #achScreen .m-tile.lit .mw::after { animation: achGlint .6s ease .45s both; }
     @keyframes achFlip { 0% { transform: perspective(520px) rotateY(0) scale(.96); } 45% { transform: perspective(520px) rotateY(90deg) scale(1.04); } 100% { transform: perspective(520px) rotateY(360deg); } }
-    #achScreen .ach-thread { position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; z-index: 2; transition: opacity .6s ease; }
-    #achScreen .ach-thread.out { opacity: 0; }
+    #achShots { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 31; }
     .screen-inner { position: relative; }
     .screen-inner { max-width: 460px; margin: 0 auto; padding: 14px 16px calc(32px + env(safe-area-inset-bottom, 0px)); }
     .screen-top { display: flex; align-items: baseline; justify-content: space-between; }
@@ -2749,42 +2748,61 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       $('achScreen').classList.add('open');
       navPush(closeAchScreen);
       tiltStart();
-      // медали встают на место волной, сверху вниз (без частиц — решение Вадима 19.10)
       const sc = $('achScreen');
       if (calm()) return;
       // открытие витрины: шёлковая нить бьёт по медалям, и они переворачиваются из серых в цветные (Вадим, 19.10)
-      sc.querySelectorAll('.ach-thread').forEach(e => e.remove());
+      if ($('achShots')) $('achShots').innerHTML = '';
       sc.querySelectorAll('.m-tile').forEach(t => t.classList.remove('dim', 'lit'));
       sc.classList.remove('enter'); void sc.offsetWidth; sc.classList.add('enter');
       clearTimeout(sc.$en); sc.$en = setTimeout(() => sc.classList.remove('enter'), 600);
-      achThread(sc);
+      achShots(sc);
     }
-    // шёлковая нить змейкой бежит по медалям первого экрана; медаль, которой она коснулась, переворачивается и становится цветной
-    function achThread(sc) {
-      const inner = sc.querySelector('.screen-inner'), tiles = [...sc.querySelectorAll('.m-tile')];
-      const vis = tiles.filter(t => t.getBoundingClientRect().top < innerHeight - 40);
-      vis.forEach(t => t.classList.add('dim'));
-      if (vis.length < 2) return vis.forEach(t => t.classList.replace('dim', 'lit'));
-      // экран ещё выезжает — точки берём, когда он встал
-      setTimeout(() => {
-        const ir = inner.getBoundingClientRect();
-        const cen = vis.map(t => { const r = t.querySelector('.mw').getBoundingClientRect(); return [r.left + r.width / 2 - ir.left, r.top + r.height / 2 - ir.top, t]; });
-        // змейкой: ряды по очереди слева направо и справа налево
-        const rows = []; cen.forEach(c => { const r = rows.find(r => Math.abs(r[0][1] - c[1]) < 20); if (r) r.push(c); else rows.push([c]); });
-        const order = rows.flatMap((r, i) => (r.sort((a, b) => a[0] - b[0]), i % 2 ? r.reverse() : r));
-        const pts = []; order.forEach((c, i) => { if (i) { const p = order[i - 1]; for (let k = 1; k <= 8; k++) pts.push([p[0] + (c[0] - p[0]) * k / 8, p[1] + (c[1] - p[1]) * k / 8 + Math.sin(k / 8 * Math.PI) * 10]); } else pts.push([c[0], c[1]]); });
-        inner.insertAdjacentHTML('afterbegin', `<svg class="ach-thread" width="${ir.width}" height="${inner.scrollHeight}" viewBox="0 0 ${ir.width} ${inner.scrollHeight}">${silkRaw(pts, { n: 7, a: .8, w: 1.5 })}</svg>`);
-        const sv = inner.querySelector('.ach-thread'), g = sv.querySelector('.silk'), N = order.length, D = 140 * N, t0 = performance.now();
-        g.__u = 0; silkStart(g);
-        const st = now => {
-          if (!sv.isConnected) return;
-          const u = Math.min(1, (now - t0) / D); g.__u = u;
-          order.forEach((c, i) => { if (u >= i / (N - 1) - 1e-6 && c[2].classList.contains('dim')) { c[2].classList.replace('dim', 'lit'); if (!c[2].classList.contains('locked')) safeHaptic('soft'); } });
-          if (u < 1) return requestAnimationFrame(st);
-          sv.classList.add('out'); setTimeout(() => { sv.remove(); }, 700);
-        };
-        requestAnimationFrame(st);
+    // полученные медали, которые видно на экране, сначала серые: с боков экрана в каждую выстреливает шёлковая нить,
+    // и медаль переворачивается в цвет. Пролистал — нити бьют по новым медалям (Вадим, 19.10)
+    const ACH = { io: null, q: [], t: 0 };
+    function achShots(sc) {
+      if (ACH.io) ACH.io.disconnect();
+      ACH.q = []; clearTimeout(ACH.t);
+      const tiles = [...sc.querySelectorAll('.m-tile:not(.locked)')];
+      tiles.forEach(t => t.classList.add('dim'));
+      if (!('IntersectionObserver' in window)) return tiles.forEach(t => t.classList.replace('dim', 'lit'));
+      // экран ещё выезжает — стреляем, когда он встал
+      ACH.t = setTimeout(() => {
+        ACH.io = new IntersectionObserver(es => es.forEach(e => {
+          if (!e.isIntersecting || !e.target.classList.contains('dim') || e.target.$q) return;
+          e.target.$q = 1; ACH.q.push(e.target); achFire();
+        }), { root: sc, threshold: .6 });
+        tiles.forEach(t => { t.$q = 0; ACH.io.observe(t); });
       }, 380);
+    }
+    function achFire() {
+      if (ACH.busy || !ACH.q.length) return;
+      ACH.busy = true;
+      const t = ACH.q.shift(), sc = $('achScreen');
+      setTimeout(() => { ACH.busy = false; achFire(); }, 110);
+      if (!sc.classList.contains('open')) return;
+      const r = t.querySelector('.mw').getBoundingClientRect(), W = innerWidth, H = innerHeight;
+      const tx = r.left + r.width / 2, ty = r.top + r.height / 2, left = tx < W / 2 || (Math.abs(tx - W / 2) < 20 && Math.random() < .5);
+      // из середины края экрана, дугой в медаль
+      const sx = left ? -6 : W + 6, sy = H * (.42 + Math.random() * .16), cx = (sx + tx) / 2, cy = Math.min(sy, ty) - 40 - Math.random() * 50;
+      const pts = [...Array(25)].map((_, k) => { const u = k / 24, v = 1 - u; return [v * v * sx + 2 * v * u * cx + u * u * tx, v * v * sy + 2 * v * u * cy + u * u * ty]; });
+      // холст нитей — поверх экрана медалей, но в body: внутри сдвинутого экрана fixed уезжал бы при прокрутке
+      let sv = $('achShots');
+      if (!sv) { document.body.insertAdjacentHTML('beforeend', '<svg id="achShots" aria-hidden="true"></svg>'); sv = $('achShots'); }
+      sv.setAttribute('viewBox', `0 0 ${W} ${H}`);
+      sv.insertAdjacentHTML('beforeend', silkRaw(pts, { n: 6, a: .8, w: 1.5 }));
+      const g = sv.lastElementChild, t0 = performance.now(), D = 340;
+      g.__u = 0; silkStart(g);
+      const st = now => {
+        if (!g.isConnected) return;
+        const k = Math.min(1, (now - t0) / D); g.__u = 1 - Math.pow(1 - k, 2);
+        if (k < 1) return requestAnimationFrame(st);
+        // попала — медаль переворачивается в цвет, нить гаснет
+        t.classList.replace('dim', 'lit'); safeHaptic('soft');
+        g.style.transition = 'opacity .45s ease'; g.style.opacity = 0;
+        setTimeout(() => g.remove(), 500);
+      };
+      requestAnimationFrame(st);
     }
     function buildAchScreen(u) {
       achBuiltFor = u;
@@ -2845,6 +2863,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       });
     }
     function closeAchScreen() {
+      if (ACH.io) ACH.io.disconnect(); ACH.q = []; clearTimeout(ACH.t);
+      if ($('achShots')) $('achShots').innerHTML = '';
       $('achScreen').classList.remove('open');
       navForget(closeAchScreen);
       tiltStop();
