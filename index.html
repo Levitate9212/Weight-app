@@ -161,6 +161,9 @@
     #storyRing { position: absolute; left: 0; top: -2px; width: 38px; height: 38px; border-radius: 50%; padding: 2px; z-index: 2;
       background: conic-gradient(var(--volt), #6FE0B8, var(--volt)); }
     #storyRing.seen { background: var(--rule); }
+    #storyRing.silky:not(.seen) { background: none; }
+    #storyRing .ring-silk { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+    #storyRing.seen .ring-silk { display: none; }
     #storyRing span { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; background: var(--bg); border: 2px solid var(--bg);
       font-family: var(--text); font-size: 10.5px; font-weight: 700; text-transform: uppercase; color: var(--ink); letter-spacing: .02em; }
     #story { position: fixed; inset: 0; z-index: 45; background: var(--story-bg); color: var(--ink); display: flex; flex-direction: column;
@@ -205,6 +208,11 @@
     .st-slide .st-tiles, .st-slide .st-plan, .st-wos { width: 100%; text-align: left; }
     .st-wos { background: var(--panel); border-radius: 20px; padding: 14px 16px; }
     .st-slide .st-close { width: 100%; margin-top: 10px; }
+    .st-slide > .st-chart:not(.st-beads) { position: relative; width: 100%; margin-top: 10px; }
+    .st-slide > .st-chart:not(.st-beads) .st-pt { position: absolute; left: -16px; top: -20px; width: calc(100% + 32px); height: calc(100% + 40px); pointer-events: none; }
+    .st-slide > .st-chart.sl:not(.st-beads) .silk { visibility: hidden; }
+    .st-slide .st-chips { justify-content: center; margin-top: 4px; }
+    .st-wks { width: 100%; }
     .st-slide .st-sleep.big { width: 100%; height: 130px; }
     .st-slide .st-sleep.big i { border-radius: 10px; }
     .st-medal1 svg, .st-medal1 img { width: 170px; height: 170px; display: block; filter: drop-shadow(0 10px 40px color-mix(in srgb, var(--pt-a) 35%, transparent)); }
@@ -248,6 +256,9 @@
     .silk .au { stroke: #F2C35B; }
     html.light .silk .au { stroke: #B9831A; }
     .silk .sg { stroke-width: 7; opacity: .28; filter: blur(3px); }
+    .silk.thin path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .silk .sl-a { stroke: var(--volt); } .silk .sl-b { stroke: #4FD1B5; }
+    html.light .silk .sl-b { stroke: #12937A; }
     html.light .silk .sg { opacity: .16; }
     .st-chart.go .ln { animation: stDraw 1.2s .1s cubic-bezier(.45,0,.2,1) both; }
     .st-chart.go .ar { animation: stArea .7s .8s ease both; }
@@ -356,6 +367,7 @@
     /* на обложке график — часть фона: во всю ширину, без подписей дней и заливки, только текущие пряди и вес в начале и в конце */
     .st-poster .st-chart.bare { margin: 26px -24px 0; }
     .st-chart.bare { margin-top: 14px; }
+    .st-slide > .st-chart.bare svg { height: 130px; }
     .st-poster .st-chart.bare svg { height: 120px; }
     .st-poster .unit { font-family: var(--num); font-weight: 700; font-size: 22px; margin-top: 14px; color: var(--muted); letter-spacing: .02em; }
     .st-poster .st-k, .st-poster .huge, .st-poster .unit, .st-poster .say { text-align: center; }
@@ -415,9 +427,13 @@
     .goal { margin-top: 16px; }
     .goal-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 12.5px; color: var(--muted); white-space: nowrap; }
     .goal-top b { font-family: var(--num); font-size: 18px; color: var(--ink); font-weight: 600; letter-spacing: .02em; }
-    .ticks { display: grid; grid-template-columns: repeat(30, 1fr); gap: 3px; margin-top: 8px; }
-    .ticks i { height: 10px; border-radius: 1.5px; background: var(--panel2); transition: background .2s ease; }
-    .ticks i.on { background: var(--volt); }
+    .ticks { position: relative; height: 16px; margin-top: 6px; }
+    .ticks svg { display: block; width: 100%; height: 16px; overflow: visible; }
+    .ticks path, .ticks line { vector-effect: non-scaling-stroke; }
+    .ticks .tk-rest { stroke: var(--panel2); stroke-width: 2.5; stroke-linecap: round; }
+    .ticks .tk-end { position: absolute; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: var(--volt); }
+    .ticks .tk-end.in { animation: tkEnd .4s ease 1.2s both; }
+    @keyframes tkEnd { from { opacity: 0; transform: scale(.3); } to { opacity: 1; transform: none; } }
     .eta { margin-top: 7px; font-size: 12.5px; color: var(--muted); display: flex; align-items: center; gap: 5px; }
     .eta b { color: var(--ink); font-weight: 600; }
 
@@ -434,13 +450,9 @@
     #mtView { position: fixed; inset: 0; z-index: 44; background: #121621; color: var(--ink); display: flex; flex-direction: column;
       opacity: 0; pointer-events: none; transform: translateY(24px); transition: opacity .25s ease, transform .35s cubic-bezier(.3,.8,.3,1); }
     #mtView.open { opacity: 1; pointer-events: auto; transform: none; }
-    #mtView .mt-pt { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; }
+    #mtSvg.silky #mtDone { opacity: .35; stroke-width: 1.4; }
     #mtSvg > g, #mtSvg > path, #mtSvg > image, #mtSvg > line, #mtSvg > text { transition: opacity .7s ease; }
     #mtSvg #mtSkyG > g, #mtSvg #mtSkyG > circle[cx="330"] { transition: opacity .7s ease; }
-    #mtSvg.pt-hide > :not(#mtSkyG):not(defs), #mtSvg.pt-hide #mtSkyG > g, #mtSvg.pt-hide #mtSkyG > circle[cx="330"] { opacity: 0; transition: none; }
-    /* пока гора собирается из точек, надписи (заголовок, цифры, подсказка) тоже из точек, а настоящие спрятаны */
-    #mtView .mt-top > * { transition: opacity .45s ease; }
-    #mtView.pt-text .mt-top > *, #mtView.pt-text .mt-hint { opacity: 0; transition: none; }
     .mt-top { position: relative; z-index: 2; padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 0; max-width: 460px; width: 100%; margin: 0 auto; }
     .mt-top .back-btn { padding-bottom: 6px; }
     .mt-top h2 { font-family: var(--display); font-weight: 700; font-size: 30px; line-height: 1.1; }
@@ -556,9 +568,9 @@
       transform: translateX(100%); transition: transform .3s cubic-bezier(.2, .8, .2, 1);
     }
     .screen.open { transform: translateX(0); }
-    #achScreen .ach-pt { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
-    #achScreen .screen-inner { transition: opacity .4s ease; }
-    #achScreen.pt-text .screen-inner { opacity: 0; transition: none; }
+    /* открытие витрины: заголовки и медали поднимаются волной */
+    #achScreen.enter .m-sec h3, #achScreen.enter .m-tile { animation: achIn .55s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--i, 0) * 28ms + 120ms); }
+    @keyframes achIn { from { opacity: 0; transform: translateY(16px) scale(.94); } to { opacity: 1; transform: none; } }
     .screen-inner { max-width: 460px; margin: 0 auto; padding: 14px 16px calc(32px + env(safe-area-inset-bottom, 0px)); }
     .screen-top { display: flex; align-items: baseline; justify-content: space-between; }
     .screen-top h2 { font-family: var(--display); font-weight: 700; font-size: 30px; }
@@ -694,6 +706,7 @@
       transform: translateY(-48px); opacity: 0; pointer-events: none;
     }
     #ptr svg { width: 18px; height: 18px; }
+    #ptr.silk-on svg { width: 30px; height: 30px; overflow: visible; }
     #ptr.back { transition: transform .3s cubic-bezier(.2, .8, .2, 1), opacity .3s ease; }
     #ptr.spin svg { animation: ptrSpin .8s linear infinite; }
     @keyframes ptrSpin { to { transform: rotate(360deg); } }
@@ -1011,6 +1024,9 @@
     // Потянуть вниз — обновить. Закрытие свайпом выключено через disableVerticalSwipes.
     function initPullToRefresh() {
       const main = document.querySelector('main'), ptr = $('ptr'), LIMIT = 70;
+      // вместо стрелки — кольцо из шёлковых прядей: тянешь — оно дорисовывается, обновляется — крутится
+      let ring = null;
+      if (!calm()) { ptr.innerHTML = `<svg viewBox="0 0 24 24">${silkRaw(silkCircle(12, 12, 7.5), { n: 6, a: .3, loop: true })}</svg>`; ring = ptr.querySelector('.silk'); ptr.classList.add('silk-on'); }
       let y0 = null, x0 = 0, dy = 0, mode = null, busy = false;
       const blocked = () => busy || $('dashboard').classList.contains('hidden') ||
         document.querySelector('.screen.open, #sheet.open') || window.scrollY > 0;
@@ -1018,6 +1034,7 @@
         const k = Math.min(1, d / LIMIT);
         main.style.transform = d ? `translateY(${d * .5}px)` : '';
         ptr.style.opacity = k;
+        if (ring) { ring.__u = k; if (!d) SILK.list.delete(ring); else if (!SILK.list.has(ring)) silkStart(ring); }
         ptr.style.transform = `translateY(${Math.min(d, LIMIT * 1.3) - 40}px) rotate(${d * 3}deg)`;
       };
       main.addEventListener('touchstart', e => {
@@ -1047,6 +1064,7 @@
         safeHaptic('medium');
         main.style.transform = '';
         ptr.style.opacity = 1; ptr.style.transform = 'translateY(14px)';
+        if (ring) ring.__u = 1;
         ptr.classList.add('spin');
         const t0 = performance.now();
         fetchData(true).finally(() => {
@@ -2717,7 +2735,9 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       $('achScreen').classList.add('open');
       navPush(closeAchScreen);
       tiltStart();
-      achParticles();
+      // медали встают на место волной, сверху вниз (без частиц — решение Вадима 19.10)
+      const sc = $('achScreen');
+      if (!calm()) { sc.classList.remove('enter'); void sc.offsetWidth; sc.classList.add('enter'); clearTimeout(sc.$en); sc.$en = setTimeout(() => sc.classList.remove('enter'), 1600); }
     }
     function buildAchScreen(u) {
       achBuiltFor = u;
@@ -2725,7 +2745,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const earnedN = cat.filter(m => m.status === 'earned').length;
       $('achScreenCount').textContent = `${earnedN} из ${cat.length}`;
       const box = $('achSections');
-      box.innerHTML = '';
+      box.innerHTML = ''; box.$n = 0;
       // старшие ступени из «Главных» показываем в конце своей серии: 7 → 30 → 100 → 365 дней
       const placed = (key) => {
         const items = cat.filter(m => m.section === key && !MEDAL_SERIES_TAIL[m.key]);
@@ -2744,11 +2764,12 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         const got = items.filter(m => m.status === 'earned').length;
         const sec = document.createElement('section');
         sec.className = 'm-sec';
-        sec.innerHTML = `<h3>${name} <small>${got} из ${items.length}</small></h3><div class="m-grid"></div>`;
+        sec.innerHTML = `<h3 style="--i:${Math.min(box.$n || 0, 24)}">${name} <small>${got} из ${items.length}</small></h3><div class="m-grid"></div>`;
         const grid = sec.querySelector('.m-grid');
         items.forEach(m => {
           const b = document.createElement('button');
           b.className = 'm-tile' + (m.status === 'earned' ? '' : ' locked');
+          box.$n = (box.$n || 0) + 1; b.style.setProperty('--i', Math.min(box.$n, 24));
           let sub;
           if (m.status === 'earned') sub = `<small>${dayMonth(m.date)}</small>`;
           else if (m.status === 'next') sub = `<span class="mini"><i style="width:${Math.round(m.progress * 100)}%"></i></span><small>${m.progressText}</small>`;
@@ -2776,69 +2797,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         });
       });
     }
-    // Открытие витрины частицами, как гора: медали, заголовки и подписи собираются из точек снизу вверх,
-    // потом проявляется настоящая витрина. Нажимать можно сразу; если начать листать — точки сразу уступают место.
-    const ACP = { s: null };
-    function achParticles() {
-      const sc = $('achScreen'), inner = sc.querySelector('.screen-inner');
-      if (ACP.s) ACP.s.stop();
-      if (PT.reduce || calm() || !inner) return;
-      let cv = sc.querySelector('.ach-pt');
-      if (!cv) {
-        cv = document.createElement('canvas'); cv.className = 'ach-pt'; cv.setAttribute('aria-hidden', 'true'); sc.appendChild(cv);
-        sc.addEventListener('scroll', () => { if (ACP.s && ACP.s.alive) ACP.s.stop(); }, { passive: true });
-      }
-      const show = () => sc.classList.remove('pt-text');
-      sc.classList.add('pt-text');
-      // точки берём, когда экран доехал до места: пока он выезжает, Safari отдаёт места слов без сдвига экрана,
-      // и надписи из точек уезжали влево за край
-      let started = false;
-      const begin = () => { if (started) return; started = true; sc.removeEventListener('transitionend', onEnd); requestAnimationFrame(run); };
-      const onEnd = e => { if (e.target === sc) begin(); };
-      sc.addEventListener('transitionend', onEnd); setTimeout(begin, 380);
-      const run = () => {
-        try {
-          const cr = cv.getBoundingClientRect();
-          if (!cr.width || !sc.classList.contains('open')) return show();
-          let shown = false;
-          const shape = (g, part) => {
-            g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#000';
-            if (part === 'text') return ptWords(g, inner, cr);
-            // медали — их собственные силуэты (картинка с прозрачным фоном), живые SVG — кругом; полоски прогресса
-            inner.querySelectorAll('.mw > img, .mw > svg, .mini').forEach(el => {
-              const r = el.getBoundingClientRect();
-              if (r.bottom < cr.top || r.top > cr.bottom || !r.width) return;
-              const x = r.left - cr.left, y = r.top - cr.top;
-              if (el.tagName === 'IMG' && el.complete && el.naturalWidth) g.drawImage(el, x, y, r.width, r.height);
-              else if (el.classList.contains('mini')) { g.beginPath(); g.rect(x, y, r.width, Math.max(3, r.height)); g.fill(); }
-              else { g.beginPath(); g.arc(x + r.width / 2, y + r.height / 2, r.width * .44, 0, 7); g.fill(); }
-            });
-          };
-          ACP.s = PT.scene(cv, {
-            n: 7000, nWide: 3, lagK: 1.4, snap: true,
-            shape: (W, H, N) => {
-              const nt = Math.round(N * .35), a = PT.sample(W, H, g => shape(g, 'pics'), N - nt, false, .55), b = PT.sample(W, H, g => shape(g, 'text'), nt, false, .55);
-              const parts = [a, b].filter(r => r.pts);
-              if (!parts.length) return { pts: null };
-              const pts = new Float32Array(parts.reduce((s, r) => s + r.pts.length, 0)); let o = 0;
-              parts.forEach(r => { pts.set(r.pts, o); o += r.pts.length; });
-              return { pts };
-            },
-            lag: (x, y, W, H, r2) => PT.clamp(y / H * .85 + r2 * .15),          // как гора: снизу вверх
-            spawn: (p, W, H) => PT.ARRIVE.rise(p, W, H),
-            gather: t => PT.clamp((t - .1) / 1),
-            exit: (i, t, x, y, W, H, r1, r2) => t < 1.25 ? null : [(r1 - .5) * .05, -.06 - r2 * .1, PT.clamp(1 - (t - 1.25) / .45)],
-            over: (ctx, W, H, t) => { if (!shown && t >= 1.15) { shown = true; show(); } },
-            done: t => t > 1.75,
-            stopped: show
-          });
-          ACP.s.start();                       // start() сначала останавливает прежнюю сцену и этим показывает витрину —
-          if (ACP.s.alive) sc.classList.add('pt-text'); else show();   // прячем её снова
-        } catch (e) { show(); }
-      };
-    }
     function closeAchScreen() {
-      if (ACP.s) ACP.s.stop();
       $('achScreen').classList.remove('open');
       navForget(closeAchScreen);
       tiltStop();
@@ -2890,6 +2849,11 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       $('storyRingTxt').textContent = ST_MONTHS[mo.m].slice(0, 3);
       let seen = false; try { seen = localStorage.getItem(stSeenKey(u)) === '1'; } catch (e) {}
       ring.classList.toggle('seen', seen);
+      // непросмотренные итоги — кольцо из шёлковых прядей, как на заставке, только тонкое
+      if (!seen && !calm() && !ring.querySelector('.ring-silk')) {
+        ring.insertAdjacentHTML('beforeend', `<svg class="ring-silk" viewBox="0 0 38 38" aria-hidden="true">${silkRaw(silkCircle(19, 19, 17.2), { n: 7, a: .32, loop: true })}</svg>`);
+        silkStart(ring.querySelector('.ring-silk')); ring.classList.add('silky');
+      }
       // данные сторис (тренировки, км, тексты тренера) грузим заранее в фоне, чтобы к нажатию всё было готово
       clearTimeout(ST.preT);
       ST.preT = setTimeout(() => stPrefetch(u), 1500);
@@ -3009,41 +2973,68 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       }
       return h + '</g>';
     }
+    // геометрия пряди: нормаль к линии в каждой точке и «тугость» у замеров (0 у точки замера, 1 посередине между ними).
+    // c — новые точки (тропа на горе растёт, пока человечек идёт)
+    function silkGeo(g, c) {
+      if (c) g.__c = c;
+      if (!g.__c) g.__c = g.dataset.c.split(' ').map(s => s.split(',').map(Number));
+      c = g.__c; const n = c.length, knots = [0], lp = !!g.dataset.loop;
+      c.forEach((p, i) => { if (p[2]) knots.push(i); });
+      g.__nrm = c.map((p, i) => {
+        const a = c[i > 0 ? i - 1 : lp ? n - 2 : 0], b = c[i < n - 1 ? i + 1 : lp ? 1 : n - 1], dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1;
+        return [-dy / l, dx / l];
+      });
+      g.__env = c.map((p, i) => { let k = 0; while (k < knots.length - 1 && knots[k + 1] < i) k++; const a = knots[k], b = knots[k + 1] == null ? a : knots[k + 1]; return b > a ? Math.sin(Math.PI * (i - a) / (b - a)) : 0; });
+      if (!g.__ph) {
+        g.__sl = g.querySelectorAll('.sl'); g.__sg = g.querySelector('.sg');
+        // волны бегут по пряди слева направо, у каждой пряди своя скорость — пучок всё время течёт
+        const N = g.__sl.length;
+        g.__ph = [...Array(N)].map((_, j) => [j / N * 6.283 + (j * 1.7 % 1), .7 + (j * 5 % 7) * .09, -(1.5 + (j * 3 % 4) * .35), N > 1 ? (j - (N - 1) / 2) / ((N - 1) / 2) : 0]);
+        g.__a = +g.dataset.a || 1;
+      }
+    }
     function silkStart(root) {
-      root.querySelectorAll('.silk').forEach(g => {
-        if (!g.__c) {
-          g.__c = g.dataset.c.split(' ').map(s => s.split(',').map(Number));
-          // нормаль к линии в каждой точке и «тугость» у замеров (0 у точки замера, 1 посередине между ними)
-          const c = g.__c, n = c.length, knots = [0];
-          c.forEach((p, i) => { if (p[2]) knots.push(i); });
-          g.__nrm = c.map((p, i) => { const a = c[Math.max(0, i - 1)], b = c[Math.min(n - 1, i + 1)], dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1; return [-dy / l, dx / l]; });
-          g.__env = c.map((p, i) => { let k = 0; while (k < knots.length - 1 && knots[k + 1] < i) k++; const a = knots[k], b = knots[k + 1] == null ? a : knots[k + 1]; return b > a ? Math.sin(Math.PI * (i - a) / (b - a)) : 0; });
-          // волны бегут по пряди слева направо, у каждой пряди своя скорость — пучок всё время течёт
-          g.__ph = [...Array(SILK.n)].map((_, j) => [j / SILK.n * 6.283 + (j * 1.7 % 1), .7 + (j * 5 % 7) * .09, -(1.5 + (j * 3 % 4) * .35), (j - (SILK.n - 1) / 2) / ((SILK.n - 1) / 2)]);
-          g.__sl = g.querySelectorAll('.sl'); g.__sg = g.querySelector('.sg');
-        }
-        g.__t0 = performance.now();
+      (root.classList && root.classList.contains('silk') ? [root] : root.querySelectorAll('.silk')).forEach(g => {
+        if (!g.__c) silkGeo(g);
+        g.__t0 = g.dataset.full ? -1e9 : performance.now();
         SILK.list.add(g);
       });
       if (!SILK.raf) SILK.raf = requestAnimationFrame(silkTick);
+    }
+    // тонкий шёлк без свечения (нить пути к цели, кольца, тропа): n прядей, a — размах пучка, loop — замкнутое кольцо.
+    // Цвет — градиент gid или (без gid) классы .sl-a/.sl-b/.au
+    const silkCircle = (cx, cy, r, n = 48) => [...Array(n + 1)].map((_, i) => [cx + r * Math.sin(i / n * 6.2832), cy - r * Math.cos(i / n * 6.2832)]);
+    function silkRaw(pts, o = {}) {
+      const f = v => v.toFixed(1), n = o.n || 7;
+      let h = `<g class="silk thin" data-c="${pts.map(p => f(p[0]) + ',' + f(p[1])).join(' ')}"${o.a ? ` data-a="${o.a}"` : ''}${o.loop ? ' data-loop="1"' : ''}${o.full ? ' data-full="1"' : ''}${o.id ? ` id="${o.id}"` : ''}>`;
+      for (let j = 0; j < n; j++) {
+        const gold = j % 4 === 2, w = ((o.w || 1) * (.55 + (j * 7 % 5) * .14)).toFixed(2), op = (.5 + (j * 3 % 6) * .09).toFixed(2);
+        h += `<path class="sl${gold ? ' au' : o.gid ? '' : j % 2 ? ' sl-b' : ' sl-a'}" style="${!gold && o.gid ? `stroke:url(#${o.gid});` : ''}stroke-width:${w};opacity:${op}"/>`;
+      }
+      return h + '</g>';
     }
     function silkTick(now) {
       SILK.raf = 0;
       const ease = x => x <= 0 ? 0 : x >= 1 ? 1 : 1 - Math.pow(1 - x, 3), f = v => v.toFixed(1);
       SILK.list.forEach(g => {
         if (!g.isConnected) { SILK.list.delete(g); return; }
-        const t = PT.reduce ? 9 : (now - g.__t0) / 1000, c = g.__c, n = c.length, u = PT.reduce ? 1 : ease((t - .1) / 1.2), m = Math.max(2, Math.ceil(u * (n - 1)) + 1);
+        const t = PT.reduce ? 9 : (now - g.__t0) / 1000, c = g.__c, n = c.length, u = g.__u != null ? g.__u : PT.reduce ? 1 : ease((t - .1) / 1.2), m = Math.max(2, Math.ceil(u * (n - 1)) + 1);
         // свечение — по средней линии
-        let d = '';
-        for (let i = 0; i < m; i++) d += (i ? 'L' : 'M') + f(c[i][0]) + ' ' + f(c[i][1]);
-        g.__sg.setAttribute('d', d);
+        if (g.__sg) {
+          let d = '';
+          for (let i = 0; i < m; i++) d += (i ? 'L' : 'M') + f(c[i][0]) + ' ' + f(c[i][1]);
+          g.__sg.setAttribute('d', d);
+        }
+        const A = g.__a, lp = g.dataset.loop, tw = 6.2832;
         g.__sl.forEach((p, j) => {
           const [ph, fr, sp, side] = g.__ph[j];
+          // на кольце волны укладываются целым числом, чтобы на стыке не было ступеньки
+          const F1 = lp ? Math.max(1, Math.round(fr * 9 / tw)) * tw : fr * 9, F2 = lp ? 4 * tw : 23;
           let s = '';
           for (let i = 0; i < m; i++) {
             const q = i / (n - 1), e = g.__env[i], head = Math.max(0, 1 - (u * (n - 1) - i) / 6) * (u < 1 ? 1 : 0);
             // ширина пучка: туго у замеров, шире между ними; у бегущего «носа» пряди расходятся, как на заставке
-            const o = side * (1.1 + 2.6 * e) * (1 - .4 * head) + (1.8 + 2.6 * e) * Math.sin(ph + fr * 9 * q + sp * t) + .8 * Math.sin(ph * 3 + 23 * q + sp * 1.7 * t) + head * 5 * Math.sin(ph * 2 + t * 3);
+            const o = A * (side * (1.1 + 2.6 * e) * (1 - .4 * head) + (1.8 + 2.6 * e) * Math.sin(ph + F1 * q + sp * t) + .8 * Math.sin(ph * 3 + F2 * q + sp * 1.7 * t) + head * 5 * Math.sin(ph * 2 + t * 3));
             s += (i ? 'L' : 'M') + f(c[i][0] + g.__nrm[i][0] * o) + ' ' + f(c[i][1] + g.__nrm[i][1] * o);
           }
           p.setAttribute('d', s);
@@ -3250,6 +3241,30 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           ${failed ? '' : stTiles(sum && sum.distance, sum ? sum.workouts : 0, wait)}
           ${rows ? `<div class="st-box"><p class="st-k">Недели</p>${rows}</div>` : ''}
           <button class="st-close" onclick="closeStory()">${b.ended ? `Вперёд, в ${ST_MONTHS[(b.m + 1) % 12]}` : 'Закрыть'}</button>`;
+      }, slides: () => {
+        // месяц — такие же листаемые экраны, как неделя: вес месяца с шёлковой линией, движение, недели, вывод
+        const S = [], say = (t, g) => t ? `<p class="st-say${g ? ' g' : ''}">${esc(t)}</p>` : '';
+        const rows = b.weeks.map((w, k) => {
+          const s = sw(w);
+          return `<button class="st-wk" onclick="stGo(${k})"><span>Неделя ${w.i + 1}<small>${stRange(w.from, w.to)}${s && s.distance.km ? ` · ${stKm(s.distance.km)} км` : ''}</small></span><b class="${cls(w.change)}">${stKg(w.change)}</b><em>›</em></button>`;
+        }).join('');
+        const mw = { days: Math.round((b.to - b.from) / DAY_MS) + 1, ws: b.weeks.flatMap(w => w.ws), from: b.from };
+        const km = sum && sum.distance && sum.distance.km, close = `<button class="st-close" onclick="closeStory()">${b.ended ? `Вперёд, в ${ST_MONTHS[(b.m + 1) % 12]}` : 'Закрыть'}</button>`;
+        S.push(`<p class="st-k">${b.ended ? 'Итоги месяца' : 'Месяц идёт'}${u.name ? ' · ' + esc(u.name) : ''}</p>
+          <div class="st-huge">${b.change == null ? '—' : `${stKg(b.change)}<small> кг</small>`}</div>
+          <div class="st-unit">${stCap(ST_MONTHS[b.m])} · ${stRange(b.from, b.to)}</div>
+          ${mw.ws.length > 1 ? stChart(mw, true).replace('class="st-chart', 'class="st-chart go') : ''}
+          <div class="st-chips">${stChip(b.weighIns, ST_Z)}${stChip(b.medals, ST_M)}${b.ended && b.path ? `<span class="st-chip"><b>${b.path[0]}% → ${b.path[1]}%</b>путь к цели</span>` : ''}</div>
+          ${say(ph && ph.cover)}`);
+        if (wait || (sum && (sum.workouts || km)))
+          S.push(`<p class="st-k">Движение за месяц</p>
+            <div class="st-huge">${wait ? '…' : km ? `${stKm(km)}<small> км</small>` : sum.workouts}</div>
+            <div class="st-unit">${wait ? 'считаю тренировки' : stWord(sum.workouts, ...ST_W)}</div>
+            ${failed ? '' : stTiles(sum && sum.distance, sum ? sum.workouts : 0, wait)}`);
+        const fin = b.ended && ph && ph.final;
+        if (rows) S.push(`<p class="st-k">Недели месяца</p><div class="st-wks">${rows}</div>${fin ? '' : close}`);
+        if (fin || !rows) S.push(`${fin ? `<p class="st-k">Вывод тренера</p>${say(ph.final, true)}` : ''}${close}`);
+        return S;
       } });
       // итог прошлого месяца — первую неделю нового месяца
       const pv = ST.prev;
@@ -3400,7 +3415,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     }
     // линия на экране дней — светящиеся пряди, как на заставке (пока обложка на экране, её сцену не трогаем)
     function stDeckSilk() {
-      const c = $('stPage').querySelector('.st-beads');
+      const c = $('stPage').querySelector('.st-slide .st-chart');
       if (!c || ST.posterOn) return;
       slLine(c, c, { trail: .9, scale: .28 });
     }
@@ -3455,6 +3470,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       navPush(closeStory);
       try { localStorage.setItem(stSeenKey(u), '1'); } catch (e) {}
       $('storyRing').classList.add('seen');
+      const rs = $('storyRing').querySelector('.ring-silk'); if (rs) rs.remove();
       // сон, тренировки, километры и тексты тренера; первую неделю месяца — ещё итог прошлого
       const req = ++ST.req;
       // прошлый месяц закончился неделю назад — пока в новом месяце одна неделя
@@ -3930,6 +3946,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         <path id="mtPinesP" d="${mtPines()}" fill="${P.pines}"/>
         <path d="${mtD(MT_TRAIL)}" fill="none" stroke="${P.trail}" stroke-width="3" stroke-dasharray="1 7" stroke-linecap="round" stroke-linejoin="round"/>
         <path id="mtDone" d="" fill="none" stroke="${P.me}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        ${calm() ? '' : silkRaw([MT_TRAIL[0], MT_TRAIL[0]], { n: 7, a: .9, w: 1.7, full: true, id: 'mtSilk' })}
         ${camps}
         <text id="mtStartT" x="${MT_TRAIL[0][0] - 4}" y="${MT_TRAIL[0][1] + 22}" font-size="13" font-weight="600" fill="${P.start}" font-family="Golos Text, system-ui, sans-serif"></text>
         <line x1="${fx}" y1="${fy}" x2="${fx}" y2="${fy - 24}" stroke="${P.pole}" stroke-width="1.6"/>
@@ -4036,6 +4053,13 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const pts = [];
       for (let k = 0; k <= 80; k++) pts.push(mtAt(t * k / 80).slice(0, 2).map(v => v.toFixed(1)).join(' '));
       $('mtDone').setAttribute('d', 'M' + pts.join('L'));
+      // пройденная тропа — шёлковая нить: тянется за человечком и всё время тихо течёт
+      const sk = $('mtSilk');
+      if (sk) {
+        silkGeo(sk, [...Array(81)].map((_, k) => mtAt(t * k / 80).slice(0, 2)));
+        if (!SILK.list.has(sk)) silkStart(sk);
+        $('mtSvg').classList.add('silky');
+      }
       const [x, y, dir] = mtAt(t);
       if (walking) MT.face = dir;
       // на вершине человечек встаёт рядом с флагом
@@ -4195,56 +4219,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       };
       MT.raf = requestAnimationFrame(step);
     }
-    // Открытие горы частицами: всё, что есть на экране (хребты, ёлки, палатки, люди, флаг, облака,
-    // солнце или луна), собирается из точек снизу вверх, потом настоящая гора проявляется сквозь них.
-    // Человечек начинает подъём, когда частицы закончили. Если что-то не так — гора открывается как раньше.
-    const MTP = { s: null, wait: 0 };
-    // силуэты всего, что нарисовано: каждую фигуру сначала обводим «ластиком», потом заливаем —
-    // так между ёлкой и горой за ней остаётся тонкая щель, и точки обводят каждую фигуру отдельно
-    // detail — только мелочи (ёлки, палатки, люди, флаг, тропа, небо): им отдаём отдельную долю точек, иначе они тонут
-    function mtSilhouettes(g, svg, cr, detail) {
-      const skip = 'defs, [style*="display:none"], [style*="display: none"], g[clip-path="url(#mtClip)"], g[clip-path="url(#mtSnowClip)"]';
-      const geo = el => {
-        const A = n => +el.getAttribute(n) || 0, P = new Path2D();
-        switch (el.tagName) {
-          case 'path': return new Path2D(el.getAttribute('d') || '');
-          case 'circle': if (A('r') < 2) return null; P.arc(A('cx'), A('cy'), A('r'), 0, 7); return P;
-          case 'ellipse': P.ellipse(A('cx'), A('cy'), A('rx'), A('ry'), 0, 0, 7); return P;
-          case 'line': P.moveTo(A('x1'), A('y1')); P.lineTo(A('x2'), A('y2')); return P;
-          case 'rect': if (A('width') > 200) return null; P.rect(A('x'), A('y'), A('width'), A('height')); return P;
-        }
-        return null;
-      };
-      const at = el => { const k = el.getScreenCTM(); if (!k) return 0; g.setTransform(k.a, k.b, k.c, k.d, k.e - cr.left, k.f - cr.top); return 1 / Math.hypot(k.a, k.b); };
-      g.lineCap = g.lineJoin = 'round';
-      let fore = false;     // всё, начиная с ёлок, — передний план
-      svg.querySelectorAll('path, circle, ellipse, line, rect').forEach(el => {
-        if (el.closest(skip) || el.getAttribute('filter')) return;
-        if (el.id === 'mtPinesP') fore = true;
-        if (detail && !fore && !el.closest('#mtSkyG')) return;
-        let op = 1;
-        for (let e = el; e && e !== svg; e = e.parentNode) op *= e.getAttribute('opacity') == null ? 1 : +e.getAttribute('opacity');
-        if (op < .12) return;
-        const P = geo(el); if (!P) return;
-        const w = at(el); if (!w) return;
-        const fe = el.closest('[fill]'), fill = fe ? fe.getAttribute('fill') : '#000', stroke = el.getAttribute('stroke'), sw = +el.getAttribute('stroke-width') || 0;
-        if (el.tagName !== 'line' && fill !== 'none' && !/mtMist|mtMoon|mtFireGlow|transparent/.test(fill)) {
-          g.globalCompositeOperation = 'destination-out'; g.lineWidth = 2.6 * w; g.stroke(P);
-          g.globalCompositeOperation = 'source-over'; g.fill(P);
-          // на самой горе — скальные грани и тропа щелями, чтобы она читалась как гора, а не пятно
-          if (el.parentNode === svg && el.getAttribute('d') === MT_SHAPE) {
-            g.globalCompositeOperation = 'destination-out'; g.lineWidth = 2.2 * w;
-            svg.querySelectorAll('g[clip-path="url(#mtClip)"] > path[fill="none"]').forEach(e => g.stroke(new Path2D(e.getAttribute('d'))));
-          }
-        } else if (stroke && stroke !== 'none' && sw) {
-          g.globalCompositeOperation = 'source-over'; g.lineWidth = Math.max(sw, 2.2 * w); g.stroke(P);
-        }
-      });
-      g.globalCompositeOperation = 'source-over';
-    }
-    function mtPtHide(on) { $('mtSvg').classList.toggle('pt-hide', on); $('mtView').classList.toggle('pt-text', on); }
-    // надписи: и обычный текст экрана (заголовок, цифры, подсказка), и подписи на горе (лагеря, старт, цель, имена).
-    // Каждое слово рисуем ровно на его месте его же шрифтом
+    const MTP = { wait: 0 };
     // слово на холст ровно на его месте на экране, его же шрифтом (cr — где на экране холст)
     function ptWord(g, cr, txt, r, cs, px) {
       if (!r.width || r.bottom < cr.top || r.top > cr.bottom || r.right < cr.left || r.left > cr.right) return;
@@ -4253,69 +4228,6 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const m = g.measureText(txt), asc = m.fontBoundingBoxAscent || px * .8, desc = m.fontBoundingBoxDescent || px * .2;
       g.fillText(txt, r.left - cr.left, r.top - cr.top + (r.height - asc - desc) / 2 + asc, r.width + 1);
     }
-    // весь обычный текст внутри root — по словам, чтобы перенос строки не сбивал место
-    function ptWords(g, root, cr) {
-      const rg = document.createRange(), tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-      g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.fillStyle = '#000'; g.textBaseline = 'alphabetic';
-      for (let n; (n = tw.nextNode());) {
-        const el = n.parentElement;
-        if (!el || el.closest('svg, canvas, .off, [hidden]') || !n.nodeValue.trim()) continue;
-        const cs = getComputedStyle(el), up = cs.textTransform === 'uppercase';
-        if (cs.display === 'none' || cs.visibility === 'hidden') continue;
-        for (const mm of n.nodeValue.matchAll(/\S+/g)) {
-          rg.setStart(n, mm.index); rg.setEnd(n, mm.index + mm[0].length);
-          ptWord(g, cr, up ? mm[0].toUpperCase() : mm[0], rg.getBoundingClientRect(), cs, parseFloat(cs.fontSize));
-        }
-      }
-    }
-    function mtTexts(g, svg, cr) {
-      const seen = op => op >= .12, word = (...a) => ptWord(g, cr, ...a);
-      ptWords(g, $('mtView'), cr);
-      // подписи на горе
-      svg.querySelectorAll('text').forEach(el => {
-        if (el.closest('defs, [style*="display:none"], [style*="display: none"]') || !el.textContent.trim()) return;
-        let op = 1;
-        for (let e = el; e && e !== svg; e = e.parentNode) op *= e.getAttribute('opacity') == null ? 1 : +e.getAttribute('opacity');
-        const k = el.getScreenCTM();
-        if (!seen(op) || !k) return;
-        const cs = getComputedStyle(el);
-        word(el.textContent.trim(), el.getBoundingClientRect(), cs, parseFloat(cs.fontSize) * Math.hypot(k.a, k.b));
-      });
-    }
-    function mtParticles() {
-      const view = $('mtView'), svg = $('mtSvg');
-      let cv = view.querySelector('.mt-pt');
-      if (!cv) { cv = document.createElement('canvas'); cv.className = 'mt-pt'; cv.setAttribute('aria-hidden', 'true'); view.appendChild(cv); }
-      if (MTP.s) MTP.s.stop();
-      const cr = cv.getBoundingClientRect();
-      if (!cr.width) return false;
-      let shown = false;
-      MTP.s = PT.scene(cv, {
-        n: 9000, nWide: 3, lagK: 1.4, snap: true,
-        shape: (W, H, N) => {
-          // доли точек: гора и хребты, мелочи переднего плана, надписи — иначе мелкое и текст тонут
-          const nd = Math.round(N * .26), nt = Math.round(N * .2);
-          const parts = [PT.sample(W, H, g => mtSilhouettes(g, svg, cr, false), N - nd - nt, false, .72),
-            PT.sample(W, H, g => mtSilhouettes(g, svg, cr, true), nd, false, .6),
-            PT.sample(W, H, g => mtTexts(g, svg, cr), nt, false, .55)].filter(r => r.pts);
-          if (!parts.length) return { pts: null };
-          const pts = new Float32Array(parts.reduce((a, r) => a + r.pts.length, 0)); let o = 0;
-          parts.forEach(r => { pts.set(r.pts, o); o += r.pts.length; });
-          return { pts };
-        },
-        lag: (x, y, W, H, r2) => PT.clamp(y / H * .85 + r2 * .15),          // нижние точки встают на место первыми
-        spawn: (p, W, H) => PT.ARRIVE.rise(p, W, H),
-        gather: t => PT.clamp((t - .1) / 1.25),
-        exit: (i, t, x, y, W, H, r1, r2) => t < 1.55 ? null : [(r1 - .5) * .05, -.06 - r2 * .1, PT.clamp(1 - (t - 1.55) / .5)],
-        over: (ctx, W, H, t) => { if (!shown && t >= 1.45) { shown = true; mtPtHide(false); } },
-        done: t => t > 2.15,
-        stopped: () => mtPtHide(false)
-      });
-      MTP.s.start();
-      if (!MTP.s.alive) return false;
-      mtPtHide(true);
-      return true;
-    }
     function openMountain() {
       if (MT.open) return;
       MT.open = true; MT.t = null; MT.follow = true;
@@ -4323,22 +4235,14 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       $('mtView').classList.add('open');
       navPush(closeMountain);
       if (!MT.last) return;
-      // подъём ждёт, пока гора соберётся из точек
-      const pt = !PT.reduce && !calm(), svg = $('mtSvg');
-      MTP.wait = pt ? 2700 : 0;
+      // без частиц (решение Вадима 19.10): экран выезжает, и человечек сразу идёт, а за ним тянется шёлковая нить
+      MTP.wait = calm() ? 0 : 450;
       renderMountain(...MT.last);
-      if (!pt) return;
-      // гора уже спрятана; точки берём после первого кадра, когда камера и человечки стоят на своих местах
-      mtPtHide(true);
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        if (!MT.open) return mtPtHide(false);
-        try { if (!mtParticles()) mtPtHide(false); } catch (e) { mtPtHide(false); }
-      }));
     }
     function closeMountain() {
       MT.open = false; MTP.wait = 0;
-      if (MTP.s) MTP.s.stop();
       cancelAnimationFrame(MT.raf);
+      if ($('mtSilk')) SILK.list.delete($('mtSilk'));
       $('mtView').classList.remove('open');
       navForget(closeMountain);
     }
@@ -4990,7 +4894,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         const done = (start >= goal) ? start - target.weight : target.weight - start;
         const pct = Math.max(0, Math.min(100, total > 0 ? Math.round(done / total * 100) : 100));
         $('progressText').textContent = `${pct}%`;
-        fillTicks(Math.round(pct * 30 / 100));
+        fillTicks(pct);
         const leftKg = parseFloat(Math.abs(target.weight - goal).toFixed(1));
         $('laneGoal').textContent = `${fmt(goal)} кг`;
         // Цель взята, если вес дошёл до неё или прошёл дальше (раньше при весе ниже
@@ -5120,6 +5024,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const d = c.data.datasets[0], col = on ? cssVar('--volt') : 'transparent';
       if (d.borderColor !== col) { d.borderColor = col; c.update('none'); }
     }
+    const msCovered = () => !!(MT.open || $('story').classList.contains('open') || document.querySelector('.screen.open'));
     function msPts() {
       const ch = chartInstance; if (!ch) return null;
       const pts = ch.getDatasetMeta(0).data.filter(p => p && !p.skip && isFinite(p.x) && isFinite(p.y)).map(p => [p.x, p.y]);
@@ -5132,7 +5037,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       clearTimeout(MS.tm);
       const c = chartInstance;
       if (!c || calm() || typeof SL === 'undefined') return;
-      if (!$('splash').classList.contains('gone') || $('story').classList.contains('open') || SL.busy(MS.s)) { MS.tm = setTimeout(mainSilk, 800); return; }
+      if (!$('splash').classList.contains('gone') || msCovered() || SL.busy(MS.s)) { MS.tm = setTimeout(mainSilk, 800); return; }
       // меньше двух точек тренда — линии не по чему течь, оставляем обычную
       if (!msPts()) { if (MS.s && MS.s.alive) { MS.quiet = true; MS.s.stop(); MS.quiet = false; } mainSilkLine(true); return; }
       const box = $('weightChart').parentNode;
@@ -5140,6 +5045,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       if (MS.cv.parentNode !== box) box.appendChild(MS.cv);
       if (!MS.s) MS.s = SL.scene(MS.cv, {
         fly: 1e5, keep: true, flat: true, scale: .12,
+        // главный экран закрыт горой, медалями или сторис — пряди не крутим зря, вернёмся, когда закроют
+        done: msCovered,
         path: msPts,
         // другая сцена забрала WebGL — пока возвращаем обычную линию и ждём
         stopped: () => { if (MS.quiet) return; mainSilkLine(true); MS.tm = setTimeout(mainSilk, 800); }
@@ -5246,15 +5153,13 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       });
     }
 
-    // 30 сегментов пути к цели; при открытии загораются по очереди
-    function fillTicks(on) {
-      const box = $('ticks');
-      if (box.childElementCount !== 30) box.innerHTML = '<i></i>'.repeat(30);
-      const anim = intro && !calm(), gen = box.$gen = (box.$gen || 0) + 1;
-      [...box.children].forEach((el, i) => {
-        if (anim) { el.classList.remove('on'); if (i < on) setTimeout(() => { if (box.$gen === gen) el.classList.add('on'); }, 200 + i * 28); }
-        else el.classList.toggle('on', i < on);
-      });
+    // путь к цели — тонкая шёлковая нить до текущего процента (дальше — тихая дорожка); при открытии нить протягивается
+    function fillTicks(pct) {
+      const box = $('ticks'), k = Math.max(0, Math.min(1, pct / 100)), anim = intro && !calm(), xe = 2 + 296 * k;
+      const pts = [...Array(25)].map((_, i) => [2 + (xe - 2) * i / 24, 8]);
+      box.innerHTML = `<svg viewBox="0 0 300 16" preserveAspectRatio="none"><line class="tk-rest" x1="${xe.toFixed(1)}" y1="8" x2="298" y2="8"/>${k > .01 ? silkRaw(pts, { n: 7, a: .65, w: 1.3, full: !anim }) : ''}</svg>
+        ${k > .01 ? `<i class="tk-end${anim ? ' in' : ''}" style="left:${(xe / 3).toFixed(2)}%"></i>` : ''}`;
+      if (k > .01) silkStart(box);
     }
 
     // Крупный белый (тёмная тема) и чёрный (светлая) текст — заголовки и большие цифры — переливом лайм → мята → бирюза,
