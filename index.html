@@ -1421,8 +1421,9 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       // у каждой линии свой гуляющий «дом», от соседей она отворачивает, долго кружить в одну сторону не может
       const MODES = ['glide', 'snake', 'dart', 'drift', 'chase', 'wave', 'glide', 'wave'];
       function lines(W, H) {
-        const LN = [...Array(NL).keys()].map(k => ({ x: (k - 4) * .055, y: ((k * 4) % NL - 4) * .08, a: k * .7 + Math.random() * 6.3, tr: 0, f: Math.random() * 9, g: Math.random() * 9, hs: [], cum: 0 }));
+        // каждый запуск — своё начальное расположение: линии разбросаны по всему полю в случайных местах и направлениях
         const ax = W / H * .5, t0 = Math.random() * 50;
+        const LN = [...Array(NL).keys()].map(k => ({ x: (Math.random() - .5) * ax * 1.3, y: (Math.random() - .5) * .7, a: Math.random() * 6.283, tr: 0, f: Math.random() * 9, g: Math.random() * 9, hs: [], cum: 0 }));
         function pick(o, k) {
           let m; do m = MODES[(Math.random() * MODES.length) | 0]; while (m === o.m);
           o.m = m; o.mt = 0; o.md = m === 'dart' ? 1.2 + Math.random() : m === 'drift' ? 2 + Math.random() * 2 : 3 + Math.random() * 4;
@@ -1475,7 +1476,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
             for (let q = 1; q < NP - 1; q++) { const o = b + q * 2 + d, cur = PA[o]; PA[o] = .25 * pv + .5 * cur + .25 * PA[o + 2]; pv = cur; }
           }
         }
-        for (let k = 0; k < NL; k++) for (let i = 0; i < 600; i++) step(k, i / 60 - 10, 1 / 60);
+        const pre = 420 + ((Math.random() * 480) | 0);
+        for (let i = 0; i < pre; i++) for (let k = 0; k < NL; k++) step(k, i / 60 - 10, 1 / 60);
         return { LN, step, path };
       }
 
