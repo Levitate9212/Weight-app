@@ -1528,11 +1528,14 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
             o.x += (sx - o.x) * q; o.y += (sy - o.y) * q;
             const ta = Math.atan2(dy, dx), d = Math.atan2(Math.sin(ta - o.a), Math.cos(ta - o.a)); o.a += d * q; o.tr *= 1 - q;
           } else if (rk > 0) {
-            // голову тянет к её месту на круге; радиус у каждой линии чуть дышит — кольцо шёлковое, а не циркульное
-            const th = RG.th + k * 6.283 / NL, rr = RG.r * (1 + .07 * Math.sin(t * (.9 + k * .13) + o.f)), sx = rr * Math.cos(th), sy = rr * Math.sin(th), q = Math.min(1, dt * 6 * rk * rk);
+            // голову тянет к её месту на круге; каждый цвет крутится сам по себе: своя скорость, часть — навстречу,
+            // и свой радиус, который чуть дышит, — кольцо из отдельных цветных колец, а не одно целое
+            if (o.rth == null) { o.rth = k * 6.283 / NL; o.rw = RG.w * (.55 + .9 * ((k * .618) % 1)) * (k % 3 === 1 ? -1 : 1); o.rr = 1 + ((k * 5) % 9 - 4) * .025; }
+            o.rth += o.rw * dt;
+            const th = o.rth, rr = RG.r * o.rr * (1 + .05 * Math.sin(t * (.9 + k * .13) + o.f)), sx = rr * Math.cos(th), sy = rr * Math.sin(th), q = Math.min(1, dt * 6 * rk * rk);
             o.x += (sx - o.x) * q; o.y += (sy - o.y) * q;
             // направление — по касательной, чтобы, когда кольцо отпустит, линия полетела дальше плавно
-            const ta = th + 1.5708, d = Math.atan2(Math.sin(ta - o.a), Math.cos(ta - o.a)); o.a += d * q; o.tr *= 1 - q;
+            const ta = th + (o.rw < 0 ? -1.5708 : 1.5708), d = Math.atan2(Math.sin(ta - o.a), Math.cos(ta - o.a)); o.a += d * q; o.tr *= 1 - q;
           }
           o.hs.push(o.x, o.y); if (o.hs.length > 1600) o.hs.splice(0, o.hs.length - 1200);
         }
@@ -1631,9 +1634,23 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           try { asg = o.mask ? contours(o.mask, W, H) : null; } catch (err) { asg = null; }
           LS = lines(W, H);
           // кольцо уже собрано к первому кадру: линии заранее прокручены по кругу (раньше их стягивало издалека, и след ломался)
-          if (o.ring) { const RG = LS.RG; RG.k = 1; for (let i = 0; i < 300; i++) { RG.th += RG.w / 60; for (let k = 0; k < NL; k++) LS.step(k, i / 60, 1 / 60); } }
+          if (o.ring) {
+            const RG = LS.RG; RG.k = 1;
+            // голова сразу на своём месте на круге (длинный шаг), след стирается — без хорд поперёк кольца
+            for (let k = 0; k < NL; k++) { LS.step(k, 0, .2); const l = LS.LN[k]; l.hs.length = 0; l.hs.push(l.x, l.y); }
+            for (let i = 1; i <= 300; i++) { RG.th += RG.w / 60; for (let k = 0; k < NL; k++) LS.step(k, i / 60, 1 / 60); }
+          }
           // путь в пикселях холста → координаты линий (единица — высота, центр в середине, y вверх)
-          if (o.path) { const pts = o.path(W, H); LS.RG.P = pts ? Float32Array.from(pts.flatMap(p => [(p[0] - W / 2) / H, (H / 2 - p[1]) / H])) : null; }
+          if (o.path) {
+            const pts = o.path(W, H); LS.RG.P = pts ? Float32Array.from(pts.flatMap(p => [(p[0] - W / 2) / H, (H / 2 - p[1]) / H])) : null;
+            // график сразу в своей форме: пряди заранее разложены по линии, ничего не слетается
+            if (LS.RG.P) {
+              LS.RG.k = 1;
+              // голова сразу встаёт на своё место на линии (длинный шаг), след стирается, и пряди прокручиваются по линии 10 секунд
+              for (let k = 0; k < NL; k++) { LS.step(k, 0, .1); const l = LS.LN[k]; l.hs.length = 0; l.hs.push(l.x, l.y); }
+              for (let i = 1; i <= 600; i++) for (let k = 0; k < NL; k++) LS.step(k, i / 60, 1 / 60);
+            }
+          }
           shown = false; QS = 1; FT = []; fn = 0;
           // след прошлой сцены не нужен
           if (RT) [RT.a, RT.b].forEach(r => { gl.bindFramebuffer(gl.FRAMEBUFFER, r.f); gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT); });
