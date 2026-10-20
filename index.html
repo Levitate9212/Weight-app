@@ -363,7 +363,7 @@
     /* на обложке график — часть фона: во всю ширину, без подписей дней и заливки, только текущие пряди и вес в начале и в конце */
     .st-poster .st-chart.bare { margin: 26px -24px 0; }
     .st-chart.bare { margin-top: 14px; }
-    .st-slide > .st-chart.bare svg { height: 130px; }
+    .st-slide > .st-chart.bare svg { height: auto; aspect-ratio: 300 / 120; }
     .st-poster .st-chart.bare svg { height: 120px; }
     .st-poster .unit { font-family: var(--num); font-weight: 700; font-size: 22px; margin-top: 14px; color: var(--muted); letter-spacing: .02em; }
     .st-poster .st-k, .st-poster .huge, .st-poster .unit, .st-poster .say { text-align: center; }
@@ -3405,7 +3405,9 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           const s = sw(w);
           return `<button class="st-wk" onclick="stGo(${k})"><span>Неделя ${w.i + 1}<small>${stRange(w.from, w.to)}${s && s.distance.km ? ` · ${stKm(s.distance.km)} км` : ''}</small></span><b class="${cls(w.change)}">${stKg(w.change)}</b><em>›</em></button>`;
         }).join('');
-        const mw = { days: Math.round((b.to - b.from) / DAY_MS) + 1, ws: b.weeks.flatMap(w => w.ws), from: b.from };
+        // месяц ещё идёт — график по уже прошедшим дням, во всю ширину (а не сжатый в левую часть до конца месяца)
+        const mws = b.weeks.flatMap(w => w.ws), mEnd = b.ended || !mws.length ? b.to : mws[mws.length - 1].d;
+        const mw = { days: Math.round((mEnd - b.from) / DAY_MS) + 1, ws: mws, from: b.from };
         const km = sum && sum.distance && sum.distance.km, close = `<button class="st-close" onclick="closeStory()">${b.ended ? `Вперёд, в ${ST_MONTHS[(b.m + 1) % 12]}` : 'Закрыть'}</button>`;
         S.push(`<p class="st-k">${b.ended ? 'Итоги месяца' : 'Месяц идёт'}${u.name ? ' · ' + esc(u.name) : ''}</p>
           <div class="st-huge">${b.change == null ? '—' : `${stKg(b.change)}<small> кг</small>`}</div>
