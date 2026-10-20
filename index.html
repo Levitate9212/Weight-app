@@ -244,7 +244,8 @@
        в конце «выскакивает» точка с волной и подписи веса */
     .st-chart .ar { fill: var(--volt); opacity: .13; }
     /* после отрисовки график живёт: цвета линии бегут лайм → мята → бирюза, по линии пробегает искра, точка дышит */
-    .st-chart .gs0, .st-chart .gs2 { stop-color: var(--pt-a); } .st-chart .gs1 { stop-color: var(--pt-c); } .st-chart .gsm { stop-color: var(--pt-b); }
+    .gs0, .gs2 { stop-color: var(--pt-a); } .gs1 { stop-color: var(--pt-c); } .gsm { stop-color: var(--pt-b); }
+    .gsh { stop-color: #F2FFD8; } html.light .gsh { stop-color: #9CD13C; }
     .st-chart .silk path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
     .silk .au { stroke: #F2C35B; }
     html.light .silk .au { stroke: #B9831A; }
@@ -1581,9 +1582,11 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
             // свой радиус и своё поведение — ровный поток, волна лепестками, рывки, эллипс, дыхание внутрь-наружу
             if (o.rth == null) { o.rth = k * 6.283 / NL; o.rw = RG.w * (.55 + .9 * ((k * .618) % 1)) * (k % 3 === 1 ? -1 : 1); o.rr = 1 + ((k * 5) % 9 - 4) * .025; o.rm = k % 5; }
             const m = o.rm;
-            o.rth += o.rw * dt * (m === 2 ? 1 + .9 * Math.sin(t * 1.4 + k) : 1);
+            // скорость у каждой линии всё время немного гуляет, а радиус дышит волнами разной частоты —
+            // тогда след ложится не ровной дугой, и куски линий не едут по кругу одинаково, как приклеенные
+            o.rth += o.rw * dt * (m === 2 ? 1 + .9 * Math.sin(t * 1.4 + k) : 1 + .3 * Math.sin(t * (.6 + k * .11) + k * 1.3));
             const th = o.rth;
-            let rr = RG.r * o.rr * (1 + .04 * Math.sin(t * (.9 + k * .13) + o.f)), ex = 1, ey = 1, rot = 0;
+            let rr = RG.r * o.rr * (1 + .04 * Math.sin(t * (.9 + k * .13) + o.f) + .07 * Math.sin(3 * th + t * (1.1 + k * .17) + k * 1.9) + .045 * Math.sin(5 * th - t * (.8 + k * .13) + k)), ex = 1, ey = 1, rot = 0;
             if (m === 1) rr *= 1 + .14 * Math.sin(4 * th + t * 1.5);
             if (m === 3) { ex = 1.2; ey = .8; rot = t * .5 + k; }
             if (m === 4) rr *= 1 + .22 * Math.sin(t * .9 + k);
@@ -3152,7 +3155,11 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     const silkCircle = (cx, cy, r, n = 48) => [...Array(n + 1)].map((_, i) => [cx + r * Math.sin(i / n * 6.2832), cy - r * Math.cos(i / n * 6.2832)]);
     // линии-графики (главный экран, путь к цели, сторис) — один и тот же тонкий шёлк: размах пучка и толщина прядей
     // в пикселях экрана, как бы ни был растянут свой svg
-    const LINE_SILK = { n: 7, w: 1.2, px: 1.3 };
+    const LINE_SILK = { n: 5, w: 1.5, px: 2.2 };
+    // перелив шёлка: лайм → мята → бирюза, посередине светлый блик; всё это медленно бежит вдоль линии
+    const silkGrad = (id, w) => `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="${w}" y2="0" spreadMethod="reflect">
+          <stop offset="0" class="gs0"/><stop offset=".4" class="gsm"/><stop offset=".5" class="gsh"/><stop offset=".6" class="gsm"/><stop offset="1" class="gs1"/>
+          ${PT.reduce ? '' : `<animateTransform attributeName="gradientTransform" type="translate" from="0 0" to="${2 * w} 0" dur="4s" repeatCount="indefinite"/>`}</linearGradient>`;
     const silkCurve = (pts, k = 12) => smoothPts(pts, k).map(p => [p[0], p[1]]);
     function silkRaw(pts, o = {}) {
       const f = v => v.toFixed(1), n = o.n || 7;
@@ -3204,12 +3211,10 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const lastP = pts[pts.length - 1];
       // подпись у точки — над ней; но если соседняя точка выше, линия приходит сверху, и подпись уходит под точку
       const ly = (p, nb) => nb[1] < p[1] - 2 && p[1] + 19 <= 106 ? p[1] + 19 : p[1] - 10;
-      const gid = 'stG' + (++ST.gid), live = !PT.reduce, lineD = smoothD(pts);
-      return `<div class="st-chart${bare ? ' bare' : ''}"><svg viewBox="0 0 300 120"><defs><linearGradient id="${gid}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="300" y2="0" spreadMethod="reflect">
-          <stop offset="0" class="gs0"/><stop offset=".5" class="gsm"/><stop offset="1" class="gs1"/>
-          ${live ? '<animateTransform attributeName="gradientTransform" type="translate" from="0 0" to="600 0" dur="5s" repeatCount="indefinite"/>' : ''}</linearGradient></defs>${labels}
+      const gid = 'stG' + (++ST.gid), lineD = smoothD(pts);
+      return `<div class="st-chart${bare ? ' bare' : ''}"><svg viewBox="0 0 300 120"><defs>${silkGrad(gid, 300)}</defs>${labels}
         ${bare ? '' : `<path class="ar" d="${lineD}L${lastP[0].toFixed(1)} 100L${pts[0][0].toFixed(1)} 100Z" style="fill:url(#${gid})"/>`}
-        ${silkRaw(silkCurve(pts), LINE_SILK)}
+        ${silkRaw(silkCurve(pts), { ...LINE_SILK, gid })}
         <circle class="rp" cx="${lastP[0].toFixed(1)}" cy="${lastP[1].toFixed(1)}" r="5"/>
         <circle class="dt" cx="${lastP[0].toFixed(1)}" cy="${lastP[1].toFixed(1)}" r="5" fill="var(--volt)"/>
         <text class="wl" x="${pts[0][0].toFixed(1)}" y="${ly(pts[0], pts[1]).toFixed(1)}" text-anchor="start">${fmt(ws[0].w)}</text>
@@ -3445,9 +3450,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const X = d => 18 + d * 264 / 6, Y = v => v == null ? 92 : 44 + (hi + pad - v) / (hi - lo + 2 * pad) * 96;
       const pts = days.filter(x => x.w != null).map(x => [X(x.d), Y(x.w)]);
       const gid = 'stG' + (++ST.gid);
-      const svg = pts.length > 1 ? `<svg viewBox="0 0 300 170" preserveAspectRatio="none"><defs><linearGradient id="${gid}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="300" y2="0" spreadMethod="reflect">
-          <stop offset="0" class="gs0"/><stop offset=".5" class="gsm"/><stop offset="1" class="gs1"/>
-          ${PT.reduce ? '' : '<animateTransform attributeName="gradientTransform" type="translate" from="0 0" to="600 0" dur="5s" repeatCount="indefinite"/>'}</linearGradient></defs>${silkRaw(silkCurve(pts), LINE_SILK)}</svg>` : '';
+      const svg = pts.length > 1 ? `<svg viewBox="0 0 300 170" preserveAspectRatio="none"><defs>${silkGrad(gid, 300)}</defs>${silkRaw(silkCurve(pts), { ...LINE_SILK, gid })}</svg>` : '';
       const beads = days.map(x => `<div class="bd${x.w == null ? ' off' : ''}${x.m ? ' wo' : ''}" style="left:${(X(x.d) / 3).toFixed(2)}%;top:${(Y(x.w) / 1.7).toFixed(2)}%">
           <b>${x.w == null ? '—' : fmt(x.w)}</b><i${x.m ? ` style="background:${x.m.c}"` : ''}>${x.m && x.m.ic ? stIcon(x.m.ic, '') : ''}</i><small>${ST_DAYS[x.d].toLowerCase()}</small></div>`).join('');
       return `<div class="st-beads st-chart go">${svg}${beads}</div>`;
@@ -5194,7 +5197,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const sv = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       sv.setAttribute('class', 'ms-svg'); sv.setAttribute('aria-hidden', 'true');
       sv.setAttribute('viewBox', `0 0 ${W} ${H}`); sv.style.width = W + 'px'; sv.style.height = H + 'px'; sv.style.left = c.canvas.offsetLeft + 'px'; sv.style.top = c.canvas.offsetTop + 'px';
-      sv.innerHTML = silkRaw(silkCurve(pts, Math.max(2, Math.round(240 / pts.length))), { ...LINE_SILK, full: !anim || calm() });
+      sv.innerHTML = `<defs>${silkGrad('msG', W)}</defs>` + silkRaw(silkCurve(pts, Math.max(2, Math.round(240 / pts.length))), { ...LINE_SILK, gid: 'msG', full: !anim || calm() });
       if (old) old.replaceWith(sv); else box.appendChild(sv);
       silkStart(sv);
       mainSilkLine(false);
@@ -5301,7 +5304,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     function fillTicks(pct) {
       const box = $('ticks'), k = Math.max(0, Math.min(1, pct / 100)), anim = intro && !calm(), xe = 2 + 296 * k;
       const pts = [...Array(25)].map((_, i) => [2 + (xe - 2) * i / 24, 8]);
-      box.innerHTML = `<svg viewBox="0 0 300 16" preserveAspectRatio="none"><line class="tk-rest" x1="${xe.toFixed(1)}" y1="8" x2="298" y2="8"/>${k > .01 ? silkRaw(pts, { ...LINE_SILK, full: !anim }) : ''}</svg>
+      box.innerHTML = `<svg viewBox="0 0 300 16" preserveAspectRatio="none"><defs>${silkGrad('tkG', 300)}</defs><line class="tk-rest" x1="${xe.toFixed(1)}" y1="8" x2="298" y2="8"/>${k > .01 ? silkRaw(pts, { ...LINE_SILK, gid: 'tkG', full: !anim }) : ''}</svg>
         ${k > .01 ? `<i class="tk-end${anim ? ' in' : ''}" style="left:${(xe / 3).toFixed(2)}%"></i>` : ''}`;
       if (k > .01) silkStart(box);
     }
