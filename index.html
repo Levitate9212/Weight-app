@@ -193,8 +193,6 @@
     .st-pn { display: flex; align-items: center; justify-content: center; gap: 22px; flex: none; padding-top: 4px; font-size: 13px; font-weight: 600; color: var(--muted); }
     .st-pn button { width: 44px; height: 36px; border-radius: 14px; background: var(--panel); color: var(--ink); font-size: 24px; line-height: 1; }
     .st-pn button:disabled { opacity: .3; }
-    .st-beads .st-pt { position: absolute; left: -16px; top: -30px; width: calc(100% + 32px); height: calc(100% + 60px); pointer-events: none; }
-    .st-beads.sl .silk { visibility: hidden; }
     .st-beads .bd { z-index: 1; }
     .st-slide { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 14px; padding: 12px 0 18px; }
     .st-slide.in-r { animation: stInR .35s cubic-bezier(.3,.8,.3,1) both; } .st-slide.in-l { animation: stInL .35s cubic-bezier(.3,.8,.3,1) both; }
@@ -209,8 +207,6 @@
     .st-wos { background: var(--panel); border-radius: 20px; padding: 14px 16px; }
     .st-slide .st-close { width: 100%; margin-top: 10px; }
     .st-slide > .st-chart:not(.st-beads) { position: relative; width: 100%; margin-top: 10px; }
-    .st-slide > .st-chart:not(.st-beads) .st-pt { position: absolute; left: -16px; top: -20px; width: calc(100% + 32px); height: calc(100% + 40px); pointer-events: none; }
-    .st-slide > .st-chart.sl:not(.st-beads) .silk { visibility: hidden; }
     .st-slide .st-chips { justify-content: center; margin-top: 4px; }
     .st-wks { width: 100%; }
     .st-slide .st-sleep.big { width: 100%; height: 130px; }
@@ -249,14 +245,12 @@
     .st-chart .ar { fill: var(--volt); opacity: .13; }
     /* после отрисовки график живёт: цвета линии бегут лайм → мята → бирюза, по линии пробегает искра, точка дышит */
     .st-chart .gs0, .st-chart .gs2 { stop-color: var(--pt-a); } .st-chart .gs1 { stop-color: var(--pt-c); } .st-chart .gsm { stop-color: var(--pt-b); }
-    /* обложка: линию веса рисуют светящиеся пряди на холсте под текстом, SVG-шёлк прячем (точка и подписи остаются) */
-    .st-poster .st-pt { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
-    .st-poster.sl .st-chart .silk { visibility: hidden; }
     .st-chart .silk path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
     .silk .au { stroke: #F2C35B; }
     html.light .silk .au { stroke: #B9831A; }
     .silk .sg { stroke-width: 7; opacity: .28; filter: blur(3px); }
     .silk.thin path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .silk.px path { vector-effect: non-scaling-stroke; }
     .silk .sg.sh { stroke: var(--volt); opacity: .22; filter: blur(4px); }
     .silk .sl-a { stroke: var(--volt); } .silk .sl-b { stroke: #4FD1B5; }
     html.light .silk .sl-b { stroke: #12937A; }
@@ -689,7 +683,7 @@
     .period-btn { flex: 1; padding: 6px 0; border-radius: 8px; font-size: 12.5px; font-weight: 600; color: var(--muted); transition: background .2s ease, color .2s ease; }
     .period-btn.active { background: var(--volt-dim); color: var(--volt); }
     .chart-box { position: relative; flex: 1; min-height: 130px; }
-    .chart-box .ms-pt { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    .chart-box .ms-svg { position: absolute; left: 0; top: 0; pointer-events: none; overflow: visible; }
     #chartNote { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; font-size: 14px; color: var(--muted); padding: 0 12px; }
 
     /* Невысокие экраны: ужимаем, чтобы график сохранил место */
@@ -3156,9 +3150,13 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     // тонкий шёлк без свечения (нить пути к цели, кольца, тропа): n прядей, a — размах пучка, loop — замкнутое кольцо.
     // Цвет — градиент gid или (без gid) классы .sl-a/.sl-b/.au
     const silkCircle = (cx, cy, r, n = 48) => [...Array(n + 1)].map((_, i) => [cx + r * Math.sin(i / n * 6.2832), cy - r * Math.cos(i / n * 6.2832)]);
+    // линии-графики (главный экран, путь к цели, сторис) — один и тот же тонкий шёлк: размах пучка и толщина прядей
+    // в пикселях экрана, как бы ни был растянут свой svg
+    const LINE_SILK = { n: 7, w: 1.2, px: 1.3 };
+    const silkCurve = (pts, k = 12) => smoothPts(pts, k).map(p => [p[0], p[1]]);
     function silkRaw(pts, o = {}) {
       const f = v => v.toFixed(1), n = o.n || 7;
-      let h = `<g class="silk thin" data-c="${pts.map(p => f(p[0]) + ',' + f(p[1])).join(' ')}"${o.a ? ` data-a="${o.a}"` : ''}${o.loop ? ' data-loop="1"' : ''}${o.full ? ' data-full="1"' : ''}${o.id ? ` id="${o.id}"` : ''}>`;
+      let h = `<g class="silk thin${o.px ? ' px' : ''}"${o.px ? ` data-px="${o.px}"` : ''} data-c="${pts.map(p => f(p[0]) + ',' + f(p[1])).join(' ')}"${o.a ? ` data-a="${o.a}"` : ''}${o.loop ? ' data-loop="1"' : ''}${o.full ? ' data-full="1"' : ''}${o.id ? ` id="${o.id}"` : ''}>`;
       if (o.sheen) h += `<path class="sg sh" style="stroke-width:${o.sheen}"/>`;
       for (let j = 0; j < n; j++) {
         const gold = j % 4 === 2, w = ((o.w || 1) * (.55 + (j * 7 % 5) * .14)).toFixed(2), op = (.5 + (j * 3 % 6) * .09).toFixed(2);
@@ -3178,7 +3176,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           for (let i = 0; i < m; i++) d += (i ? 'L' : 'M') + f(c[i][0]) + ' ' + f(c[i][1]);
           g.__sg.setAttribute('d', d);
         }
-        const A = g.__a, lp = g.dataset.loop, tw = 6.2832;
+        let A = g.__a; const lp = g.dataset.loop, tw = 6.2832;
+        if (g.dataset.px) { const M = g.ownerSVGElement && g.ownerSVGElement.getScreenCTM(); A = +g.dataset.px / (M && Math.abs(M.d) || 1); }
         g.__sl.forEach((p, j) => {
           const [ph, fr, sp, side] = g.__ph[j];
           // на кольце волны укладываются целым числом, чтобы на стыке не было ступеньки
@@ -3210,7 +3209,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           <stop offset="0" class="gs0"/><stop offset=".5" class="gsm"/><stop offset="1" class="gs1"/>
           ${live ? '<animateTransform attributeName="gradientTransform" type="translate" from="0 0" to="600 0" dur="5s" repeatCount="indefinite"/>' : ''}</linearGradient></defs>${labels}
         ${bare ? '' : `<path class="ar" d="${lineD}L${lastP[0].toFixed(1)} 100L${pts[0][0].toFixed(1)} 100Z" style="fill:url(#${gid})"/>`}
-        ${silkSvg(pts, gid)}
+        ${silkRaw(silkCurve(pts), LINE_SILK)}
         <circle class="rp" cx="${lastP[0].toFixed(1)}" cy="${lastP[1].toFixed(1)}" r="5"/>
         <circle class="dt" cx="${lastP[0].toFixed(1)}" cy="${lastP[1].toFixed(1)}" r="5" fill="var(--volt)"/>
         <text class="wl" x="${pts[0][0].toFixed(1)}" y="${ly(pts[0], pts[1]).toFixed(1)}" text-anchor="start">${fmt(ws[0].w)}</text>
@@ -3448,7 +3447,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const gid = 'stG' + (++ST.gid);
       const svg = pts.length > 1 ? `<svg viewBox="0 0 300 170" preserveAspectRatio="none"><defs><linearGradient id="${gid}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="300" y2="0" spreadMethod="reflect">
           <stop offset="0" class="gs0"/><stop offset=".5" class="gsm"/><stop offset="1" class="gs1"/>
-          ${PT.reduce ? '' : '<animateTransform attributeName="gradientTransform" type="translate" from="0 0" to="600 0" dur="5s" repeatCount="indefinite"/>'}</linearGradient></defs>${silkSvg(pts, gid)}</svg>` : '';
+          ${PT.reduce ? '' : '<animateTransform attributeName="gradientTransform" type="translate" from="0 0" to="600 0" dur="5s" repeatCount="indefinite"/>'}</linearGradient></defs>${silkRaw(silkCurve(pts), LINE_SILK)}</svg>` : '';
       const beads = days.map(x => `<div class="bd${x.w == null ? ' off' : ''}${x.m ? ' wo' : ''}" style="left:${(X(x.d) / 3).toFixed(2)}%;top:${(Y(x.w) / 1.7).toFixed(2)}%">
           <b>${x.w == null ? '—' : fmt(x.w)}</b><i${x.m ? ` style="background:${x.m.c}"` : ''}>${x.m && x.m.ic ? stIcon(x.m.ic, '') : ''}</i><small>${ST_DAYS[x.d].toLowerCase()}</small></div>`).join('');
       return `<div class="st-beads st-chart go">${svg}${beads}</div>`;
@@ -3474,7 +3473,6 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       if (!v || !v.week) { el.className = 'st-poster off'; return; }
       el.className = 'st-poster'; el.innerHTML = stPosterHtml(v, b); stFitHuge(el); void el.offsetWidth; el.classList.add('in');
       // цифра — чистая, без частиц и прядей (Вадим: пряди, собирающиеся в кучу, на обложке не нужны)
-      if (ST.pt) { ST.pt.stop(); ST.pt = null; }
       stPosterChart(el);
       // обложка стоит, пока не нажмёшь (без таймера — решение Вадима 19.10)
       ST.posterT0 = ST.posterOpen = performance.now(); ST.posterOn = true;
@@ -3489,40 +3487,15 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     }
     function stPosterChart(el) {
       const c = el.querySelector('.st-chart');
-      if (ST.pt) { ST.pt.stop(); ST.pt = null; }
       if (!c) return;
       c.classList.add('go');
       silkStart(el);
-      // линия веса на обложке — тот же светящийся шёлк, что на заставке
-      const s = slLine(el, c, { trail: .2, scale: .22, done: () => el.classList.contains('off') });
-      if (s) ST.pt = s;
-    }
-    // Светящиеся пряди заставки бегут по линии графика (SVG-шёлк c.silk), как кометы. Холст — в host, под текстом.
-    // Нет WebGL или анимации выключены — остаётся SVG-шёлк
-    function slLine(host, c, o) {
-      const g = c.querySelector('.silk'), svg = c.querySelector('svg');
-      if (!g || !svg || calm()) return null;
-      const cv = document.createElement('canvas'); cv.className = 'st-pt'; cv.setAttribute('aria-hidden', 'true');
-      host.insertBefore(cv, host.firstChild);
-      const s = SL.scene(cv, {
-        fly: 1e5, keep: true, flat: true, trail: o.trail, scale: o.scale,
-        path: () => {
-          const M = svg.getScreenCTM(), cr = cv.getBoundingClientRect(), P = svg.createSVGPoint();
-          return g.dataset.c.split(' ').map(q => { const [x, y] = q.split(',').map(Number); P.x = x; P.y = y; const r = P.matrixTransform(M); return [r.x - cr.left, r.y - cr.top]; });
-        },
-        done: () => !cv.isConnected || (o.done && o.done())
-      });
-      if (!s) { cv.remove(); return null; }
-      host.classList.add('sl'); s.start();
-      return s;
     }
     function stPosterHide() {
       if (!ST.posterOn) return;
       ST.posterOn = false; cancelAnimationFrame(ST.timer);
       $('stPoster').classList.add('gone');
       stChartGo();
-      if (ST.sl) setTimeout(stDeckSilk, 650);
-      const pt = ST.pt; setTimeout(() => { if (pt && ST.pt === pt && !ST.posterOn) pt.stop(); }, 600);
     }
     function stTick(now) {
       if (!ST.posterOn) return;
@@ -3564,13 +3537,6 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         <div class="st-pn"><button onclick="stSlide(-1)" ${ST.si ? '' : 'disabled'} aria-label="Назад">‹</button><span>${ST.si + 1} / ${n}</span><button onclick="stSlide(1)" ${ST.si < n - 1 ? '' : 'disabled'} aria-label="Дальше">›</button></div></div>`;
       pg.scrollTop = 0;
       silkStart(pg);
-      stDeckSilk();
-    }
-    // линия на экране дней — светящиеся пряди, как на заставке (пока обложка на экране, её сцену не трогаем)
-    function stDeckSilk() {
-      const c = $('stPage').querySelector('.st-slide .st-chart');
-      if (!c || ST.posterOn) return;
-      slLine(c, c, { trail: .9, scale: .28 });
     }
     function stSlideTo(k) { if (ST.sl && k !== ST.si) { const d = k > ST.si ? 'in-r' : 'in-l'; ST.si = k; safeHaptic('selection'); stDeck(d); } }
     function stSlide(d) {
@@ -3601,7 +3567,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const v = ST.views[ST.i];
       if (v.slides && ST.sl) { ST.sl = v.slides(); stDeck(''); }
       else { stGo(ST.i, false); $('stPage').scrollTop = top; }
-      if (ST.posterOn) { const el = $('stPoster'), bar = $('stPosterBar'), wd = bar && bar.style.width, cv = el.querySelector('.st-pt'); el.innerHTML = stPosterHtml(ST.views[ST.i], b); stFitHuge(el); if (cv) el.insertBefore(cv, el.firstChild); if (wd) $('stPosterBar').style.width = wd; const sc = el.querySelector('.st-chart'); if (sc) sc.classList.add('go'); silkStart(el); sc && sc.querySelectorAll('.silk').forEach(g => g.__t0 -= 2000); }
+      if (ST.posterOn) { const el = $('stPoster'), bar = $('stPosterBar'), wd = bar && bar.style.width; el.innerHTML = stPosterHtml(ST.views[ST.i], b); stFitHuge(el); if (wd) $('stPosterBar').style.width = wd; const sc = el.querySelector('.st-chart'); if (sc) sc.classList.add('go'); silkStart(el); sc && sc.querySelectorAll('.silk').forEach(g => g.__t0 -= 2000); }
     }
     function openStory() {
       const u = globalData[activeUserId];
@@ -3643,7 +3609,6 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     }
     function closeStory() {
       ST.req++; ST.posterOn = false; ST.hold = false; cancelAnimationFrame(ST.dk);
-      if (ST.pt) { ST.pt.stop(); ST.pt = null; }
       $('story').classList.remove('open'); $('story').setAttribute('aria-hidden', 'true');
       cancelAnimationFrame(ST.timer);
       navForget(closeStory);
@@ -5197,49 +5162,44 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         }
       });
       if (reveal) startReveal(chartInstance); else chartInstance.$reveal = 1;
-      clearTimeout(MS.tm); MS.tm = setTimeout(mainSilk, reveal ? 1000 : 0);
+      mainSilk(reveal);
     }
 
-    // ===== Линия тренда на главном — шёлковые пряди, как на заставке и в сторис =====
-    // WebGL-сцена одна на всё приложение: пока идут заставка, сторис или медаль, ждём; без WebGL — обычная линия Chart.js
-    const MS = { s: null, cv: null, tm: 0, quiet: false };
+    // ===== Линия тренда на главном — тот же тонкий шёлк, что у пути к цели и в сторис (SVG поверх графика) =====
+    const MS = { tm: 0, key: '' };
     function mainSilkLine(on) {
       const c = chartInstance; if (!c) return;
       const d = c.data.datasets[0], col = on ? cssVar('--volt') : 'transparent';
       if (d.borderColor !== col) { d.borderColor = col; c.update('none'); }
     }
-    const msCovered = () => !!(MT.open || $('story').classList.contains('open') || document.querySelector('.screen.open'));
     function msPts() {
       const ch = chartInstance; if (!ch) return null;
       const pts = ch.getDatasetMeta(0).data.filter(p => p && !p.skip && isFinite(p.x) && isFinite(p.y)).map(p => [p.x, p.y]);
       if (pts.length < 2) return null;
       // длинный период — не больше ~120 точек, тренд и так плавный
       const k = Math.ceil(pts.length / 120);
-      return k > 1 ? pts.filter((p, i) => i % k === 0 || i === pts.length - 1) : pts;
+      const q = k > 1 ? pts.filter((p, i) => i % k === 0 || i === pts.length - 1) : pts;
+      // тренд по дням идёт ступеньками — шёлку нужна плавная линия: лёгкое сглаживание по соседям, концы на месте
+      let y = q.map(p => p[1]);
+      for (let r = 0; r < 3; r++) y = y.map((v, i) => i && i < y.length - 1 ? (y[i - 1] + 2 * v + y[i + 1]) / 4 : v);
+      return q.map((p, i) => [p[0], y[i]]);
     }
-    function mainSilk() {
+    function mainSilk(anim) {
       clearTimeout(MS.tm);
-      const c = chartInstance;
-      if (!c || calm() || typeof SL === 'undefined') return;
-      if (!$('splash').classList.contains('gone') || msCovered() || SL.busy(MS.s)) { MS.tm = setTimeout(mainSilk, 800); return; }
-      // меньше двух точек тренда — линии не по чему течь, оставляем обычную
-      if (!msPts()) { if (MS.s && MS.s.alive) { MS.quiet = true; MS.s.stop(); MS.quiet = false; } mainSilkLine(true); return; }
-      const box = $('weightChart').parentNode;
-      if (!MS.cv) { MS.cv = document.createElement('canvas'); MS.cv.className = 'ms-pt'; MS.cv.setAttribute('aria-hidden', 'true'); }
-      if (MS.cv.parentNode !== box) box.appendChild(MS.cv);
-      if (!MS.s) MS.s = SL.scene(MS.cv, {
-        fly: 1e5, keep: true, flat: true, scale: .12,
-        // главный экран закрыт горой, медалями или сторис — пряди не крутим зря, вернёмся, когда закроют
-        done: msCovered,
-        path: msPts,
-        // другая сцена забрала WebGL — пока возвращаем обычную линию и ждём
-        stopped: () => { if (MS.quiet) return; mainSilkLine(true); MS.tm = setTimeout(mainSilk, 800); }
-      });
-      if (!MS.s) { mainSilkLine(true); return; }
-      MS.quiet = true; MS.s.start(); MS.quiet = false;
+      const c = chartInstance, box = $('weightChart').parentNode, old = box.querySelector('.ms-svg'), pts = c && msPts();
+      if (!pts) { if (old) old.remove(); MS.key = ''; if (c) mainSilkLine(true); return; }
+      const W = c.width, H = c.height, key = W + 'x' + H + ':' + pts.map(p => p[0].toFixed(0) + ',' + p[1].toFixed(0)).join(' ');
+      if (old && key === MS.key) return;
+      MS.key = key;
+      const sv = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      sv.setAttribute('class', 'ms-svg'); sv.setAttribute('aria-hidden', 'true');
+      sv.setAttribute('viewBox', `0 0 ${W} ${H}`); sv.style.width = W + 'px'; sv.style.height = H + 'px'; sv.style.left = c.canvas.offsetLeft + 'px'; sv.style.top = c.canvas.offsetTop + 'px';
+      sv.innerHTML = silkRaw(silkCurve(pts, Math.max(2, Math.round(240 / pts.length))), { ...LINE_SILK, full: !anim || calm() });
+      if (old) old.replaceWith(sv); else box.appendChild(sv);
+      silkStart(sv);
       mainSilkLine(false);
     }
-    window.addEventListener('resize', () => { if (MS.s && MS.s.alive) { clearTimeout(MS.tm); MS.tm = setTimeout(mainSilk, 300); } });
+    window.addEventListener('resize', () => { clearTimeout(MS.tm); MS.tm = setTimeout(() => mainSilk(false), 300); });
 
     // ===== Живое построение графика: линии прорисовываются слева направо =====
     const hexA = (hex, a) => {
@@ -5341,7 +5301,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     function fillTicks(pct) {
       const box = $('ticks'), k = Math.max(0, Math.min(1, pct / 100)), anim = intro && !calm(), xe = 2 + 296 * k;
       const pts = [...Array(25)].map((_, i) => [2 + (xe - 2) * i / 24, 8]);
-      box.innerHTML = `<svg viewBox="0 0 300 16" preserveAspectRatio="none"><line class="tk-rest" x1="${xe.toFixed(1)}" y1="8" x2="298" y2="8"/>${k > .01 ? silkRaw(pts, { n: 7, a: .65, w: 1.3, full: !anim }) : ''}</svg>
+      box.innerHTML = `<svg viewBox="0 0 300 16" preserveAspectRatio="none"><line class="tk-rest" x1="${xe.toFixed(1)}" y1="8" x2="298" y2="8"/>${k > .01 ? silkRaw(pts, { ...LINE_SILK, full: !anim }) : ''}</svg>
         ${k > .01 ? `<i class="tk-end${anim ? ' in' : ''}" style="left:${(xe / 3).toFixed(2)}%"></i>` : ''}`;
       if (k > .01) silkStart(box);
     }
