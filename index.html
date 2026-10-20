@@ -92,9 +92,16 @@
     .sp-small span { color: var(--volt); }
     #splash.pt .sp-small { display: block; }
     /* заставка из прядей: в светлой теме она тёмная (пряди светятся только на тёмном), а при входе разливается песок */
-    html.light #splash.sl { background: #10171E; }
-    html.light #splash.sl .sp-small { color: #E9EEF2; }
-    html.light #splash.sl .sp-small span { color: #BDEB5B; }
+    /* светлая заставка — песок, как само приложение днём */
+    html.light #splash.sl { background: #F4F1EA; }
+    html.light #splash.sl .sp-small span { color: #5E8F17; }
+    /* мягкая подсветка снизу: лайм и бирюза медленно дышат и переливаются под логотипом */
+    #splash.sl::before { content: ""; position: absolute; left: -20%; right: -20%; bottom: 0; height: 46%; pointer-events: none;
+      background: radial-gradient(48% 62% at 34% 100%, rgba(189,235,91,.30), rgba(189,235,91,0) 70%), radial-gradient(52% 70% at 68% 100%, rgba(92,200,232,.26), rgba(92,200,232,0) 72%), radial-gradient(40% 46% at 50% 100%, rgba(118,226,168,.24), rgba(118,226,168,0) 70%);
+      filter: blur(18px); animation: spAurora 7s ease-in-out infinite alternate; transition: opacity .4s ease; }
+    @keyframes spAurora { 0% { transform: translateX(-4%) scaleY(.9); opacity: .75; } 50% { opacity: 1; } 100% { transform: translateX(4%) scaleY(1.08); opacity: .8; } }
+    #splash.sl-out::before { opacity: 0; }
+    @media (prefers-reduced-motion: reduce) { #splash.sl::before { animation: none; } }
     #goalSl { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 40; }
     #splash.sl-out .sp-small { opacity: 0; transition: opacity .3s ease; }
     #splash.sl.leaving { background: transparent; transition: opacity .4s ease, visibility .4s ease; }
@@ -154,6 +161,9 @@
     #storyRing { position: absolute; left: 0; top: -2px; width: 38px; height: 38px; border-radius: 50%; padding: 2px; z-index: 2;
       background: conic-gradient(var(--volt), #6FE0B8, var(--volt)); }
     #storyRing.seen { background: var(--rule); }
+    #storyRing.silky:not(.seen) { background: none; }
+    #storyRing .ring-silk { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+    #storyRing.seen .ring-silk { display: none; }
     #storyRing span { display: grid; place-items: center; width: 100%; height: 100%; border-radius: 50%; background: var(--bg); border: 2px solid var(--bg);
       font-family: var(--text); font-size: 10.5px; font-weight: 700; text-transform: uppercase; color: var(--ink); letter-spacing: .02em; }
     #story { position: fixed; inset: 0; z-index: 45; background: var(--story-bg); color: var(--ink); display: flex; flex-direction: column;
@@ -174,6 +184,51 @@
     .st-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; margin: 0 -16px; padding: 0 16px 8px; scrollbar-width: none; touch-action: pan-y; }
     .st-scroll::-webkit-scrollbar { display: none; }
     .st-card { display: flex; flex-direction: column; gap: 10px; }
+    /* неделя — сторис из экранов: полоски сверху, на экране одна мысль, всё по центру, в стиле заставки */
+    .st-deck { min-height: 100%; display: flex; flex-direction: column; }
+    .st-segs { display: flex; gap: 4px; margin: 0 0 6px; flex: none; }
+    .st-segs i { flex: 1; height: 14px; display: flex; align-items: center; cursor: pointer; }
+    .st-segs b { display: block; width: 100%; height: 3px; border-radius: 2px; background: var(--rule); transition: background .25s; }
+    .st-segs i.on b { background: var(--volt); }
+    .st-pn { display: flex; align-items: center; justify-content: center; gap: 22px; flex: none; padding-top: 4px; font-size: 13px; font-weight: 600; color: var(--muted); }
+    .st-pn button { width: 44px; height: 36px; border-radius: 14px; background: var(--panel); color: var(--ink); font-size: 24px; line-height: 1; }
+    .st-pn button:disabled { opacity: .3; }
+    .st-beads .st-pt { position: absolute; left: -16px; top: -30px; width: calc(100% + 32px); height: calc(100% + 60px); pointer-events: none; }
+    .st-beads.sl .silk { visibility: hidden; }
+    .st-beads .bd { z-index: 1; }
+    .st-slide { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 14px; padding: 12px 0 18px; }
+    .st-slide.in-r { animation: stInR .35s cubic-bezier(.3,.8,.3,1) both; } .st-slide.in-l { animation: stInL .35s cubic-bezier(.3,.8,.3,1) both; }
+    .st-slide > .st-k { letter-spacing: .18em; }
+    .st-huge { font-family: var(--num); font-weight: 800; font-size: clamp(84px, 30vw, 128px); line-height: .85; letter-spacing: -.02em; font-variant-numeric: tabular-nums;
+      background-image: linear-gradient(90deg, var(--pt-a), var(--pt-b) 70%); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
+    .st-huge small { font-size: .34em; letter-spacing: 0; }
+    .st-unit { font-family: var(--num); font-weight: 700; font-size: 20px; color: var(--muted); letter-spacing: .02em; margin-top: -4px; }
+    .st-say { font-family: Montserrat, var(--text); font-weight: 600; font-size: 15px; line-height: 1.4; text-transform: uppercase; letter-spacing: .02em; max-width: 30ch; margin-top: 6px; }
+    .st-say.g { font-size: 17px; background-image: linear-gradient(90deg, var(--pt-a), var(--pt-b) 70%); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
+    .st-slide .st-tiles, .st-slide .st-plan, .st-wos { width: 100%; text-align: left; }
+    .st-wos { background: var(--panel); border-radius: 20px; padding: 14px 16px; }
+    .st-slide .st-close { width: 100%; margin-top: 10px; }
+    .st-slide > .st-chart:not(.st-beads) { position: relative; width: 100%; margin-top: 10px; }
+    .st-slide > .st-chart:not(.st-beads) .st-pt { position: absolute; left: -16px; top: -20px; width: calc(100% + 32px); height: calc(100% + 40px); pointer-events: none; }
+    .st-slide > .st-chart.sl:not(.st-beads) .silk { visibility: hidden; }
+    .st-slide .st-chips { justify-content: center; margin-top: 4px; }
+    .st-wks { width: 100%; }
+    .st-slide .st-sleep.big { width: 100%; height: 130px; }
+    .st-slide .st-sleep.big i { border-radius: 10px; }
+    .st-medal1 svg, .st-medal1 img { width: 170px; height: 170px; display: block; filter: drop-shadow(0 10px 40px color-mix(in srgb, var(--pt-a) 35%, transparent)); }
+    .st-mt { font-family: var(--num); font-weight: 800; font-size: 36px; line-height: 1; max-width: 16ch;
+      background-image: linear-gradient(90deg, var(--pt-a), var(--pt-b) 70%); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
+    .st-slide .st-medals { justify-content: center; }
+    /* дни — бусины на шёлковой нити */
+    .st-beads { position: relative; width: 100%; aspect-ratio: 300 / 170; margin-top: 4px; }
+    .st-beads.st-chart svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+    .st-beads .bd { position: absolute; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .st-beads .bd b { font-family: var(--num); font-size: 16px; font-weight: 700; }
+    .st-beads .bd small { font-size: 11px; font-weight: 600; color: var(--muted); }
+    .st-beads .bd i { width: 14px; height: 14px; border-radius: 50%; background: var(--volt); box-shadow: 0 0 0 4px color-mix(in srgb, var(--volt) 22%, transparent); display: grid; place-items: center; }
+    .st-beads .bd.wo i { width: 28px; height: 28px; box-shadow: none; }
+    .st-beads .bd.wo i svg { width: 18px; height: 18px; position: static; }
+    .st-beads .bd.off b { color: var(--muted); } .st-beads .bd.off i { background: var(--panel2); box-shadow: none; }
     .st-card.in-l { animation: stInL .35s cubic-bezier(.3,.8,.3,1) both; } .st-card.in-r { animation: stInR .35s cubic-bezier(.3,.8,.3,1) both; }
     @keyframes stInL { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
     @keyframes stInR { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
@@ -194,8 +249,18 @@
     .st-chart .ar { fill: var(--volt); opacity: .13; }
     /* после отрисовки график живёт: цвета линии бегут лайм → мята → бирюза, по линии пробегает искра, точка дышит */
     .st-chart .gs0, .st-chart .gs2 { stop-color: var(--pt-a); } .st-chart .gs1 { stop-color: var(--pt-c); } .st-chart .gsm { stop-color: var(--pt-b); }
-    .st-chart .sk { fill: #fff; opacity: 0; filter: drop-shadow(0 0 4px var(--pt-b)); }
-    html.light .st-chart .sk { fill: var(--pt-c); }
+    /* обложка: линию веса рисуют светящиеся пряди на холсте под текстом, SVG-шёлк прячем (точка и подписи остаются) */
+    .st-poster .st-pt { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
+    .st-poster.sl .st-chart .silk { visibility: hidden; }
+    .st-chart .silk path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .silk .au { stroke: #F2C35B; }
+    html.light .silk .au { stroke: #B9831A; }
+    .silk .sg { stroke-width: 7; opacity: .28; filter: blur(3px); }
+    .silk.thin path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    .silk .sg.sh { stroke: var(--volt); opacity: .22; filter: blur(4px); }
+    .silk .sl-a { stroke: var(--volt); } .silk .sl-b { stroke: #4FD1B5; }
+    html.light .silk .sl-b { stroke: #12937A; }
+    html.light .silk .sg { opacity: .16; }
     .st-chart.go .ln { animation: stDraw 1.2s .1s cubic-bezier(.45,0,.2,1) both; }
     .st-chart.go .ar { animation: stArea .7s .8s ease both; }
     .st-chart.go .dt { animation: stPop .45s 1.2s cubic-bezier(.3,1.6,.5,1) both; transform-box: fill-box; transform-origin: center; }
@@ -278,29 +343,38 @@
       padding: calc(14px + env(safe-area-inset-top, 0px)) 24px calc(24px + env(safe-area-inset-bottom, 0px)); transition: transform .45s cubic-bezier(.5,0,.3,1), opacity .45s; }
     .st-poster.gone { transform: translateY(-100%); opacity: .6; pointer-events: none; }
     .st-poster.off { display: none; }
-    .st-poster .bar { height: 3px; border-radius: 2px; background: rgba(0,0,0,.18); overflow: hidden; }
+    .st-poster .bar { visibility: hidden; height: 3px; border-radius: 2px; background: rgba(0,0,0,.18); overflow: hidden; }
     .st-poster .bar b { display: block; height: 100%; width: 0; background: #121315; }
     .st-poster .bar.wait { animation: stBarWait 1.1s ease-in-out infinite alternate; }
     @keyframes stBarWait { from { opacity: 1; } to { opacity: .35; } }
     .st-poster .st-head { margin: 10px -2px 0; } .st-poster .st-head .t { color: rgba(18,19,21,.7); font-size: 14px; }
-    .st-poster .st-k { color: rgba(18,19,21,.6); margin-top: auto; }
+    .st-poster .st-k { color: rgba(18,19,21,.6); margin-top: auto; letter-spacing: .18em; }
     /* тёмная тема: обложка не слепит — тёмный фон с мягким зелёным отсветом, лайм только в цифрах */
-    html:not(.light) .st-poster { background: radial-gradient(120% 70% at 85% 0%, rgba(189,235,91,.22), rgba(189,235,91,0) 60%), linear-gradient(170deg, #22311F 0%, #1A2621 50%, var(--story-bg) 100%); color: var(--ink); }
+    /* обложка — тот же мир, что заставка: фон приложения, всё по центру, мягкий отсвет за цифрой */
+    html:not(.light) .st-poster { background: radial-gradient(70% 38% at 50% 44%, rgba(118,226,168,.10), rgba(118,226,168,0) 70%), #17212B; color: var(--ink); }
     html:not(.light) .st-poster .bar { background: rgba(255,255,255,.14); } html:not(.light) .st-poster .bar b { background: var(--volt); }
     html:not(.light) .st-poster .st-head .t, html:not(.light) .st-poster .st-k { color: var(--muted); }
     /* светлая обложка тоже мягкая: светло-оливковый перелив в кремовый вместо яркого лайма */
-    html.light .st-poster { background: radial-gradient(120% 70% at 85% 0%, rgba(211,232,143,.6), rgba(255,255,255,0) 60%), linear-gradient(170deg, #ECF0D2 0%, var(--bg) 100%); color: var(--ink); }
+    html.light .st-poster { background: radial-gradient(70% 38% at 50% 44%, rgba(100,149,28,.10), rgba(100,149,28,0) 70%), #F4F1EA; color: var(--ink); }
     html.light .st-poster .bar { background: rgba(0,0,0,.1); } html.light .st-poster .bar b { background: var(--volt); }
     html.light .st-poster .st-head .t, html.light .st-poster .st-k { color: var(--muted); }
     html:not(.light) .st-poster .st-x { color: var(--ink); }
-    html:not(.light) .st-poster .huge { color: var(--volt); }
+    /* цифра недели — как фраза заставки: чистый перелив лайм → мята, без свечения */
+    .st-poster .huge { background-image: linear-gradient(90deg, var(--pt-a), var(--pt-b) 70%); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
     html:not(.light) .st-poster svg.sp path, html:not(.light) .st-poster svg.sp circle { stroke: var(--volt); }
     html:not(.light) .st-poster svg.sp circle { fill: var(--volt); }
     .st-poster .huge { font-family: var(--num); font-weight: 800; font-size: clamp(110px, 40vw, 190px); line-height: .85; letter-spacing: -.02em; margin-top: 12px; font-variant-numeric: tabular-nums; }
     .st-poster .huge.sm { font-size: clamp(60px, 22vw, 92px); text-transform: uppercase; font-family: var(--display); letter-spacing: -.02em; }
-    .st-poster .unit { font-family: var(--num); font-weight: 700; font-size: 24px; margin-top: 16px; }
+    /* на обложке график — часть фона: во всю ширину, без подписей дней и заливки, только текущие пряди и вес в начале и в конце */
+    .st-poster .st-chart.bare { margin: 26px -24px 0; }
+    .st-chart.bare { margin-top: 14px; }
+    .st-slide > .st-chart.bare svg { height: 130px; }
+    .st-poster .st-chart.bare svg { height: 120px; }
+    .st-poster .unit { font-family: var(--num); font-weight: 700; font-size: 22px; margin-top: 14px; color: var(--muted); letter-spacing: .02em; }
+    .st-poster .st-k, .st-poster .huge, .st-poster .unit, .st-poster .say { text-align: center; }
+    .st-poster .stats { justify-content: center; text-align: center; }
     .st-poster svg.sp { width: 100%; height: 90px; margin-top: 26px; overflow: visible; }
-    .st-poster .stats { display: flex; gap: 26px; margin-top: 30px; }
+    .st-poster .stats { display: flex; gap: 40px; margin-top: 30px; }
     .st-poster .stats b { display: block; font-family: var(--num); font-weight: 800; font-size: 46px; line-height: 1; }
     .st-poster .stats span { font-size: 13px; font-weight: 600; opacity: .7; }
     .st-poster .say { margin-top: 26px; font-size: 17px; font-weight: 600; line-height: 1.35; min-height: 46px; }
@@ -308,10 +382,6 @@
     .st-poster.in .huge, .st-poster.in .unit, .st-poster.in .stats, .st-poster.in .say { animation: stIn .55s cubic-bezier(.3,.8,.3,1) both; }
     .st-poster.in .unit { animation-delay: .08s; } .st-poster.in .stats { animation-delay: .16s; } .st-poster.in .say { animation-delay: .24s; }
     .st-poster.in svg.sp path { animation: stDraw 1.1s .2s ease-out both; }
-    /* обложка с частицами: цифра и линия веса собираются из точек, сам текст и SVG прячем (место в вёрстке остаётся) */
-    .st-poster .st-pt { position: absolute; inset: 0; width: 100%; height: 100%; z-index: -1; pointer-events: none; }
-    .st-poster.pt .huge { color: transparent !important; -webkit-text-fill-color: transparent; }
-    .st-poster.pt svg.sp { visibility: hidden; }
     @keyframes stIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
     @media (prefers-reduced-motion: reduce) {
       .st-card.in-l, .st-card.in-r, .st-chart.go *, .st-poster.in *, .st-poster.in svg.sp path { animation: none !important; }
@@ -358,9 +428,13 @@
     .goal { margin-top: 16px; }
     .goal-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 12.5px; color: var(--muted); white-space: nowrap; }
     .goal-top b { font-family: var(--num); font-size: 18px; color: var(--ink); font-weight: 600; letter-spacing: .02em; }
-    .ticks { display: grid; grid-template-columns: repeat(30, 1fr); gap: 3px; margin-top: 8px; }
-    .ticks i { height: 10px; border-radius: 1.5px; background: var(--panel2); transition: background .2s ease; }
-    .ticks i.on { background: var(--volt); }
+    .ticks { position: relative; height: 16px; margin-top: 6px; }
+    .ticks svg { display: block; width: 100%; height: 16px; overflow: visible; }
+    .ticks path, .ticks line { vector-effect: non-scaling-stroke; }
+    .ticks .tk-rest { stroke: var(--panel2); stroke-width: 2.5; stroke-linecap: round; }
+    .ticks .tk-end { position: absolute; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: var(--volt); }
+    .ticks .tk-end.in { animation: tkEnd .4s ease 1.2s both; }
+    @keyframes tkEnd { from { opacity: 0; transform: scale(.3); } to { opacity: 1; transform: none; } }
     .eta { margin-top: 7px; font-size: 12.5px; color: var(--muted); display: flex; align-items: center; gap: 5px; }
     .eta b { color: var(--ink); font-weight: 600; }
 
@@ -377,13 +451,22 @@
     #mtView { position: fixed; inset: 0; z-index: 44; background: #121621; color: var(--ink); display: flex; flex-direction: column;
       opacity: 0; pointer-events: none; transform: translateY(24px); transition: opacity .25s ease, transform .35s cubic-bezier(.3,.8,.3,1); }
     #mtView.open { opacity: 1; pointer-events: auto; transform: none; }
-    #mtView .mt-pt { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; }
+    #mtSvg.silky #mtDone { opacity: .35; stroke-width: 1.4; }
+    /* весь путь до вершины — тихая шёлковая тропа (вместо пунктира), пройденное — яркая нить поверх */
+    #mtTrailG { opacity: .5; }
+    .mt-camp.pop { animation: campPop .55s cubic-bezier(.3,1.6,.5,1); transform-box: fill-box; transform-origin: 50% 70%; }
+    .mt-camp.pop .tg { animation: campFlash 1.2s ease both; }
+    @keyframes campPop { 0% { transform: scale(1); } 40% { transform: scale(1.35); } 100% { transform: none; } }
+    @keyframes campFlash { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: .9; } }
+    .mt-burst circle { transform-box: fill-box; transform-origin: center; }
+    .mt-burst .bf { animation: burstF 1.1s ease-out both; }
+    .mt-burst .br { animation: burstR .9s cubic-bezier(.2,.7,.3,1) both; }
+    .mt-burst .b2 { animation-delay: .12s; }
+    @keyframes burstF { 0% { opacity: 0; transform: scale(.4); } 18% { opacity: 1; transform: scale(1.25); } 100% { opacity: 0; transform: scale(1.7); } }
+    @keyframes burstR { 0% { opacity: 1; transform: scale(.6); } 100% { opacity: 0; transform: scale(5); } }
+    #mtTrailG .sl-a { stroke: #DDE3EA; } #mtTrailG .sl-b { stroke: #9FB3C8; }
     #mtSvg > g, #mtSvg > path, #mtSvg > image, #mtSvg > line, #mtSvg > text { transition: opacity .7s ease; }
     #mtSvg #mtSkyG > g, #mtSvg #mtSkyG > circle[cx="330"] { transition: opacity .7s ease; }
-    #mtSvg.pt-hide > :not(#mtSkyG):not(defs), #mtSvg.pt-hide #mtSkyG > g, #mtSvg.pt-hide #mtSkyG > circle[cx="330"] { opacity: 0; transition: none; }
-    /* пока гора собирается из точек, надписи (заголовок, цифры, подсказка) тоже из точек, а настоящие спрятаны */
-    #mtView .mt-top > * { transition: opacity .45s ease; }
-    #mtView.pt-text .mt-top > *, #mtView.pt-text .mt-hint { opacity: 0; transition: none; }
     .mt-top { position: relative; z-index: 2; padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 0; max-width: 460px; width: 100%; margin: 0 auto; }
     .mt-top .back-btn { padding-bottom: 6px; }
     .mt-top h2 { font-family: var(--display); font-weight: 700; font-size: 30px; line-height: 1.1; }
@@ -499,9 +582,20 @@
       transform: translateX(100%); transition: transform .3s cubic-bezier(.2, .8, .2, 1);
     }
     .screen.open { transform: translateX(0); }
-    #achScreen .ach-pt { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
-    #achScreen .screen-inner { transition: opacity .4s ease; }
-    #achScreen.pt-text .screen-inner { opacity: 0; transition: none; }
+    /* открытие витрины: заголовки проявляются, нить бьёт по медалям — они переворачиваются из серых в цветные */
+    #achScreen.enter .m-sec h3 { animation: achIn .55s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--i, 0) * 40ms + 120ms); }
+    @keyframes achIn { from { opacity: 0; transform: translateY(16px) scale(.94); } to { opacity: 1; transform: none; } }
+    #achScreen .m-tile .mw::after { content: ""; position: absolute; inset: 7%; border-radius: 50%; pointer-events: none; opacity: 0;
+      background: linear-gradient(105deg, transparent 36%, rgba(255,255,255,.7) 50%, transparent 64%) no-repeat; background-size: 260% 100%; }
+    @keyframes achGlint { 0% { opacity: 1; background-position: 120% 0; } 85% { opacity: 1; } 100% { opacity: 0; background-position: -20% 0; } }
+    #achScreen .m-tile.dim .mw > img, #achScreen .m-tile.dim .mw > svg { filter: grayscale(1) brightness(.55); opacity: .45; }
+    #achScreen .m-tile.lit .mw > img, #achScreen .m-tile.lit .mw > svg { transition: filter .2s ease .22s, opacity .2s ease .22s, transform .15s ease; }
+    #achScreen .m-tile.lit .mw { animation: achFlip .65s cubic-bezier(.3,1.25,.5,1) both; }
+    #achScreen .m-tile.lit .mw::after { animation: achGlint .6s ease .45s both; }
+    @keyframes achFlip { 0% { transform: perspective(520px) rotateY(0) scale(.96); } 45% { transform: perspective(520px) rotateY(90deg) scale(1.04); } 100% { transform: perspective(520px) rotateY(360deg); } }
+    #shotSl { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 46; }
+    #achShots { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 31; }
+    .screen-inner { position: relative; }
     .screen-inner { max-width: 460px; margin: 0 auto; padding: 14px 16px calc(32px + env(safe-area-inset-bottom, 0px)); }
     .screen-top { display: flex; align-items: baseline; justify-content: space-between; }
     .screen-top h2 { font-family: var(--display); font-weight: 700; font-size: 30px; }
@@ -595,6 +689,7 @@
     .period-btn { flex: 1; padding: 6px 0; border-radius: 8px; font-size: 12.5px; font-weight: 600; color: var(--muted); transition: background .2s ease, color .2s ease; }
     .period-btn.active { background: var(--volt-dim); color: var(--volt); }
     .chart-box { position: relative; flex: 1; min-height: 130px; }
+    .chart-box .ms-pt { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
     #chartNote { position: absolute; inset: 0; display: grid; place-items: center; text-align: center; font-size: 14px; color: var(--muted); padding: 0 12px; }
 
     /* Невысокие экраны: ужимаем, чтобы график сохранил место */
@@ -636,6 +731,7 @@
       transform: translateY(-48px); opacity: 0; pointer-events: none;
     }
     #ptr svg { width: 18px; height: 18px; }
+    #ptr.silk-on svg { width: 30px; height: 30px; overflow: visible; }
     #ptr.back { transition: transform .3s cubic-bezier(.2, .8, .2, 1), opacity .3s ease; }
     #ptr.spin svg { animation: ptrSpin .8s linear infinite; }
     @keyframes ptrSpin { to { transform: rotate(360deg); } }
@@ -953,6 +1049,9 @@
     // Потянуть вниз — обновить. Закрытие свайпом выключено через disableVerticalSwipes.
     function initPullToRefresh() {
       const main = document.querySelector('main'), ptr = $('ptr'), LIMIT = 70;
+      // вместо стрелки — кольцо из шёлковых прядей: тянешь — оно дорисовывается, обновляется — крутится
+      let ring = null;
+      if (!calm()) { ptr.innerHTML = `<svg viewBox="0 0 24 24">${silkRaw(silkCircle(12, 12, 7.5), { n: 6, a: .3, loop: true })}</svg>`; ring = ptr.querySelector('.silk'); ptr.classList.add('silk-on'); }
       let y0 = null, x0 = 0, dy = 0, mode = null, busy = false;
       const blocked = () => busy || $('dashboard').classList.contains('hidden') ||
         document.querySelector('.screen.open, #sheet.open') || window.scrollY > 0;
@@ -960,6 +1059,7 @@
         const k = Math.min(1, d / LIMIT);
         main.style.transform = d ? `translateY(${d * .5}px)` : '';
         ptr.style.opacity = k;
+        if (ring) { ring.__u = k; if (!d) SILK.list.delete(ring); else if (!SILK.list.has(ring)) silkStart(ring); }
         ptr.style.transform = `translateY(${Math.min(d, LIMIT * 1.3) - 40}px) rotate(${d * 3}deg)`;
       };
       main.addEventListener('touchstart', e => {
@@ -989,6 +1089,7 @@
         safeHaptic('medium');
         main.style.transform = '';
         ptr.style.opacity = 1; ptr.style.transform = 'translateY(14px)';
+        if (ring) ring.__u = 1;
         ptr.classList.add('spin');
         const t0 = performance.now();
         fetchData(true).finally(() => {
@@ -1034,7 +1135,7 @@
       safeHaptic('light');
       $('errorBox').classList.add('hidden');
       $('splash').classList.remove('gone', 'leaving', 'sl-out');
-      if (SP.s) { SP.exitAt = null; SP.s.start(); }
+      if (SP.s) { SP.exitAt = null; SP.left = null; SP.loaded = false; SP.s.start(); }
       fetchData();
     }
 
@@ -1262,7 +1363,7 @@ void main(){float fi=a.x,s=a.y,sd=a.z;
  off+=K>.68?(1.-s)*(1.-s)*(.06+.06*A)*SC*(B>.5?1.:-.6):0.;
  float m=clamp((M-h1(fi+4.1)*.3-(1.-s)*.3)/.4,0.,1.); m=m*m*(3.-2.*m);
  c=mix(c,b.xy,m); nm=normalize(mix(nm,b.zw,m)+vec2(1e-5)); off*=1.-m*.9;
- float w=(1.+1.3*G*G)*(1.+.2*m), qw=mix(6.,2.5,m), hw=w*qw;
+ float w=(1.+1.3*G*G)*(1.+.2*m), qw=mix(6.,2.5,m)*clamp(SC*1.6,.35,1.), hw=w*qw;
  vec2 q=c+nm*off+nm*sd*hw/R.y;
  gl_Position=vec4(q.x*2.*R.y/R.x,q.y*2.,0.,1.);
  vx=sd*qw;
@@ -1272,9 +1373,9 @@ void main(){float fi=a.x,s=a.y,sd=a.z;
  vec3 own=CC[int(k+.5)], nx=CC[int(mod(k+1.,${NL}.)+.5)]; vc=mix(own,nx,step(.8,E)*.35);
  float hs=max(0.,sin(u*7.+fi+T*.7)); hs*=hs; hs*=hs; hs*=hs*hs;
  vh=(.25*s+hs*step(.55,A)*1.2)*(1.-m);}`;
-      const FSL = `precision mediump float; uniform vec3 HI; varying vec3 vc; varying float vx,vf,vh;
+      const FSL = `precision mediump float; uniform vec3 HI; uniform float GW; varying vec3 vc; varying float vx,vf,vh;
 void main(){float x=vx, core=exp(-x*x), e=max(1.-abs(x)/6.,0.), glow=exp(-x*x/60.)*e*e;
- gl_FragColor=vec4((vc*(core*.85+glow*.12)+HI*core*vh)*vf,1.);}`;
+ gl_FragColor=vec4((vc*(core*.85+glow*.12*GW)+HI*core*vh*GW)*vf,1.);}`;
       // след: прошлый кадр, чуть размытый и угасающий, — пряди тянут за собой мягкий шлейф
       const FSF = `precision highp float; uniform sampler2D PV,CU; uniform vec2 R; uniform float DK;
 void main(){vec2 uv=gl_FragCoord.xy/R, px=3.2/R;
@@ -1282,15 +1383,27 @@ void main(){vec2 uv=gl_FragCoord.xy/R, px=3.2/R;
  pv=clamp(pv*DK-vec3(1./255.),0.,1.); pv=pv==pv?pv:vec3(0.);
  gl_FragColor=vec4(max(pv,texture2D(CU,uv).rgb),1.);}`;
       // показ на прозрачном холсте: в тёмной теме — свечение, в светлой — насыщенная краска
-      const FSS = `precision highp float; uniform sampler2D FB; uniform vec2 R; uniform float LT,AL;
+      const FSS = `precision highp float; uniform sampler2D FB; uniform vec2 R; uniform float LT,AL,GW;
 void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
  for(int i=0;i<8;i++){float a=float(i)*.785+.39; vec2 o=vec2(cos(a),sin(a))/R;
   g+=texture2D(FB,uv+o*6.).rgb*.55+texture2D(FB,uv+o*16.).rgb*.45;}
- vec3 col=1.-exp(-(b+g/8.*.9)*1.3); float a=max(col.r,max(col.g,col.b));
+ g*=GW;
+ vec3 col=1.-exp(-(b+g/8.*.9)*mix(.75,1.3,GW));
+ // без свечения (графики): пряди сохраняют цвет; где разные цвета сложились в серое — лайм
+ {float bm=max(b.r,max(b.g,b.b)); vec3 bh=b/max(bm,1e-4); float bn=min(bh.r,min(bh.g,bh.b));
+  vec3 fc=mix(vec3(.74,.92,.36),clamp(bh-.3*bn,0.,1.)/(1.-.3*bn),smoothstep(.12,.4,1.-bn))*(1.-exp(-bm*1.8));
+  col=mix(fc,col,GW);}
+ float a=max(col.r,max(col.g,col.b));
  vec3 cg=b+g/8.*.25; float lb=max(b.r,max(b.g,b.b)), lg=max(g.r,max(g.g,g.b))/8.;
  float lm=max(cg.r,max(cg.g,cg.b)); vec3 hu=cg/max(lm,1e-4); float mn=min(hu.r,min(hu.g,hu.b));
- vec3 ik=clamp(hu-.6*mn,0.,1.)*.78; float al=clamp(1.-exp(-(lb*1.7+lg*.45)),0.,.92);
- gl_FragColor=mix(vec4(col,a),vec4(ik*al,al),LT)*AL;}`;
+ vec3 ik=clamp(hu-.45*mn,0.,1.);
+ // где много разных цветов легли друг на друга (плотная линия графика), смесь серая — там нить лаймово-зелёная, как линия на светлой теме
+ ik=mix(vec3(.37,.6,.12),ik,smoothstep(.12,.4,1.-mn));
+ // светлая тема: яркая цветная нить + светлый цветной ореол (выбор Вадима — «светлая А»)
+ float ac=1.-exp(-lb*2.2), ah=(1.-exp(-lg*1.3))*.45;
+ vec3 cc=ik*.9, ch=mix(ik,vec3(1.),.3);
+ float al=ac+ah*(1.-ac); vec3 lc=cc*ac+ch*ah*(1.-ac);
+ gl_FragColor=mix(vec4(col,a),vec4(lc,al),LT)*AL;}`;
       let gl = null, cv = null, PR = null, BUF = null, RT = null, broken = false, cur = null;   // cur — идущая сцена: WebGL один, сцена тоже одна
       const TB = new Float32Array(NSTR * (NSEG + 1) * 8);
       function init() {
@@ -1414,8 +1527,9 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       // у каждой линии свой гуляющий «дом», от соседей она отворачивает, долго кружить в одну сторону не может
       const MODES = ['glide', 'snake', 'dart', 'drift', 'chase', 'wave', 'glide', 'wave'];
       function lines(W, H) {
-        const LN = [...Array(NL).keys()].map(k => ({ x: (k - 4) * .055, y: ((k * 4) % NL - 4) * .08, a: k * .7 + Math.random() * 6.3, tr: 0, f: Math.random() * 9, g: Math.random() * 9, hs: [], cum: 0 }));
-        const ax = W / H * .5, t0 = Math.random() * 50;
+        // каждый запуск — своё начальное расположение: линии разбросаны по всему полю в случайных местах и направлениях
+        const ax = W / H * .5, t0 = Math.random() * 50, RG = { k: 0, th: Math.random() * 6.283, r: Math.min(.2, ax * .55), w: 1.5 };
+        const LN = [...Array(NL).keys()].map(k => ({ x: (Math.random() - .5) * ax * 1.3, y: (Math.random() - .5) * .7, a: Math.random() * 6.283, tr: 0, f: Math.random() * 9, g: Math.random() * 9, hs: [], cum: 0 }));
         function pick(o, k) {
           let m; do m = MODES[(Math.random() * MODES.length) | 0]; while (m === o.m);
           o.m = m; o.mt = 0; o.md = m === 'dart' ? 1.2 + Math.random() : m === 'drift' ? 2 + Math.random() * 2 : 3 + Math.random() * 4;
@@ -1447,10 +1561,44 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           turn = turn * (1 - edge) + ang(hx * .5, hy * .5) * 2 * edge;
           o.cum = o.cum * Math.pow(.6, dt) + o.tr * dt;
           if (Math.abs(o.cum) > 1.6 && Math.sign(turn) === Math.sign(o.cum)) turn *= .15;
+          // кольцо (заставка, пока грузятся данные): у каждой линии своё место на вращающемся круге, она догоняет его
+          // и идёт по кругу; когда данные пришли, кольцо плавно отпускает линии
+          const rk = RG.k;
           turn = Math.max(-1.4, Math.min(1.4, turn));
           o.tr += (turn - o.tr) * Math.min(1, dt * 2.5); o.a += o.tr * dt;
           o.v = (o.v || v) + (v - (o.v || v)) * Math.min(1, dt * 1.6);
           o.x += Math.cos(o.a) * o.v * dt; o.y += Math.sin(o.a) * o.v * dt;
+          if (rk > 0 && (o.pp || RG.P)) {
+            // путь (линия графика): каждая линия лежит на всём графике целиком, чуть в стороне от соседей, и мягко колышется;
+            // пряди сами текут вдоль неё (как на заставке) — линия цельная с первого кадра, без вспышек участками.
+            // o.pp — свой путь у этой линии (выстрел в медаль или лагерь): голова — в конце пути, в цели
+            const Q = o.pp || RG, P = Q.P, N = Q.N, n = P.length / 2, side = (k - (NL - 1) / 2) * .0006, fw = !!o.pp;
+            o.hs.length = 0;
+            // у графика голова — в начале: пряди текут справа налево (так хочет Вадим)
+            for (let j = 0; j < n; j++) {
+              const i = fw ? j : n - 1 - j;
+              const wob = side + .0016 * Math.sin(i * .22 + t * 1.3 + k * 2.1);
+              o.hs.push(P[i * 2] + N[i * 2] * wob, P[i * 2 + 1] + N[i * 2 + 1] * wob);
+            }
+            o.x = o.hs[o.hs.length - 2]; o.y = o.hs[o.hs.length - 1];
+            return;
+          } else if (rk > 0) {
+            // голову тянет к её месту на круге; каждый цвет крутится сам по себе: своя скорость, часть — навстречу,
+            // свой радиус и своё поведение — ровный поток, волна лепестками, рывки, эллипс, дыхание внутрь-наружу
+            if (o.rth == null) { o.rth = k * 6.283 / NL; o.rw = RG.w * (.55 + .9 * ((k * .618) % 1)) * (k % 3 === 1 ? -1 : 1); o.rr = 1 + ((k * 5) % 9 - 4) * .025; o.rm = k % 5; }
+            const m = o.rm;
+            o.rth += o.rw * dt * (m === 2 ? 1 + .9 * Math.sin(t * 1.4 + k) : 1);
+            const th = o.rth;
+            let rr = RG.r * o.rr * (1 + .04 * Math.sin(t * (.9 + k * .13) + o.f)), ex = 1, ey = 1, rot = 0;
+            if (m === 1) rr *= 1 + .14 * Math.sin(4 * th + t * 1.5);
+            if (m === 3) { ex = 1.2; ey = .8; rot = t * .5 + k; }
+            if (m === 4) rr *= 1 + .22 * Math.sin(t * .9 + k);
+            const lx = rr * ex * Math.cos(th), ly = rr * ey * Math.sin(th);
+            const sx = lx * Math.cos(rot) - ly * Math.sin(rot), sy = lx * Math.sin(rot) + ly * Math.cos(rot), q = Math.min(1, dt * 6 * rk * rk);
+            o.x += (sx - o.x) * q; o.y += (sy - o.y) * q;
+            // направление — по касательной, чтобы, когда кольцо отпустит, линия полетела дальше плавно
+            const ta = th + (o.rw < 0 ? -1.5708 : 1.5708), d = Math.atan2(Math.sin(ta - o.a), Math.cos(ta - o.a)); o.a += d * q; o.tr *= 1 - q;
+          }
           o.hs.push(o.x, o.y); if (o.hs.length > 1600) o.hs.splice(0, o.hs.length - 1200);
         }
         // NP точек от головы назад по следу на равных расстояниях, потом лёгкое сглаживание
@@ -1468,18 +1616,21 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
             for (let q = 1; q < NP - 1; q++) { const o = b + q * 2 + d, cur = PA[o]; PA[o] = .25 * pv + .5 * cur + .25 * PA[o + 2]; pv = cur; }
           }
         }
-        for (let k = 0; k < NL; k++) for (let i = 0; i < 600; i++) step(k, i / 60 - 10, 1 / 60);
-        return { LN, step, path };
+        const pre = 420 + ((Math.random() * 480) | 0);
+        for (let i = 0; i < pre; i++) for (let k = 0; k < NL; k++) step(k, i / 60 - 10, 1 / 60);
+        return { LN, step, path, RG };
       }
 
       // сцена. o: mask(g,W,H) — нарисовать фигуру; fly — сколько секунд линии летают; form — сколько стекаются;
       // keep — пряди остаются на фигуре (не растворяются); glow — светиться и в светлой теме (фон тёмный); show() — пора проявлять настоящую картинку;
-      // over(ctx,W,H,t,ph) — дорисовать поверх; done(t) — конец; stopped()
+      // over(ctx,W,H,t,ph) — дорисовать поверх; done(t) — конец; stopped();
+      // ring() — пока true, линии кружат кольцом и сцена не переходит к фигуре (заставка ждёт данные);
+      // flat — без свечения и ореола (графики: тонкий шёлк); path(W,H) — точки линии в пикселях: головы линий бегут по ней, и пряди текут вдоль неё; trail — длина прядей
       function scene(canvas, o) {
         if (!canvas || !canvas.getContext || !init()) return null;
         const ctx = canvas.getContext('2d'), fly = o.fly == null ? 1.2 : o.fly, form = o.form || 1.6;
         const PA = new Float32Array(NP * NL * 2), e = x => x < 0 ? 0 : x > 1 ? 1 : x * x * (3 - 2 * x);
-        let W = 1, H = 1, dpr = 1, alive = false, raf = 0, t0 = 0, last = 0, asg = null, LS = null, shown = false, QS = 1, FT = [], fn = 0;
+        let W = 1, H = 1, dpr = 1, alive = false, raf = 0, t0 = 0, last = 0, asg = null, LS = null, shown = false, QS = 1, FT = [], fn = 0, hold = 0;
         function size() {
           const r = canvas.getBoundingClientRect(); W = Math.max(1, r.width); H = Math.max(1, r.height); dpr = Math.min(window.devicePixelRatio || 1, 2);
           canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1491,7 +1642,12 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         function frame(now) {
           if (!alive) return;
           if (!canvas.isConnected || !gl) { stop(); return; }
-          const t = (now - t0) / 1000, dt = Math.min(.1, Math.max(.001, (now - last) / 1000)) || 1 / 60; last = now;
+          const tr = (now - t0) / 1000, dt = Math.min(.1, Math.max(.001, (now - last) / 1000)) || 1 / 60; last = now;
+          // кольцо держит сцену перед переходом к фигуре: время сцены стоит, пока ring() true
+          const ringOn = !!(o.ring && o.ring());
+          if (ringOn && tr - hold > fly) hold = tr - fly;
+          const t = tr - hold;
+          if (LS) { const RG = LS.RG; RG.k += ((o.path || (o.ring && (ringOn || t < fly)) ? 1 : 0) - RG.k) * Math.min(1, dt * (ringOn ? 2.2 : 1.6)); if (RG.k < .002) RG.k = 0; RG.th += RG.w * dt; }
           // телефон не успевает — картинка прядей чуть мягче, но без рывков
           FT.push(dt); if (FT.length > 40) { const av = FT.reduce((a, b) => a + b) / FT.length; FT.length = 0; if (++fn > 1 && av > 1 / 40 && QS > .6) QS *= .85; }
           const ph = phase(t);
@@ -1509,10 +1665,10 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
             gl.bindBuffer(gl.ARRAY_BUFFER, BUF.t); gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 0, 0);
             gl.bindBuffer(gl.ARRAY_BUFFER, BUF.l); gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
             const ns = Math.max(1, Math.min(6, Math.round(dt * 60)));
-            for (let k = 0; k < NL; k++) { for (let i = 0; i < ns; i++) LS.step(k, t - dt + (i + 1) * dt / ns, dt / ns); LS.path(k, .62 + .22 * Math.sin(t * (.21 + k * .05) + LS.LN[k].f), PA); }
+            for (let k = 0; k < NL; k++) { for (let i = 0; i < ns; i++) LS.step(k, t - dt + (i + 1) * dt / ns, dt / ns); LS.path(k, LS.LN[k].pp ? LS.LN[k].pp.len : LS.RG.P ? LS.RG.len : .62 + .22 * Math.sin(t * (.21 + k * .05) + LS.LN[k].f), PA); }
             gl.uniform2f(P.u.R, w, h); gl.uniform1f(P.u.T, t); gl.uniform1f(P.u.M, asg ? ph.M : 0); gl.uniform1f(P.u.TX, asg ? ph.TX : ph.M);
             gl.uniform1f(P.u.KP, o.keep ? 1 : 0); gl.uniform1f(P.u.SC, Math.min(1, W / H * 1.25) * 1.3 * (o.scale || 1));
-            gl.uniform4fv(P.u['PA[0]'], PA); gl.uniform3fv(P.u['CC[0]'], PAL.flat()); gl.uniform3fv(P.u.HI, HI);
+            gl.uniform4fv(P.u['PA[0]'], PA); gl.uniform3fv(P.u['CC[0]'], PAL.flat()); gl.uniform3fv(P.u.HI, HI); gl.uniform1f(P.u.GW, o.flat ? 0 : 1);
             gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, BUF.i); gl.drawElements(gl.TRIANGLES, BUF.n, gl.UNSIGNED_SHORT, 0);
             gl.disable(gl.BLEND); gl.disableVertexAttribArray(1);
@@ -1520,12 +1676,12 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
             gl.useProgram(PR.F.p); gl.bindFramebuffer(gl.FRAMEBUFFER, RT.b.f);
             gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, RT.a.t); gl.uniform1i(PR.F.u.PV, 1);
             gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, RT.c.t); gl.uniform1i(PR.F.u.CU, 2);
-            gl.uniform2f(PR.F.u.R, w, h); gl.uniform1f(PR.F.u.DK, Math.pow(.88, dt * 60));
+            gl.uniform2f(PR.F.u.R, w, h); gl.uniform1f(PR.F.u.DK, Math.pow(o.flat ? .6 : .88, dt * 60));
             gl.drawArrays(gl.TRIANGLES, 0, 3);
             gl.useProgram(PR.S.p); gl.bindFramebuffer(gl.FRAMEBUFFER, null);
             gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
             gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, RT.b.t); gl.uniform1i(PR.S.u.FB, 1);
-            gl.uniform2f(PR.S.u.R, w, h); gl.uniform1f(PR.S.u.LT, o.glow || PT.isDark() ? 0 : 1); gl.uniform1f(PR.S.u.AL, ph.A);
+            gl.uniform2f(PR.S.u.R, w, h); gl.uniform1f(PR.S.u.LT, o.glow || PT.isDark() ? 0 : 1); gl.uniform1f(PR.S.u.AL, ph.A); gl.uniform1f(PR.S.u.GW, o.flat ? 0 : 1);
             gl.drawArrays(gl.TRIANGLES, 0, 3);
             gl.activeTexture(gl.TEXTURE0);
             const sw = RT.a; RT.a = RT.b; RT.b = sw;
@@ -1535,22 +1691,52 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           if (o.done ? o.done(t) : !o.keep && t > fly + form * 1.25 + .9) { stop(); return; }
           raf = requestAnimationFrame(frame);
         }
+        // точки в пикселях холста → путь линий (единица — высота, центр в середине, y вверх): точки, нормали, длина
+        function mkPath(pts) {
+          if (!pts || pts.length < 2) return null;
+          const P = Float32Array.from(pts.flatMap(p => [(p[0] - W / 2) / H, (H / 2 - p[1]) / H])), n = P.length / 2, N = new Float32Array(n * 2); let len = 0;
+          for (let i = 0; i < n; i++) {
+            const a = Math.max(0, i - 1), b = Math.min(n - 1, i + 1), dx = P[b * 2] - P[a * 2], dy = P[b * 2 + 1] - P[a * 2 + 1], l = Math.hypot(dx, dy) || 1;
+            N[i * 2] = -dy / l; N[i * 2 + 1] = dx / l;
+            if (i) len += Math.hypot(P[i * 2] - P[i * 2 - 2], P[i * 2 + 1] - P[i * 2 - 1]);
+          }
+          return { P, N, len: Math.max(len, 1e-3) };
+        }
         function start() {
           stop(); if (cur && cur !== api && cur.alive) cur.stop(); cur = api; size();
           try { asg = o.mask ? contours(o.mask, W, H) : null; } catch (err) { asg = null; }
-          LS = lines(W, H); shown = false; QS = 1; FT = []; fn = 0;
+          LS = lines(W, H);
+          // кольцо уже собрано к первому кадру: линии заранее прокручены по кругу (раньше их стягивало издалека, и след ломался)
+          if (o.ring) {
+            const RG = LS.RG; RG.k = 1;
+            // голова сразу на своём месте на круге (длинный шаг), след стирается — без хорд поперёк кольца
+            for (let k = 0; k < NL; k++) { LS.step(k, 0, .2); const l = LS.LN[k]; l.hs.length = 0; l.hs.push(l.x, l.y); }
+            for (let i = 1; i <= 300; i++) { RG.th += RG.w / 60; for (let k = 0; k < NL; k++) LS.step(k, i / 60, 1 / 60); }
+          }
+          // путь в пикселях холста → координаты линий (единица — высота, центр в середине, y вверх)
+          if (o.path) {
+            const q = mkPath(o.path(W, H)); LS.RG.P = q ? q.P : null;
+            // график сразу в своей форме: пряди заранее разложены по линии, ничего не слетается
+            if (q) {
+              LS.RG.N = q.N; LS.RG.len = q.len; LS.RG.k = 1;
+              for (let k = 0; k < NL; k++) LS.step(k, 0, 1 / 60);
+            }
+          }
+          shown = false; QS = 1; FT = []; fn = 0;
           // след прошлой сцены не нужен
           if (RT) [RT.a, RT.b].forEach(r => { gl.bindFramebuffer(gl.FRAMEBUFFER, r.f); gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT); });
-          t0 = last = performance.now(); alive = true; raf = requestAnimationFrame(frame);
+          hold = 0; t0 = last = performance.now(); alive = true; raf = requestAnimationFrame(frame);
         }
         function stop() {
           const was = alive; alive = false; cancelAnimationFrame(raf);
           if (was) { ctx.clearRect(0, 0, W, H); if (o.stopped) o.stopped(); }
         }
-        const api = { start, stop, time: () => (performance.now() - t0) / 1000, get alive() { return alive; } };
+        // line(k, точки) — своя траектория у линии k (null — вернуть на общий путь)
+        const line = (k, pts) => { if (LS && LS.LN[k]) LS.LN[k].pp = mkPath(pts); };
+        const api = { start, stop, line, time: () => (performance.now() - t0) / 1000 - hold, get alive() { return alive; } };
         return api;
       }
-      return { scene, PAL, ink, css };
+      return { scene, PAL, ink, css, busy: me => !!(cur && cur.alive && cur !== me) };
     })();
 
     // Фраза на заставке: каждый раз новая, подряд не повторяется
@@ -1580,7 +1766,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
 
     // Заставка из частиц: фраза дня собирается из потока, а при входе в приложение разлетается.
     // Каждый раз другое появление и уход, подряд не повторяются. Если что-то не так — остаётся прежняя заставка.
-    const SP = { s: null, exitAt: null, inK: 'dust', outK: 'blast', lay: null, sl: false, ready: 0 };
+    const SP = { s: null, exitAt: null, inK: 'dust', outK: 'blast', lay: null, sl: false, ready: 0, left: null, loaded: false };
     // насколько фраза уже «чёткая»: точки встают ровно в буквы к 1,25 с, затем за 0,55 с плавно проявляется текст;
     // на выходе за четверть секунды снова уходит в точки
     const spCrisp = t => {
@@ -1612,11 +1798,18 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const FLY = 1.4, FORM = 1.6;
       SP.ready = FLY + FORM + .9;   // фраза чёткая и немного стоит, чтобы её успели прочитать
       const s = SL.scene(cv, {
-        fly: FLY, form: FORM, glow: true,
+        fly: FLY, form: FORM,
+        // пока данные грузятся, пряди кружат кольцом в центре (вместо загрузки); пришли — кольцо раскручивается в фразу
+        ring: () => !SP.loaded,
         mask: (g, W, H) => { L = layout(g, W, H); text(g, W, '#000'); },
         over: (ctx, W, H, t, ph) => {
           if (!L) return;
-          const x = SP.exitAt == null ? -1 : t - SP.exitAt, D = x < 0 ? 0 : e(x), out = x < 0 ? 0 : e((x - 1.05) / .5);
+          const x = SP.exitAt == null ? -1 : t - SP.exitAt, D = x < 0 ? 0 : e(x);
+          // фон разлился до краёв — только теперь заставка становится прозрачной (в этом же кадре, а не по таймеру:
+          // пока телефон занят отрисовкой приложения, таймер опаздывает, и под тающим фоном мелькала тёмная заставка)
+          if (D >= 1 && SP.left == null) { SP.left = t; sp.classList.add('leaving'); }
+          const out = SP.left == null ? 0 : e((t - SP.left - .05) / .35);
+          if (out >= 1 && !sp.classList.contains('gone')) sp.classList.add('gone');
           if (D > 0) {
             // «рассвет»: фон приложения расходится кругом от фразы до краёв, потом тает, и видно приложение
             const R = Math.max(W, H), r = D * 1.3 * R, f = (.08 + .14 * (1 - D)) * R, c = PT.isDark() ? '23,33,43' : '244,241,234';
@@ -1624,14 +1817,16 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
             gr.addColorStop(0, `rgba(${c},${1 - out})`); gr.addColorStop(1, `rgba(${c},0)`);
             ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
           }
-          const k = ph.TX * (1 - out), TD = x < 0 ? 0 : e((x - .05) / .45);
+          // фраза тает, пока фон ещё разливается, — к открытию приложения её уже нет и она не висит поверх
+          const k = ph.TX * (1 - (x < 0 ? 0 : e((x - .55) / .4))) * (1 - out);
           if (k < .01) return;
-          ctx.globalAlpha = k; text(ctx, W, grad(ctx, W, bright));
-          // на песке буквы темнеют до лайма и бирюзы, чтобы читались
-          if (!PT.isDark() && TD > 0) { ctx.globalAlpha = k * TD; text(ctx, W, grad(ctx, W, day)); }
+          // на песке буквы сразу глубокие лайм и бирюза, чтобы читались
+          ctx.globalAlpha = k; text(ctx, W, grad(ctx, W, PT.isDark() ? bright : day));
           ctx.globalAlpha = 1;
         },
-        done: t => SP.exitAt != null && t - SP.exitAt > 1.6
+        done: t => SP.left != null && t - SP.left > .75,
+        // сцену остановили раньше времени — заставку всё равно убираем, без тёмного экрана
+        stopped: () => { if (SP.exitAt != null) sp.classList.add('leaving', 'gone'); }
       });
       if (!s) return false;
       SP.s = s; SP.sl = true; SP.exitAt = null;
@@ -1703,15 +1898,16 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     function hideSplash(then) {
       const sp = $('splash');
       if (sp.classList.contains('gone')) { if (then) then(); return; }
+      SP.loaded = true;
       if (SP.s && SP.s.alive && SP.sl) {
         // пряди успевают стать чёткой фразой, потом от неё разливается фон приложения, и заставка уходит
         const wait = Math.max(0, SP.ready - SP.s.time()) * 1000;
         setTimeout(() => {
-          SP.exitAt = SP.s.time();
+          SP.exitAt = SP.s.time(); SP.left = null;
           if (then) then();
           sp.classList.add('sl-out');
-          setTimeout(() => sp.classList.add('leaving'), 1000);
-          setTimeout(() => sp.classList.add('gone'), 1700);
+          // запасной выход, если кадры совсем встали
+          setTimeout(() => sp.classList.add('leaving', 'gone'), 6000);
         }, wait);
         return;
       }
@@ -2573,7 +2769,125 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       $('achScreen').classList.add('open');
       navPush(closeAchScreen);
       tiltStart();
-      achParticles();
+      const sc = $('achScreen');
+      if (calm()) return;
+      // открытие витрины: шёлковая нить бьёт по медалям, и они переворачиваются из серых в цветные (Вадим, 19.10)
+      if ($('achShots')) $('achShots').innerHTML = '';
+      sc.querySelectorAll('.m-tile').forEach(t => t.classList.remove('dim', 'lit'));
+      sc.classList.remove('enter'); void sc.offsetWidth; sc.classList.add('enter');
+      clearTimeout(sc.$en); sc.$en = setTimeout(() => sc.classList.remove('enter'), 600);
+      achShots(sc);
+    }
+    // полученные медали, которые видно на экране, сначала серые: с боков экрана в каждую выстреливает шёлковая нить,
+    // и медаль переворачивается в цвет. Пролистал — нити бьют по новым медалям (Вадим, 19.10)
+    const ACH = { io: null, q: [], t: 0 };
+    function achShots(sc) {
+      if (ACH.io) ACH.io.disconnect();
+      ACH.q = []; clearTimeout(ACH.t);
+      const tiles = [...sc.querySelectorAll('.m-tile:not(.locked)')];
+      tiles.forEach(t => t.classList.add('dim'));
+      if (!('IntersectionObserver' in window)) return tiles.forEach(t => t.classList.replace('dim', 'lit'));
+      // экран ещё выезжает — стреляем, когда он встал
+      ACH.t = setTimeout(() => {
+        ACH.io = new IntersectionObserver(es => es.forEach(e => {
+          if (!e.isIntersecting || !e.target.classList.contains('dim') || e.target.$q) return;
+          e.target.$q = 1; ACH.q.push(e.target); achFire();
+        }), { root: sc, threshold: .6 });
+        tiles.forEach(t => { t.$q = 0; ACH.io.observe(t); });
+      }, 380);
+    }
+    function achFire() {
+      if (ACH.busy || !ACH.q.length) return;
+      ACH.busy = true;
+      const t = ACH.q.shift(), sc = $('achScreen');
+      setTimeout(() => { ACH.busy = false; achFire(); }, 150);
+      if (!sc.classList.contains('open')) return;
+      const W = innerWidth, H = innerHeight;
+      // цель — центр медали в каждом кадре: листаешь, пока нить летит, — она догоняет медаль, а не бьёт в старое место
+      const mw = t.querySelector('.mw'), aim = () => { const q = mw.getBoundingClientRect(); return [q.left + q.width / 2, q.top + q.height / 2]; };
+      // холст нитей — поверх экрана медалей, но в body: внутри сдвинутого экрана fixed уезжал бы при прокрутке
+      let sv = $('achShots');
+      if (!sv) { document.body.insertAdjacentHTML('beforeend', '<svg id="achShots" aria-hidden="true"></svg>'); sv = $('achShots'); }
+      sv.setAttribute('viewBox', `0 0 ${W} ${H}`);
+      // попала — медаль переворачивается в цвет
+      const hit = () => { t.classList.replace('dim', 'lit'); safeHaptic('soft'); };
+      if (!slShot(aim, hit)) silkShot(sv, [0, 0, W, H], aim, 1, hit);
+    }
+    // шёлковая нить выстреливает дугой в цель aim() → [x, y] (цель может двигаться) из случайного места видимой области v = [x, y, w, h]:
+    // с боков на разной высоте, снизу, из углов или из центра (не из самой цели). k — масштаб (единиц на пиксель)
+    // откуда летит нить: с боков на разной высоте, снизу, из углов или из центра видимой области (не из самой цели)
+    function shotFrom([X, Y, W, H], tx, ty, k) {
+      const rnd = Math.random, from = [[X - 6 * k, Y + H * (.3 + rnd() * .4)], [X + W + 6 * k, Y + H * (.3 + rnd() * .4)], [X + W * (.3 + rnd() * .4), Y + H + 6 * k],
+        [X - 6 * k, Y + H + 6 * k], [X + W + 6 * k, Y + H + 6 * k], [X - 6 * k, Y + H * .12], [X + W + 6 * k, Y + H * .12], [X + W / 2, Y + H / 2]]
+        .filter(([x, y]) => Math.hypot(x - tx, y - ty) > 140 * k);
+      return from[(rnd() * from.length) | 0] || [X - 6 * k, Y + H / 2];
+    }
+    // Выстрел настоящими прядями заставки (WebGL): одна-две линии заставки летят дугой в цель aim() (пиксели экрана),
+    // долетели — hit(), и хвост втягивается в цель. Линий 9 на всё: свободных нет или нет WebGL — false, тогда стреляет SVG-шёлк
+    const SHOT = { s: null, cv: null, used: new Set(), idle: 0 };
+    function shotScene() {
+      if (calm() || typeof SL === 'undefined' || SL.busy(SHOT.s)) return null;
+      if (!SHOT.cv) { SHOT.cv = document.createElement('canvas'); SHOT.cv.id = 'shotSl'; SHOT.cv.setAttribute('aria-hidden', 'true'); document.body.appendChild(SHOT.cv); }
+      // все линии ждут за краем экрана, пока их не позовут
+      if (!SHOT.s) SHOT.s = SL.scene(SHOT.cv, { fly: 1e5, keep: true, scale: .55, path: () => [[-4000, -4000], [-3990, -4000]],
+        done: () => !SHOT.used.size && SHOT.idle && performance.now() - SHOT.idle > 1600, stopped: () => SHOT.used.clear() });
+      if (!SHOT.s) return null;
+      if (!SHOT.s.alive) { SHOT.idle = 0; SHOT.s.start(); }
+      return SHOT.s;
+    }
+    function slShot(aim, hit) {
+      const s = shotScene(); if (!s) return false;
+      const free = [...Array(9).keys()].filter(k => !SHOT.used.has(k)).sort(() => Math.random() - .5);
+      if (!free.length) return false;
+      const ks = free.slice(0, free.length >= 4 ? 2 : 1);
+      ks.forEach(k => SHOT.used.add(k)); SHOT.idle = 0;
+      let [tx, ty] = aim(), hitDone = false;
+      const [sx, sy] = shotFrom([0, 0, innerWidth, innerHeight], tx, ty, 1), b0 = (Math.random() < .5 ? -1 : 1) * (50 + Math.random() * 70);
+      const arc = (b, u0, u1) => {
+        const dx = tx - sx, dy = ty - sy, dl = Math.hypot(dx, dy) || 1, cx = (sx + tx) / 2 - dy / dl * b, cy = (sy + ty) / 2 + dx / dl * b;
+        return [...Array(24)].map((_, i) => { const u = u0 + (u1 - u0) * i / 23, w = 1 - u; return [w * w * sx + 2 * w * u * cx + u * u * tx, w * w * sy + 2 * w * u * cy + u * u * ty]; });
+      };
+      const D = 420, RT = 300, t0 = performance.now(), free_ = () => { ks.forEach(k => { s.line(k, null); SHOT.used.delete(k); }); if (!SHOT.used.size) SHOT.idle = performance.now(); };
+      const st = now => {
+        if (!s.alive) { if (!hitDone) hit(); return; }
+        [tx, ty] = aim();
+        const e = now - t0;
+        if (e < D) { const u = 1 - Math.pow(1 - e / D, 2); ks.forEach((k, j) => s.line(k, arc(b0 * (1 - .3 * j), 0, Math.max(u, .02)))); }
+        else {
+          if (!hitDone) { hitDone = true; hit(); }
+          // хвост втягивается в цель
+          const r = Math.min(1, (e - D) / RT);
+          if (r >= 1) return free_();
+          ks.forEach((k, j) => s.line(k, arc(b0 * (1 - .3 * j), r * .97, 1)));
+        }
+        requestAnimationFrame(st);
+      };
+      requestAnimationFrame(st);
+      return true;
+    }
+    function silkShot(sv, v, aim, k, hit) {
+      const rnd = Math.random;
+      let [tx, ty] = aim();
+      const [sx, sy] = shotFrom(v, tx, ty, k);
+      const bend = (rnd() < .5 ? -1 : 1) * (50 + rnd() * 70) * k, dx = tx - sx, dy = ty - sy, dl = Math.hypot(dx, dy) || 1;
+      // изгиб — сбоку от прямой, на том же месте относительно цели, пока она едет
+      const ox = -dy / dl * bend, oy = dx / dl * bend;
+      const arc = () => { const cx = (sx + tx) / 2 + ox, cy = (sy + ty) / 2 + oy; return [...Array(25)].map((_, i) => { const u = i / 24, w = 1 - u; return [w * w * sx + 2 * w * u * cx + u * u * tx, w * w * sy + 2 * w * u * cy + u * u * ty]; }); };
+      // пучок: много тонких прядей разной яркости и мягкий шёлковый отлив под ними
+      sv.insertAdjacentHTML('beforeend', silkRaw(arc(), { n: 14, a: 1.25 * k, w: 1.05 * k, sheen: 9 * k }));
+      const g = sv.lastElementChild, t0 = performance.now(), D = 340;
+      g.__u = 0; silkStart(g);
+      const st = now => {
+        if (!g.isConnected) return;
+        const q = Math.min(1, (now - t0) / D); g.__u = 1 - Math.pow(1 - q, 2);
+        const [nx, ny] = aim();
+        if (Math.abs(nx - tx) + Math.abs(ny - ty) > .5) { tx = nx; ty = ny; silkGeo(g, arc()); }
+        if (q < 1) return requestAnimationFrame(st);
+        if (hit) hit();
+        g.style.transition = 'opacity .45s ease'; g.style.opacity = 0;
+        setTimeout(() => g.remove(), 500);
+      };
+      requestAnimationFrame(st);
     }
     function buildAchScreen(u) {
       achBuiltFor = u;
@@ -2581,7 +2895,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const earnedN = cat.filter(m => m.status === 'earned').length;
       $('achScreenCount').textContent = `${earnedN} из ${cat.length}`;
       const box = $('achSections');
-      box.innerHTML = '';
+      box.innerHTML = ''; box.$n = 0;
       // старшие ступени из «Главных» показываем в конце своей серии: 7 → 30 → 100 → 365 дней
       const placed = (key) => {
         const items = cat.filter(m => m.section === key && !MEDAL_SERIES_TAIL[m.key]);
@@ -2600,11 +2914,12 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         const got = items.filter(m => m.status === 'earned').length;
         const sec = document.createElement('section');
         sec.className = 'm-sec';
-        sec.innerHTML = `<h3>${name} <small>${got} из ${items.length}</small></h3><div class="m-grid"></div>`;
+        sec.innerHTML = `<h3 style="--i:${Math.min(box.$n || 0, 24)}">${name} <small>${got} из ${items.length}</small></h3><div class="m-grid"></div>`;
         const grid = sec.querySelector('.m-grid');
         items.forEach(m => {
           const b = document.createElement('button');
           b.className = 'm-tile' + (m.status === 'earned' ? '' : ' locked');
+          box.$n = (box.$n || 0) + 1; b.style.setProperty('--i', Math.min(box.$n, 24));
           let sub;
           if (m.status === 'earned') sub = `<small>${dayMonth(m.date)}</small>`;
           else if (m.status === 'next') sub = `<span class="mini"><i style="width:${Math.round(m.progress * 100)}%"></i></span><small>${m.progressText}</small>`;
@@ -2632,70 +2947,9 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         });
       });
     }
-    // Открытие витрины частицами, как гора: медали, заголовки и подписи собираются из точек снизу вверх,
-    // потом проявляется настоящая витрина. Нажимать можно сразу; если начать листать — точки сразу уступают место.
-    const ACP = { s: null };
-    function achParticles() {
-      const sc = $('achScreen'), inner = sc.querySelector('.screen-inner');
-      if (ACP.s) ACP.s.stop();
-      if (PT.reduce || calm() || !inner) return;
-      let cv = sc.querySelector('.ach-pt');
-      if (!cv) {
-        cv = document.createElement('canvas'); cv.className = 'ach-pt'; cv.setAttribute('aria-hidden', 'true'); sc.appendChild(cv);
-        sc.addEventListener('scroll', () => { if (ACP.s && ACP.s.alive) ACP.s.stop(); }, { passive: true });
-      }
-      const show = () => sc.classList.remove('pt-text');
-      sc.classList.add('pt-text');
-      // точки берём, когда экран доехал до места: пока он выезжает, Safari отдаёт места слов без сдвига экрана,
-      // и надписи из точек уезжали влево за край
-      let started = false;
-      const begin = () => { if (started) return; started = true; sc.removeEventListener('transitionend', onEnd); requestAnimationFrame(run); };
-      const onEnd = e => { if (e.target === sc) begin(); };
-      sc.addEventListener('transitionend', onEnd); setTimeout(begin, 380);
-      const run = () => {
-        try {
-          const cr = cv.getBoundingClientRect();
-          if (!cr.width || !sc.classList.contains('open')) return show();
-          let shown = false;
-          const shape = (g, part) => {
-            g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#000';
-            if (part === 'text') return ptWords(g, inner, cr);
-            // медали — их собственные силуэты (картинка с прозрачным фоном), живые SVG — кругом; полоски прогресса
-            inner.querySelectorAll('.mw > img, .mw > svg, .mini').forEach(el => {
-              const r = el.getBoundingClientRect();
-              if (r.bottom < cr.top || r.top > cr.bottom || !r.width) return;
-              const x = r.left - cr.left, y = r.top - cr.top;
-              if (el.tagName === 'IMG' && el.complete && el.naturalWidth) g.drawImage(el, x, y, r.width, r.height);
-              else if (el.classList.contains('mini')) { g.beginPath(); g.rect(x, y, r.width, Math.max(3, r.height)); g.fill(); }
-              else { g.beginPath(); g.arc(x + r.width / 2, y + r.height / 2, r.width * .44, 0, 7); g.fill(); }
-            });
-          };
-          // пряди обводят медали и надписи витрины, потом проявляется настоящая витрина; нет WebGL — частицы
-          ACP.s = SL.scene(cv, { fly: .5, form: 1.2, mask: g => { shape(g, 'pics'); shape(g, 'text'); }, show, stopped: show }) || PT.scene(cv, {
-            n: 7000, nWide: 3, lagK: 1.4, snap: true,
-            shape: (W, H, N) => {
-              const nt = Math.round(N * .35), a = PT.sample(W, H, g => shape(g, 'pics'), N - nt, false, .55), b = PT.sample(W, H, g => shape(g, 'text'), nt, false, .55);
-              const parts = [a, b].filter(r => r.pts);
-              if (!parts.length) return { pts: null };
-              const pts = new Float32Array(parts.reduce((s, r) => s + r.pts.length, 0)); let o = 0;
-              parts.forEach(r => { pts.set(r.pts, o); o += r.pts.length; });
-              return { pts };
-            },
-            lag: (x, y, W, H, r2) => PT.clamp(y / H * .85 + r2 * .15),          // как гора: снизу вверх
-            spawn: (p, W, H) => PT.ARRIVE.rise(p, W, H),
-            gather: t => PT.clamp((t - .1) / 1),
-            exit: (i, t, x, y, W, H, r1, r2) => t < 1.25 ? null : [(r1 - .5) * .05, -.06 - r2 * .1, PT.clamp(1 - (t - 1.25) / .45)],
-            over: (ctx, W, H, t) => { if (!shown && t >= 1.15) { shown = true; show(); } },
-            done: t => t > 1.75,
-            stopped: show
-          });
-          ACP.s.start();                       // start() сначала останавливает прежнюю сцену и этим показывает витрину —
-          if (ACP.s.alive) sc.classList.add('pt-text'); else show();   // прячем её снова
-        } catch (e) { show(); }
-      };
-    }
     function closeAchScreen() {
-      if (ACP.s) ACP.s.stop();
+      if (ACH.io) ACH.io.disconnect(); ACH.q = []; clearTimeout(ACH.t);
+      if ($('achShots')) $('achShots').innerHTML = '';
       $('achScreen').classList.remove('open');
       navForget(closeAchScreen);
       tiltStop();
@@ -2747,6 +3001,11 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       $('storyRingTxt').textContent = ST_MONTHS[mo.m].slice(0, 3);
       let seen = false; try { seen = localStorage.getItem(stSeenKey(u)) === '1'; } catch (e) {}
       ring.classList.toggle('seen', seen);
+      // непросмотренные итоги — кольцо из шёлковых прядей, как на заставке, только тонкое
+      if (!seen && !calm() && !ring.querySelector('.ring-silk')) {
+        ring.insertAdjacentHTML('beforeend', `<svg class="ring-silk" viewBox="0 0 38 38" aria-hidden="true">${silkRaw(silkCircle(19, 19, 17.2), { n: 7, a: .32, loop: true })}</svg>`);
+        silkStart(ring.querySelector('.ring-silk')); ring.classList.add('silky');
+      }
       // данные сторис (тренировки, км, тексты тренера) грузим заранее в фоне, чтобы к нажатию всё было готово
       clearTimeout(ST.preT);
       ST.preT = setTimeout(() => stPrefetch(u), 1500);
@@ -2835,22 +3094,123 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       }
       return d;
     }
-    function stChart(w) {
+    // та же кривая, но густыми точками — по ней идут шёлковые пряди
+    function smoothPts(pts, k) {
+      const n = pts.length;
+      if (n < 2) return pts.slice();
+      const dx = [], m = [], tg = [], out = [pts[0]];
+      for (let i = 0; i < n - 1; i++) { dx[i] = pts[i + 1][0] - pts[i][0] || 1e-6; m[i] = (pts[i + 1][1] - pts[i][1]) / dx[i]; }
+      tg[0] = m[0]; tg[n - 1] = m[n - 2];
+      for (let i = 1; i < n - 1; i++) tg[i] = m[i - 1] * m[i] <= 0 ? 0 : 3 * (dx[i - 1] + dx[i]) / ((2 * dx[i] + dx[i - 1]) / m[i - 1] + (dx[i] + 2 * dx[i - 1]) / m[i]);
+      for (let i = 0; i < n - 1; i++) {
+        const h = dx[i] / 3, a = pts[i], b = pts[i + 1], c1 = [a[0] + h, a[1] + tg[i] * h], c2 = [b[0] - h, b[1] - tg[i + 1] * h];
+        for (let j = 1; j <= k; j++) {
+          const u = j / k, v = 1 - u;
+          out.push([v * v * v * a[0] + 3 * v * v * u * c1[0] + 3 * v * u * u * c2[0] + u * u * u * b[0], v * v * v * a[1] + 3 * v * v * u * c1[1] + 3 * v * u * u * c2[1] + u * u * u * b[1], j === k ? 1 : 0]);
+        }
+      }
+      return out;
+    }
+    // Линия графика — пучок шёлковых прядей, как на заставке: лайм, мята, бирюза и немного золота,
+    // под ними мягкое свечение. Пряди тихо колышутся, у замеров собираются туже, между ними чуть расходятся.
+    // Рисуется слева направо, когда график показан (класс go). Без анимаций (настройка телефона) — пряди стоят.
+    const SILK = { n: 15, list: new Set(), raf: 0 };
+    function silkSvg(pts, gid) {
+      const c = smoothPts(pts, 14), f = v => v.toFixed(1);
+      const data = c.map(p => f(p[0]) + ',' + f(p[1]) + (p[2] ? ',1' : '')).join(' ');
+      let h = `<g class="silk" data-c="${data}"><path class="sg" style="stroke:url(#${gid})"/>`;
+      for (let j = 0; j < SILK.n; j++) {
+        const gold = j % 5 === 2;
+        h += `<path class="sl${gold ? ' au' : ''}" style="${gold ? '' : `stroke:url(#${gid});`}stroke-width:${(.6 + (j * 7 % 5) * .17).toFixed(2)};opacity:${(.45 + (j * 3 % 6) * .09).toFixed(2)}"/>`;
+      }
+      return h + '</g>';
+    }
+    // геометрия пряди: нормаль к линии в каждой точке и «тугость» у замеров (0 у точки замера, 1 посередине между ними).
+    // c — новые точки (тропа на горе растёт, пока человечек идёт)
+    function silkGeo(g, c) {
+      if (c) g.__c = c;
+      if (!g.__c) g.__c = g.dataset.c.split(' ').map(s => s.split(',').map(Number));
+      c = g.__c; const n = c.length, knots = [0], lp = !!g.dataset.loop;
+      c.forEach((p, i) => { if (p[2]) knots.push(i); });
+      g.__nrm = c.map((p, i) => {
+        const a = c[i > 0 ? i - 1 : lp ? n - 2 : 0], b = c[i < n - 1 ? i + 1 : lp ? 1 : n - 1], dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1;
+        return [-dy / l, dx / l];
+      });
+      g.__env = c.map((p, i) => { let k = 0; while (k < knots.length - 1 && knots[k + 1] < i) k++; const a = knots[k], b = knots[k + 1] == null ? a : knots[k + 1]; return b > a ? Math.sin(Math.PI * (i - a) / (b - a)) : 0; });
+      if (!g.__ph) {
+        g.__sl = g.querySelectorAll('.sl'); g.__sg = g.querySelector('.sg');
+        // волны бегут по пряди слева направо, у каждой пряди своя скорость — пучок всё время течёт
+        const N = g.__sl.length;
+        g.__ph = [...Array(N)].map((_, j) => [j / N * 6.283 + (j * 1.7 % 1), .7 + (j * 5 % 7) * .09, -(1.5 + (j * 3 % 4) * .35), N > 1 ? (j - (N - 1) / 2) / ((N - 1) / 2) : 0]);
+        g.__a = +g.dataset.a || 1;
+      }
+    }
+    function silkStart(root) {
+      (root.classList && root.classList.contains('silk') ? [root] : root.querySelectorAll('.silk')).forEach(g => {
+        if (!g.__c) silkGeo(g);
+        g.__t0 = g.dataset.full ? -1e9 : performance.now();
+        SILK.list.add(g);
+      });
+      if (!SILK.raf) SILK.raf = requestAnimationFrame(silkTick);
+    }
+    // тонкий шёлк без свечения (нить пути к цели, кольца, тропа): n прядей, a — размах пучка, loop — замкнутое кольцо.
+    // Цвет — градиент gid или (без gid) классы .sl-a/.sl-b/.au
+    const silkCircle = (cx, cy, r, n = 48) => [...Array(n + 1)].map((_, i) => [cx + r * Math.sin(i / n * 6.2832), cy - r * Math.cos(i / n * 6.2832)]);
+    function silkRaw(pts, o = {}) {
+      const f = v => v.toFixed(1), n = o.n || 7;
+      let h = `<g class="silk thin" data-c="${pts.map(p => f(p[0]) + ',' + f(p[1])).join(' ')}"${o.a ? ` data-a="${o.a}"` : ''}${o.loop ? ' data-loop="1"' : ''}${o.full ? ' data-full="1"' : ''}${o.id ? ` id="${o.id}"` : ''}>`;
+      if (o.sheen) h += `<path class="sg sh" style="stroke-width:${o.sheen}"/>`;
+      for (let j = 0; j < n; j++) {
+        const gold = j % 4 === 2, w = ((o.w || 1) * (.55 + (j * 7 % 5) * .14)).toFixed(2), op = (.5 + (j * 3 % 6) * .09).toFixed(2);
+        h += `<path class="sl${gold ? ' au' : o.gid ? '' : j % 2 ? ' sl-b' : ' sl-a'}" style="${!gold && o.gid ? `stroke:url(#${o.gid});` : ''}stroke-width:${w};opacity:${op}"/>`;
+      }
+      return h + '</g>';
+    }
+    function silkTick(now) {
+      SILK.raf = 0;
+      const ease = x => x <= 0 ? 0 : x >= 1 ? 1 : 1 - Math.pow(1 - x, 3), f = v => v.toFixed(1);
+      SILK.list.forEach(g => {
+        if (!g.isConnected) { SILK.list.delete(g); return; }
+        const t = PT.reduce ? 9 : (now - g.__t0) / 1000, c = g.__c, n = c.length, u = g.__u != null ? g.__u : PT.reduce ? 1 : ease((t - .1) / 1.2), m = Math.max(2, Math.ceil(u * (n - 1)) + 1);
+        // свечение — по средней линии
+        if (g.__sg) {
+          let d = '';
+          for (let i = 0; i < m; i++) d += (i ? 'L' : 'M') + f(c[i][0]) + ' ' + f(c[i][1]);
+          g.__sg.setAttribute('d', d);
+        }
+        const A = g.__a, lp = g.dataset.loop, tw = 6.2832;
+        g.__sl.forEach((p, j) => {
+          const [ph, fr, sp, side] = g.__ph[j];
+          // на кольце волны укладываются целым числом, чтобы на стыке не было ступеньки
+          const F1 = lp ? Math.max(1, Math.round(fr * 9 / tw)) * tw : fr * 9, F2 = lp ? 4 * tw : 23;
+          let s = '';
+          for (let i = 0; i < m; i++) {
+            const q = i / (n - 1), e = g.__env[i], head = Math.max(0, 1 - (u * (n - 1) - i) / 6) * (u < 1 ? 1 : 0);
+            // ширина пучка: туго у замеров, шире между ними; у бегущего «носа» пряди расходятся, как на заставке
+            const o = A * (side * (1.1 + 2.6 * e) * (1 - .4 * head) + (1.8 + 2.6 * e) * Math.sin(ph + F1 * q + sp * t) + .8 * Math.sin(ph * 3 + F2 * q + sp * 1.7 * t) + head * 5 * Math.sin(ph * 2 + t * 3));
+            s += (i ? 'L' : 'M') + f(c[i][0] + g.__nrm[i][0] * o) + ' ' + f(c[i][1] + g.__nrm[i][1] * o);
+          }
+          p.setAttribute('d', s);
+        });
+        if (PT.reduce) SILK.list.delete(g);
+      });
+      if (SILK.list.size) SILK.raf = requestAnimationFrame(silkTick);
+    }
+    function stChart(w, bare) {
       if (w.ws.length < 2) return w.ws.length ? `<div class="st-chart"><svg viewBox="0 0 300 120"><circle cx="150" cy="60" r="6" fill="var(--volt)"/><text x="150" y="92" text-anchor="middle">${fmt(w.ws[0].w)} кг</text></svg></div>` : '';
       const n = w.days, ws = w.ws, lo = Math.min(...ws.map(e => e.w)), hi = Math.max(...ws.map(e => e.w)), pad = Math.max(.3, (hi - lo) * .15);
       const X = e => 16 + (e.d - w.from) / DAY_MS / Math.max(1, n - 1) * 268, Y = v => 14 + (hi + pad - v) / (hi - lo + 2 * pad) * 84;
       const pts = ws.map(e => [X(e), Y(e.w)]);
-      const labels = [...Array(n)].map((_, k) => `<text x="${(16 + k / Math.max(1, n - 1) * 268).toFixed(1)}" y="118" text-anchor="middle">${ST_DAYS[k].toLowerCase()}</text>`).join('');
+      const labels = bare ? '' : [...Array(n)].map((_, k) => `<text x="${(16 + k / Math.max(1, n - 1) * 268).toFixed(1)}" y="118" text-anchor="middle">${ST_DAYS[k].toLowerCase()}</text>`).join('');
       const lastP = pts[pts.length - 1];
       // подпись у точки — над ней; но если соседняя точка выше, линия приходит сверху, и подпись уходит под точку
       const ly = (p, nb) => nb[1] < p[1] - 2 && p[1] + 19 <= 106 ? p[1] + 19 : p[1] - 10;
       const gid = 'stG' + (++ST.gid), live = !PT.reduce, lineD = smoothD(pts);
-      return `<div class="st-chart"><svg viewBox="0 0 300 120"><defs><linearGradient id="${gid}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="300" y2="0" spreadMethod="reflect">
+      return `<div class="st-chart${bare ? ' bare' : ''}"><svg viewBox="0 0 300 120"><defs><linearGradient id="${gid}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="300" y2="0" spreadMethod="reflect">
           <stop offset="0" class="gs0"/><stop offset=".5" class="gsm"/><stop offset="1" class="gs1"/>
           ${live ? '<animateTransform attributeName="gradientTransform" type="translate" from="0 0" to="600 0" dur="5s" repeatCount="indefinite"/>' : ''}</linearGradient></defs>${labels}
-        <path class="ar" d="${lineD}L${lastP[0].toFixed(1)} 100L${pts[0][0].toFixed(1)} 100Z" style="fill:url(#${gid})"/>
-        <path class="ln" d="${lineD}" pathLength="100" style="--len:100;stroke-dasharray:100;stroke:url(#${gid})"/>
-        ${live ? `<circle class="sk" r="3.2"><animateMotion path="${lineD}" dur="3.6s" begin="indefinite" repeatCount="indefinite" keyPoints="0;1;1" keyTimes="0;.55;1" calcMode="linear"/><animate attributeName="opacity" values="0;1;1;0;0" keyTimes="0;.06;.5;.56;1" dur="3.6s" begin="indefinite" repeatCount="indefinite"/></circle>` : ''}
+        ${bare ? '' : `<path class="ar" d="${lineD}L${lastP[0].toFixed(1)} 100L${pts[0][0].toFixed(1)} 100Z" style="fill:url(#${gid})"/>`}
+        ${silkSvg(pts, gid)}
         <circle class="rp" cx="${lastP[0].toFixed(1)}" cy="${lastP[1].toFixed(1)}" r="5"/>
         <circle class="dt" cx="${lastP[0].toFixed(1)}" cy="${lastP[1].toFixed(1)}" r="5" fill="var(--volt)"/>
         <text class="wl" x="${pts[0][0].toFixed(1)}" y="${ly(pts[0], pts[1]).toFixed(1)}" text-anchor="start">${fmt(ws[0].w)}</text>
@@ -2977,7 +3337,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
             <div class="st-box"><div class="st-hero">
               <div><p class="st-k">Вес за неделю</p>${stChange(w.change, cls)}</div>
               <div class="side">${w.ws.length}/7 замеров<br>${s ? stWord(s.workouts, 'тренировка', 'тренировки', 'тренировок') : `${dots} тренировок`}${sl ? `<br>сон ${stHm(sl.avg)}` : ''}</div></div>
-              ${w.ws.length ? stChart(w) : '<p class="st-sub">На этой неделе замеров не было</p>'}</div>
+              ${w.ws.length ? stChart(w, true) : '<p class="st-sub">На этой неделе замеров не было</p>'}</div>
             ${failed ? '' : stTiles(s && s.distance, s ? s.workouts : 0, wait)}
             ${stCoach(p && p.workouts)}
             ${s && s.list && s.list.length ? `<div class="st-box"><p class="st-k">Тренировки недели</p>${s.list.map(stWoCard).join('')}</div>` : ''}
@@ -2987,6 +3347,36 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
             ${wait || p ? `<div class="st-box"><p class="st-k">Вывод тренера</p>${p ? `<p class="st-verdict">${esc(p.verdict)}</p>` : stCoach('', true)}</div>` : ''}
             ${p && p.plan && p.plan.length ? `<div class="st-box"><p class="st-k">План на новую неделю</p><div class="st-plan">${p.plan.map((t, n) => `<div><span>${n + 1}</span>${esc(t)}</div>`).join('')}</div></div>` : ''}
             <button class="st-close" onclick="stNext()">Принял, погнали</button>`;
+        }, slides: () => {
+          // неделя — сторис из экранов после обложки: на каждом одна мысль, всё по центру
+          const S = [], say = (t, g) => t ? `<p class="st-say${g ? ' g' : ''}">${esc(t)}</p>` : '';
+          const sl = s && s.sleep && s.sleep.nights >= 3 ? s.sleep : null;
+          const bs = s && s.distance && s.distance.bySport ? Object.values(s.distance.bySport) : [];
+          const km = s && s.distance && s.distance.km, mins = bs.reduce((a, x) => a + (x.min || 0), 0);
+          if (wait || (s && (s.workouts || km)))
+            S.push(`<p class="st-k">Движение за неделю</p>
+              <div class="st-huge">${wait ? '…' : km ? `${stKm(km)}<small> км</small>` : s.workouts}</div>
+              <div class="st-unit">${wait ? 'считаю тренировки' : `${stWord(s.workouts, ...ST_W)}${mins ? ' · ' + stMin(mins) : ''}`}</div>
+              ${failed ? '' : stTiles(s && s.distance, s ? s.workouts : 0, wait)}${say(p && p.workouts)}`);
+          if (s && s.list && s.list.length) S.push(`<p class="st-k">Тренировки недели</p><div class="st-wos">${s.list.map(stWoCard).join('')}</div>`);
+          S.push(`<p class="st-k">Неделя по дням</p>${stBeads(w, s)}${say(p && p.days)}`);
+          if (sl) {
+            const top = Math.max(600, ...s.days.map(d => d.sleepMin || 0)), bd = new Date(sl.best.date + 'T12:00:00');
+            const bars = s.days.map((d, k) => `<div><i class="${d.sleepMin == null ? '' : d.date === sl.best.date ? 'best' : d.sleepMin < 360 ? 'low' : ''}" style="height:${d.sleepMin == null ? 0 : Math.round(d.sleepMin / top * 100)}%"></i>${ST_DAYS[k].toLowerCase()}</div>`).join('');
+            S.push(`<p class="st-k">Сон</p><div class="st-huge">${Math.floor(sl.avg / 60)}:${String(sl.avg % 60).padStart(2, '0')}</div>
+              <div class="st-unit">в среднем · ${stWord(sl.nights, 'ночь', 'ночи', 'ночей')}</div><div class="st-sleep big">${bars}</div>
+              <p class="st-sub">Лучшая ночь ${ST_WEEKDAY_ACC[bd.getDay()]}, ${stHm(sl.best.min)}${sl.debt ? ` · недосып до 8 ч: ${stHm(sl.debt)}` : ''}</p>${say(p && p.sleep)}`);
+          }
+          if (w.medals.length) {
+            const [m0, ...more] = w.medals;
+            S.push(`<p class="st-k">${w.medals.length > 1 ? 'Медали недели' : 'Медаль недели'}</p><div class="st-medal1">${medalPic(m0)}</div>
+              <div class="st-mt">${esc(m0.title)}</div>
+              ${more.length ? `<div class="st-medals">${more.slice(0, 7).map(md => `<div class="md">${medalPic(md)}${esc(md.title)}</div>`).join('')}</div>` : ''}`);
+          }
+          S.push(`${wait || p ? `<p class="st-k">Вывод тренера</p>${p ? say(p.verdict, true) : stCoach('', true)}` : ''}
+            ${p && p.plan && p.plan.length ? `<p class="st-k" style="margin-top:12px">План на новую неделю</p><div class="st-plan">${p.plan.map((t, n) => `<div><span>${n + 1}</span>${esc(t)}</div>`).join('')}</div>` : ''}
+            <button class="st-close" onclick="stNext()">Принял, погнали</button>`);
+          return S;
         } });
       });
       V.push({ id: 'month', tab: stCap(ST_MONTHS[b.m]), html: () => {
@@ -3004,6 +3394,30 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           ${failed ? '' : stTiles(sum && sum.distance, sum ? sum.workouts : 0, wait)}
           ${rows ? `<div class="st-box"><p class="st-k">Недели</p>${rows}</div>` : ''}
           <button class="st-close" onclick="closeStory()">${b.ended ? `Вперёд, в ${ST_MONTHS[(b.m + 1) % 12]}` : 'Закрыть'}</button>`;
+      }, slides: () => {
+        // месяц — такие же листаемые экраны, как неделя: вес месяца с шёлковой линией, движение, недели, вывод
+        const S = [], say = (t, g) => t ? `<p class="st-say${g ? ' g' : ''}">${esc(t)}</p>` : '';
+        const rows = b.weeks.map((w, k) => {
+          const s = sw(w);
+          return `<button class="st-wk" onclick="stGo(${k})"><span>Неделя ${w.i + 1}<small>${stRange(w.from, w.to)}${s && s.distance.km ? ` · ${stKm(s.distance.km)} км` : ''}</small></span><b class="${cls(w.change)}">${stKg(w.change)}</b><em>›</em></button>`;
+        }).join('');
+        const mw = { days: Math.round((b.to - b.from) / DAY_MS) + 1, ws: b.weeks.flatMap(w => w.ws), from: b.from };
+        const km = sum && sum.distance && sum.distance.km, close = `<button class="st-close" onclick="closeStory()">${b.ended ? `Вперёд, в ${ST_MONTHS[(b.m + 1) % 12]}` : 'Закрыть'}</button>`;
+        S.push(`<p class="st-k">${b.ended ? 'Итоги месяца' : 'Месяц идёт'}${u.name ? ' · ' + esc(u.name) : ''}</p>
+          <div class="st-huge">${b.change == null ? '—' : `${stKg(b.change)}<small> кг</small>`}</div>
+          <div class="st-unit">${stCap(ST_MONTHS[b.m])} · ${stRange(b.from, b.to)}</div>
+          ${mw.ws.length > 1 ? stChart(mw, true).replace('class="st-chart', 'class="st-chart go') : ''}
+          <div class="st-chips">${stChip(b.weighIns, ST_Z)}${stChip(b.medals, ST_M)}${b.ended && b.path ? `<span class="st-chip"><b>${b.path[0]}% → ${b.path[1]}%</b>путь к цели</span>` : ''}</div>
+          ${say(ph && ph.cover)}`);
+        if (wait || (sum && (sum.workouts || km)))
+          S.push(`<p class="st-k">Движение за месяц</p>
+            <div class="st-huge">${wait ? '…' : km ? `${stKm(km)}<small> км</small>` : sum.workouts}</div>
+            <div class="st-unit">${wait ? 'считаю тренировки' : stWord(sum.workouts, ...ST_W)}</div>
+            ${failed ? '' : stTiles(sum && sum.distance, sum ? sum.workouts : 0, wait)}`);
+        const fin = b.ended && ph && ph.final;
+        if (rows) S.push(`<p class="st-k">Недели месяца</p><div class="st-wks">${rows}</div>${fin ? '' : close}`);
+        if (fin || !rows) S.push(`${fin ? `<p class="st-k">Вывод тренера</p>${say(ph.final, true)}` : ''}${close}`);
+        return S;
       } });
       // итог прошлого месяца — первую неделю нового месяца
       const pv = ST.prev;
@@ -3021,16 +3435,29 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       }
       return V;
     }
+    // дни недели — бусины на шёлковой нити: высота — вес, день с тренировкой — цветная бусина со значком
+    function stBeads(w, s) {
+      const days = [...Array(7)].map((_, d) => {
+        const day = new Date(w.from); day.setDate(day.getDate() + d);
+        const e = w.ws.filter(x => +x.d === +day).pop(), sd = s && s.days && s.days[d], wo = sd && sd.workouts && sd.workouts[0];
+        return { d, w: e ? e.w : null, m: wo ? (wo.sport ? stSport(wo.sport) : { c: 'var(--volt)', ic: null }) : null };
+      });
+      const ws = days.filter(x => x.w != null).map(x => x.w), lo = ws.length ? Math.min(...ws) : 0, hi = ws.length ? Math.max(...ws) : 1, pad = Math.max(.3, (hi - lo) * .2);
+      const X = d => 18 + d * 264 / 6, Y = v => v == null ? 92 : 44 + (hi + pad - v) / (hi - lo + 2 * pad) * 96;
+      const pts = days.filter(x => x.w != null).map(x => [X(x.d), Y(x.w)]);
+      const gid = 'stG' + (++ST.gid);
+      const svg = pts.length > 1 ? `<svg viewBox="0 0 300 170" preserveAspectRatio="none"><defs><linearGradient id="${gid}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="300" y2="0" spreadMethod="reflect">
+          <stop offset="0" class="gs0"/><stop offset=".5" class="gsm"/><stop offset="1" class="gs1"/>
+          ${PT.reduce ? '' : '<animateTransform attributeName="gradientTransform" type="translate" from="0 0" to="600 0" dur="5s" repeatCount="indefinite"/>'}</linearGradient></defs>${silkSvg(pts, gid)}</svg>` : '';
+      const beads = days.map(x => `<div class="bd${x.w == null ? ' off' : ''}${x.m ? ' wo' : ''}" style="left:${(X(x.d) / 3).toFixed(2)}%;top:${(Y(x.w) / 1.7).toFixed(2)}%">
+          <b>${x.w == null ? '—' : fmt(x.w)}</b><i${x.m ? ` style="background:${x.m.c}"` : ''}>${x.m && x.m.ic ? stIcon(x.m.ic, '') : ''}</i><small>${ST_DAYS[x.d].toLowerCase()}</small></div>`).join('');
+      return `<div class="st-beads st-chart go">${svg}${beads}</div>`;
+    }
     // яркая обложка: вес недели крупно, мини-график, замеры, тренировки, километры
     function stPosterHtml(v, b) {
       const w = v.week, s = ST.srv && ST.srv.weeks ? ST.srv.weeks.find(x => x.from === w.key) : null, dots = ST.srv && ST.srv.failed ? '—' : '…';
-      let spark = '';
-      if (w.ws.length > 1) {
-        const lo = Math.min(...w.ws.map(e => e.w)), hi = Math.max(...w.ws.map(e => e.w)), r = Math.max(.4, hi - lo);
-        const pts = w.ws.map(e => [8 + (e.d - w.from) / DAY_MS / 6 * 324, 10 + (hi - e.w) / r * 70]);
-        const d = smoothD(pts), lp = pts[pts.length - 1];
-        spark = `<svg class="sp" viewBox="0 0 340 90"><path d="${d}" pathLength="100" fill="none" stroke="#121315" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" style="--len:100;stroke-dasharray:100"/><circle cx="${lp[0].toFixed(1)}" cy="${lp[1].toFixed(1)}" r="8" fill="#121315"/></svg>`;
-      }
+      // график — тот же живой, что в карточке недели: рисуется, бегут цвета, по линии пробегает искра, точка дышит
+      const spark = stChart(w, true);
       const a = w.ws.length ? w.ws[0].w : null, z = w.ws.length ? w.ws[w.ws.length - 1].w : null;
       return `<div class="bar"><b id="stPosterBar"></b></div>
         <div class="st-head"><span class="t">Неделя ${w.i + 1} · ${stRange(w.from, w.to)}</span><button class="st-x" onclick="closeStory()" aria-label="Закрыть">×</button></div>
@@ -3045,112 +3472,63 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     function stPoster(v, b) {
       const el = $('stPoster');
       if (!v || !v.week) { el.className = 'st-poster off'; return; }
-      el.className = 'st-poster'; el.innerHTML = stPosterHtml(v, b); void el.offsetWidth; el.classList.add('in');
-      stPosterParticles(el);
+      el.className = 'st-poster'; el.innerHTML = stPosterHtml(v, b); stFitHuge(el); void el.offsetWidth; el.classList.add('in');
+      // цифра — чистая, без частиц и прядей (Вадим: пряди, собирающиеся в кучу, на обложке не нужны)
+      if (ST.pt) { ST.pt.stop(); ST.pt = null; }
+      stPosterChart(el);
+      // обложка стоит, пока не нажмёшь (без таймера — решение Вадима 19.10)
       ST.posterT0 = ST.posterOpen = performance.now(); ST.posterOn = true;
-      cancelAnimationFrame(ST.timer); ST.timer = requestAnimationFrame(stTick);
+      cancelAnimationFrame(ST.timer);
+    }
+    // цифра недели во всю ширину, но не шире экрана: «−10,4» уменьшается, пока не влезет
+    function stFitHuge(el) {
+      const h = el.querySelector('.huge');
+      if (!h) return;
+      h.style.fontSize = ''; h.style.whiteSpace = 'nowrap';
+      if (h.scrollWidth > h.clientWidth + 1) h.style.fontSize = (parseFloat(getComputedStyle(h).fontSize) * h.clientWidth / h.scrollWidth * .96).toFixed(1) + 'px';
+    }
+    function stPosterChart(el) {
+      const c = el.querySelector('.st-chart');
+      if (ST.pt) { ST.pt.stop(); ST.pt = null; }
+      if (!c) return;
+      c.classList.add('go');
+      silkStart(el);
+      // линия веса на обложке — тот же светящийся шёлк, что на заставке
+      const s = slLine(el, c, { trail: .2, scale: .22, done: () => el.classList.contains('off') });
+      if (s) ST.pt = s;
+    }
+    // Светящиеся пряди заставки бегут по линии графика (SVG-шёлк c.silk), как кометы. Холст — в host, под текстом.
+    // Нет WebGL или анимации выключены — остаётся SVG-шёлк
+    function slLine(host, c, o) {
+      const g = c.querySelector('.silk'), svg = c.querySelector('svg');
+      if (!g || !svg || calm()) return null;
+      const cv = document.createElement('canvas'); cv.className = 'st-pt'; cv.setAttribute('aria-hidden', 'true');
+      host.insertBefore(cv, host.firstChild);
+      const s = SL.scene(cv, {
+        fly: 1e5, keep: true, flat: true, trail: o.trail, scale: o.scale,
+        path: () => {
+          const M = svg.getScreenCTM(), cr = cv.getBoundingClientRect(), P = svg.createSVGPoint();
+          return g.dataset.c.split(' ').map(q => { const [x, y] = q.split(',').map(Number); P.x = x; P.y = y; const r = P.matrixTransform(M); return [r.x - cr.left, r.y - cr.top]; });
+        },
+        done: () => !cv.isConnected || (o.done && o.done())
+      });
+      if (!s) { cv.remove(); return null; }
+      host.classList.add('sl'); s.start();
+      return s;
     }
     function stPosterHide() {
       if (!ST.posterOn) return;
       ST.posterOn = false; cancelAnimationFrame(ST.timer);
       $('stPoster').classList.add('gone');
       stChartGo();
+      if (ST.sl) setTimeout(stDeckSilk, 650);
       const pt = ST.pt; setTimeout(() => { if (pt && ST.pt === pt && !ST.posterOn) pt.stop(); }, 600);
-    }
-    // Цифра недели и линия веса на обложке собираются из частиц. Сам текст остаётся в вёрстке (невидимым),
-    // точки берутся ровно с его места. Без анимаций (настройка телефона) — обычная обложка.
-    function stPosterParticles(el) {
-      if (ST.pt) { ST.pt.stop(); ST.pt = null; }
-      const huge = el.querySelector('.huge');
-      if (!huge || PT.reduce) return;
-      try {
-        const cv = document.createElement('canvas'); cv.className = 'st-pt'; cv.setAttribute('aria-hidden', 'true');
-        el.insertBefore(cv, el.firstChild);
-        const svg = el.querySelector('svg.sp'), path = svg && svg.querySelector('path'), dot = svg && svg.querySelector('circle');
-        let nt = 0, end = null, lut = null, lu, ldn, lsp, base = 0;
-        // пряди ложатся на цифру недели и линию веса и так и остаются на них — ползут вдоль контуров и переливаются
-        const sl = SL.scene(cv, {
-          fly: .5, form: 1.5, keep: true,
-          mask: g => {
-            const cs = getComputedStyle(huge), txt = huge.textContent;
-            g.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`; g.textAlign = 'left'; g.textBaseline = 'alphabetic';
-            if ('letterSpacing' in g) g.letterSpacing = cs.letterSpacing;
-            const fz = parseFloat(cs.fontSize), m = g.measureText(txt), asc = m.fontBoundingBoxAscent || fz * .8, desc = m.fontBoundingBoxDescent || fz * .2;
-            const lh = parseFloat(cs.lineHeight) || fz;
-            g.fillText(txt, huge.offsetLeft, huge.offsetTop + (lh - asc - desc) / 2 + asc);
-            if (!path) return;
-            const L = path.getTotalLength(), M = path.getScreenCTM(), pr = el.getBoundingClientRect(), P = svg.createSVGPoint();
-            g.beginPath();
-            for (let k = 0; k <= 160; k++) { const q = path.getPointAtLength(k / 160 * L); P.x = q.x; P.y = q.y; const r = P.matrixTransform(M); k ? g.lineTo(r.x - pr.left, r.y - pr.top) : g.moveTo(r.x - pr.left, r.y - pr.top); }
-            g.lineWidth = 3; g.lineCap = g.lineJoin = 'round'; g.strokeStyle = '#000'; g.stroke();
-            if (dot) { P.x = +dot.getAttribute('cx'); P.y = +dot.getAttribute('cy'); const r = P.matrixTransform(dot.getScreenCTM()); end = [r.x - pr.left, r.y - pr.top]; }
-          },
-          over: (ctx, W, H, t, ph) => {
-            if (!end || ph.M < .85) return;
-            const r = W * .011 * (1 + .25 * Math.sin(t * 3)), ramp = PT.ramp();
-            ctx.globalAlpha = PT.clamp((ph.M - .85) / .15); ctx.fillStyle = ramp[ramp.length - 1];
-            ctx.beginPath(); ctx.arc(end[0], end[1], r, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1;
-          },
-          done: () => !cv.isConnected || el.classList.contains('off')
-        });
-        const s = sl || PT.scene(cv, {
-          n: 5200, wrap: true, shimmer: .35,
-          shape: (W, H, N) => {
-            nt = Math.round(N * .74);
-            const nLine = path ? Math.round(nt * .26) : 0, nNum = nt - nLine, cs = getComputedStyle(huge), txt = huge.textContent;
-            const num = PT.sample(W, H, g => {
-              g.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`; g.fillStyle = '#000'; g.textAlign = 'left'; g.textBaseline = 'alphabetic';
-              if ('letterSpacing' in g) g.letterSpacing = cs.letterSpacing;
-              const fz = parseFloat(cs.fontSize), m = g.measureText(txt), asc = m.fontBoundingBoxAscent || fz * .8, desc = m.fontBoundingBoxDescent || fz * .2;
-              const lh = parseFloat(cs.lineHeight) || fz;
-              g.fillText(txt, huge.offsetLeft, huge.offsetTop + (lh - asc - desc) / 2 + asc);
-            }, nNum);
-            if (!num.pts) { nt = 0; return { pts: null }; }
-            const out = new Float32Array(nt * 2); out.set(num.pts);
-            if (nLine) {
-              const L = path.getTotalLength(), M = path.getScreenCTM(), pr = el.getBoundingClientRect(), P = svg.createSVGPoint();
-              // линия на экране (таблица из 240 точек); каждая точка линии течёт по ней слева направо, как потоки фона
-              const NS = 240; lut = new Float32Array((NS + 1) * 2);
-              for (let k = 0; k <= NS; k++) { const q = path.getPointAtLength(k / NS * L); P.x = q.x; P.y = q.y; const r = P.matrixTransform(M); lut[k * 2] = r.x - pr.left; lut[k * 2 + 1] = r.y - pr.top; }
-              lu = new Float32Array(nLine); ldn = new Float32Array(nLine); lsp = new Float32Array(nLine);
-              for (let j = 0; j < nLine; j++) {
-                lu[j] = Math.random(); lsp[j] = .1 + Math.random() * .06;
-                ldn[j] = Math.random() < .7 ? (Math.random() - .5) * 2.4 : Math.pow(Math.random(), 2) * H * .045;
-                const k = Math.round(lu[j] * NS);
-                out[(nNum + j) * 2] = lut[k * 2]; out[(nNum + j) * 2 + 1] = lut[k * 2 + 1] + ldn[j];
-              }
-              base = nNum;
-              if (dot) { P.x = +dot.getAttribute('cx'); P.y = +dot.getAttribute('cy'); const r = P.matrixTransform(dot.getScreenCTM()); end = [r.x - pr.left, r.y - pr.top]; }
-            }
-            const move = lut ? (k, t, mp) => {
-              if (k < base) return 0;
-              const j = k - base, u = lu[j] + t * lsp[j], f = u - Math.floor(u), x = f * 240, a = x | 0, b = Math.min(240, a + 1), w = x - a;
-              mp[0] = lut[a * 2] + (lut[b * 2] - lut[a * 2]) * w; mp[1] = lut[a * 2 + 1] + (lut[b * 2 + 1] - lut[a * 2 + 1]) * w + ldn[j];
-              const wrapped = Math.floor(u) !== Math.floor(lu[j] + (t - .05) * lsp[j]);
-              return wrapped ? 2 : 1;
-            } : null;
-            return { pts: out, move };
-          },
-          member: i => i % 4 !== 3,
-          spawn: (p, W, H) => p.i % 4 !== 3 ? [Math.random() * W, H + Math.random() * H * .4, 0, -4 - p.r2 * 5] : [Math.random() * W, Math.random() * H, 0, 0],
-          gather: t => PT.clamp((t - .15) / 1.6),
-          bias: (t, r1) => [0, -.03 - r1 * .02],
-          flowSpeed: () => .07,
-          alpha: has => has ? 1 : .5,
-          over: (ctx, W, H, t, g) => {
-            if (!end || g < .85) return;
-            const r = W * .011 * (1 + .25 * Math.sin(t * 3)), ramp = PT.ramp();
-            ctx.globalAlpha = PT.clamp((g - .85) / .15); ctx.fillStyle = ramp[ramp.length - 1];
-            ctx.beginPath(); ctx.arc(end[0], end[1], r, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1;
-          },
-          done: () => !cv.isConnected || el.classList.contains('off')
-        });
-        el.classList.add('pt');
-        ST.pt = s; s.start();
-      } catch (e) { el.classList.remove('pt'); }
     }
     function stTick(now) {
       if (!ST.posterOn) return;
+      // палец держит — обложка на паузе
+      if (ST.hold) { ST.posterT0 += now - (ST.plast || now); ST.plast = now; ST.timer = requestAnimationFrame(stTick); return; }
+      ST.plast = now;
       // пока сервер не прислал тренировки и км — обложка ждёт, полоска не бежит (но не дольше 12 с)
       const wait = !ST.srv && now - ST.posterOpen < ST_POSTER_WAIT, bw = $('stPosterBar');
       if (bw) bw.parentNode.classList.toggle('wait', wait);
@@ -3169,21 +3547,49 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const dir = i > ST.i ? 'in-r' : i < ST.i ? 'in-l' : '';
       if (dir && anim) safeHaptic('selection');
       ST.i = i; stTabs();
-      const pg = $('stPage');
-      pg.innerHTML = `<div class="st-card${anim && dir ? ' ' + dir : ''}">${ST.views[i].html()}</div>`;
+      const pg = $('stPage'), v = ST.views[i];
+      if (v.slides) { ST.sl = v.slides(); ST.si = 0; stDeck(anim ? dir || 'in' : ''); return; }
+      ST.sl = null; cancelAnimationFrame(ST.dk);
+      pg.innerHTML = `<div class="st-card${anim && dir ? ' ' + dir : ''}">${v.html()}</div>`;
       if (anim) pg.scrollTop = 0;
       stChartGo();
+    }
+    // экраны недели после обложки листаются руками, без таймера: свайп или тап справа — дальше, слева — назад;
+    // полоски сверху показывают, где ты, и по ним можно перейти на любой экран. Неделю выбираешь во вкладках сверху
+    function stDeck(anim) {
+      const pg = $('stPage'), n = ST.sl.length;
+      ST.si = Math.max(0, Math.min(n - 1, ST.si));
+      pg.innerHTML = `<div class="st-deck"><div class="st-segs">${ST.sl.map((_, k) => `<i class="${k <= ST.si ? 'on' : ''}" onclick="stSlideTo(${k})"><b></b></i>`).join('')}</div>
+        <div class="st-slide${anim ? ' ' + (anim === 'in-l' ? 'in-l' : 'in-r') : ''}">${ST.sl[ST.si]}</div>
+        <div class="st-pn"><button onclick="stSlide(-1)" ${ST.si ? '' : 'disabled'} aria-label="Назад">‹</button><span>${ST.si + 1} / ${n}</span><button onclick="stSlide(1)" ${ST.si < n - 1 ? '' : 'disabled'} aria-label="Дальше">›</button></div></div>`;
+      pg.scrollTop = 0;
+      silkStart(pg);
+      stDeckSilk();
+    }
+    // линия на экране дней — светящиеся пряди, как на заставке (пока обложка на экране, её сцену не трогаем)
+    function stDeckSilk() {
+      const c = $('stPage').querySelector('.st-slide .st-chart');
+      if (!c || ST.posterOn) return;
+      slLine(c, c, { trail: .9, scale: .28 });
+    }
+    function stSlideTo(k) { if (ST.sl && k !== ST.si) { const d = k > ST.si ? 'in-r' : 'in-l'; ST.si = k; safeHaptic('selection'); stDeck(d); } }
+    function stSlide(d) {
+      if (!ST.sl) return;
+      const j = ST.si + d;
+      if (j < 0) return;
+      if (j >= ST.sl.length) { stNext(); return; }
+      safeHaptic('selection'); ST.si = j; stDeck(d > 0 ? 'in-r' : 'in-l');
     }
     // график рисуется заново, когда карточку впервые видно: не под обложкой и не при тихой пересборке с новыми данными
     function stChartGo() {
       const v = ST.views[ST.i], c = $('stPage').querySelector('.st-chart');
       if (!c || !v || ST.posterOn) return;
       // искра по линии — когда линия уже нарисована (после тихой пересборки — сразу)
-      const spark = ms => { clearTimeout(ST.skT); ST.skT = setTimeout(() => { if (c.isConnected) c.querySelectorAll('[begin=indefinite]').forEach(a => { try { a.beginElement(); } catch (e) {} }); }, ms); };
-      if (ST.drawn === v.id) { spark(0); return; }
+      // после тихой пересборки линия сразу целиком, без повторной отрисовки
+      if (ST.drawn === v.id) { silkStart(c); c.querySelectorAll('.silk').forEach(g => g.__t0 -= 2000); return; }
       ST.drawn = v.id;
       c.classList.remove('go'); void c.getBoundingClientRect(); c.classList.add('go');
-      spark(1400);
+      silkStart(c);
     }
     // «Принял, погнали»: к следующей неделе, после последней — к месяцу
     function stNext() { if (ST.i < ST.views.length - 1) stGo(ST.i + 1); else closeStory(); }
@@ -3192,8 +3598,10 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const id = ST.views[ST.i] && ST.views[ST.i].id, top = $('stPage').scrollTop;
       ST.views = stViews(u, b);
       ST.i = Math.max(0, ST.views.findIndex(v => v.id === id));
-      stGo(ST.i, false); $('stPage').scrollTop = top;
-      if (ST.posterOn) { const el = $('stPoster'), bar = $('stPosterBar'), wd = bar && bar.style.width, cv = el.querySelector('.st-pt'); el.innerHTML = stPosterHtml(ST.views[ST.i], b); if (cv) el.insertBefore(cv, el.firstChild); if (wd) $('stPosterBar').style.width = wd; }
+      const v = ST.views[ST.i];
+      if (v.slides && ST.sl) { ST.sl = v.slides(); stDeck(''); }
+      else { stGo(ST.i, false); $('stPage').scrollTop = top; }
+      if (ST.posterOn) { const el = $('stPoster'), bar = $('stPosterBar'), wd = bar && bar.style.width, cv = el.querySelector('.st-pt'); el.innerHTML = stPosterHtml(ST.views[ST.i], b); stFitHuge(el); if (cv) el.insertBefore(cv, el.firstChild); if (wd) $('stPosterBar').style.width = wd; const sc = el.querySelector('.st-chart'); if (sc) sc.classList.add('go'); silkStart(el); sc && sc.querySelectorAll('.silk').forEach(g => g.__t0 -= 2000); }
     }
     function openStory() {
       const u = globalData[activeUserId];
@@ -3215,6 +3623,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       navPush(closeStory);
       try { localStorage.setItem(stSeenKey(u), '1'); } catch (e) {}
       $('storyRing').classList.add('seen');
+      const rs = $('storyRing').querySelector('.ring-silk'); if (rs) rs.remove();
       // сон, тренировки, километры и тексты тренера; первую неделю месяца — ещё итог прошлого
       const req = ++ST.req;
       // прошлый месяц закончился неделю назад — пока в новом месяце одна неделя
@@ -3233,7 +3642,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       });
     }
     function closeStory() {
-      ST.req++; ST.posterOn = false;
+      ST.req++; ST.posterOn = false; ST.hold = false; cancelAnimationFrame(ST.dk);
       if (ST.pt) { ST.pt.stop(); ST.pt = null; }
       $('story').classList.remove('open'); $('story').setAttribute('aria-hidden', 'true');
       cancelAnimationFrame(ST.timer);
@@ -3241,14 +3650,29 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     }
     // обложка: тап — открыть неделю. Карточка: свайп вбок — соседняя, свайп вниз сверху — закрыть
     (() => {
-      $('stPoster').addEventListener('click', e => { if (!e.target.closest('button')) stPosterHide(); });
+      // держишь палец — пауза; короткий тап — дальше (слева — назад)
+      const press = (node, tap) => {
+        let t0 = 0, x = 0, y = 0, ht = 0, down = false;
+        node.addEventListener('pointerdown', e => { if (e.target.closest('button, a, .st-wos, .st-segs')) return; down = true; t0 = performance.now(); x = e.clientX; y = e.clientY; clearTimeout(ht); ht = setTimeout(() => { if (down) ST.hold = true; }, 220); });
+        const up = (e, ok) => {
+          if (!down) return; down = false; clearTimeout(ht);
+          const held = ST.hold; ST.hold = false;
+          if (!ok || held || performance.now() - t0 > 400 || Math.hypot(e.clientX - x, e.clientY - y) > 12) return;
+          const r = node.getBoundingClientRect(); tap(e.clientX - r.left < r.width / 3 ? -1 : 1);
+        };
+        node.addEventListener('pointerup', e => up(e, true));
+        node.addEventListener('pointercancel', e => up(e, false));
+        node.addEventListener('contextmenu', e => e.preventDefault());
+      };
+      press($('stPoster'), () => stPosterHide());
       const el = $('stPage');
+      press(el, d => { if (ST.sl) stSlide(d); });
       let x0 = 0, y0 = 0, top0 = 0, on = false;
       el.addEventListener('touchstart', e => { const t = e.touches[0]; x0 = t.clientX; y0 = t.clientY; top0 = el.scrollTop; on = true; }, { passive: true });
       el.addEventListener('touchend', e => {
         if (!on) return; on = false;
         const t = e.changedTouches[0], dx = t.clientX - x0, dy = t.clientY - y0;
-        if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) stGo(ST.i + (dx < 0 ? 1 : -1));
+        if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) { if (ST.sl) stSlide(dx < 0 ? 1 : -1); else stGo(ST.i + (dx < 0 ? 1 : -1)); }
         else if (dy > 110 && top0 <= 0 && Math.abs(dy) > Math.abs(dx)) closeStory();
       }, { passive: true });
     })();
@@ -3616,6 +4040,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           <linearGradient id="mtMid" gradientUnits="userSpaceOnUse" x1="0" y1="430" x2="0" y2="820"><stop offset="0" stop-color="${P.mid[0]}"/><stop offset="1" stop-color="${P.mid[1]}"/></linearGradient>
           <linearGradient id="mtMist" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${P.mist}" stop-opacity="0"/><stop offset="1" stop-color="${P.mist}" stop-opacity=".85"/></linearGradient>
           <radialGradient id="mtMoon"><stop offset="0" stop-color="${day ? '#FFF1B8' : '#F2F3F0'}" stop-opacity="${day ? .6 : .22}"/><stop offset="1" stop-color="${day ? '#FFF1B8' : '#F2F3F0'}" stop-opacity="0"/></radialGradient>
+          <radialGradient id="mtBurst"><stop offset="0" stop-color="#FFF6D6" stop-opacity="1"/><stop offset=".35" stop-color="#FFC94D" stop-opacity=".75"/><stop offset="1" stop-color="#FF8A2E" stop-opacity="0"/></radialGradient>
           <radialGradient id="mtFireGlow"><stop offset="0" stop-color="#FFB547" stop-opacity=".75"/><stop offset=".4" stop-color="#FF7A2E" stop-opacity=".3"/><stop offset="1" stop-color="#FF7A2E" stop-opacity="0"/></radialGradient>
           <linearGradient id="mtShade" x1=".8" y1="0" x2=".2" y2="1"><stop offset="0" stop-color="${P.shade[0]}" stop-opacity="${P.shade[1]}"/><stop offset=".55" stop-color="${P.shade[0]}" stop-opacity="${P.shade[2]}"/><stop offset="1" stop-color="${P.shade[0]}" stop-opacity=".05"/></linearGradient>
           <linearGradient id="mtSnow" gradientUnits="userSpaceOnUse" x1="0" y1="210" x2="0" y2="720"><stop offset="0" stop-color="${P.snow[0]}"/><stop offset=".6" stop-color="${P.snow[1]}"/><stop offset="1" stop-color="${P.snow[2]}"/></linearGradient>
@@ -3673,9 +4098,11 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         <path d="${mtD(MT_RIDGE)}" fill="none" stroke="${P.rim}" stroke-width="1.4" opacity="${P.rimOp}" stroke-linejoin="round"/>
         <ellipse data-bake="1420 160 280 180 1" cx="1560" cy="250" rx="90" ry="22" fill="#FFFFFF" opacity=".22" filter="url(#mtFog)" transform="rotate(-12 1560 250)"/>
         <path id="mtPinesP" d="${mtPines()}" fill="${P.pines}"/>
-        <path d="${mtD(MT_TRAIL)}" fill="none" stroke="${P.trail}" stroke-width="3" stroke-dasharray="1 7" stroke-linecap="round" stroke-linejoin="round"/>
+        ${calm() ? `<path d="${mtD(MT_TRAIL)}" fill="none" stroke="${P.trail}" stroke-width="3" stroke-dasharray="1 7" stroke-linecap="round" stroke-linejoin="round"/>` : `<g id="mtTrailG">${silkRaw([...Array(121)].map((_, k) => mtAt(k / 120).slice(0, 2)), { n: 6, a: 1, w: 1.4, full: true, id: 'mtScout' })}</g>`}
         <path id="mtDone" d="" fill="none" stroke="${P.me}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+        ${calm() ? '' : silkRaw([MT_TRAIL[0], MT_TRAIL[0]], { n: 7, a: .9, w: 1.7, full: true, id: 'mtSilk' })}
         ${camps}
+        <g id="mtShots"></g>
         <text id="mtStartT" x="${MT_TRAIL[0][0] - 4}" y="${MT_TRAIL[0][1] + 22}" font-size="13" font-weight="600" fill="${P.start}" font-family="Golos Text, system-ui, sans-serif"></text>
         <line x1="${fx}" y1="${fy}" x2="${fx}" y2="${fy - 24}" stroke="${P.pole}" stroke-width="1.6"/>
         <path id="mtFlag" d="M${fx} ${fy - 24}L${fx + 18} ${fy - 19}L${fx} ${fy - 14}Z" fill="#F2B53A"/>
@@ -3778,9 +4205,17 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       $('mtTorch').setAttribute('transform', `translate(${(-sw).toFixed(2)} 0)`);
     }
     function mtDraw(t, reached, walking) {
+      MT.drawT = t;
       const pts = [];
       for (let k = 0; k <= 80; k++) pts.push(mtAt(t * k / 80).slice(0, 2).map(v => v.toFixed(1)).join(' '));
       $('mtDone').setAttribute('d', 'M' + pts.join('L'));
+      // пройденная тропа — шёлковая нить: тянется за человечком и всё время тихо течёт
+      const sk = $('mtSilk');
+      if (sk) {
+        silkGeo(sk, [...Array(81)].map((_, k) => mtAt(t * k / 80).slice(0, 2)));
+        if (!SILK.list.has(sk)) silkStart(sk);
+        $('mtSvg').classList.add('silky');
+      }
       const [x, y, dir] = mtAt(t);
       if (walking) MT.face = dir;
       // на вершине человечек встаёт рядом с флагом
@@ -3794,7 +4229,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         const P = mtPal();
         tb.setAttribute('fill', on ? P.meBack : P.triOff); tb.setAttribute('stroke', on ? P.me : P.triOffS);
         tw.setAttribute('fill', on ? '#FFE08A' : P.triOffS); tw.setAttribute('opacity', on ? 1 : .45);
-        g.querySelector('.tg').setAttribute('opacity', on ? .55 : 0);
+        g.querySelector('.tg').setAttribute('opacity', on ? .9 : 0);
         txt.setAttribute('fill', on ? P.campOn : P.campOff);
       });
     }
@@ -3914,14 +4349,18 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const t = Math.max(0, Math.min(1, done / total));
       // лагерь горит, если медаль «Путь к цели» уже получена, или тропа до него дошла
       const earned = new Set(((u.medals && u.medals.catalog) || []).filter(m => m.status === 'earned').map(m => m.key));
-      const reached = (c, tt) => earned.has('path_' + c) || tt * 100 >= c - 1e-6;
+      const reached0 = (c, tt) => earned.has('path_' + c) || tt * 100 >= c - 1e-6;
       mtStats(start, goal, current, true);
       // человечек идёт по тропе: при открытии и смене человека — от подножия
       const from = (MT.user !== u || MT.t == null) ? 0 : MT.t;
       MT.user = u; MT.t = t;
       mtCompany(u, t);
       cancelAnimationFrame(MT.raf);
-      if (calm() || Math.abs(t - from) < 0.002) { MT.face = mtAt(t)[2]; mtDraw(t, reached, false); return; }
+      // лагерь загорается, когда в него попадают шёлковые нити (человечек дошёл); пройденные раньше горят сразу
+      const hit = new Set(MT_CAMPS.filter(c => from * 100 >= c - 1e-6)), shots = !calm() && !!$('mtShots');
+      let fin = !shots;
+      const reached = (c, tt) => reached0(c, tt) && (fin || hit.has(c));
+      if (calm() || Math.abs(t - from) < 0.002) { fin = true; MT.face = mtAt(t)[2]; mtDraw(t, reached, false); return; }
       // Время идёт по кадрам, а не по часам: пока гора собирается и экран выезжает, кадры
       // бывают по полсекунды, и раньше человечек стоял, а потом рывком догонял. Долгий кадр
       // засчитывается как обычный (не больше 34 мс). Старт — после короткой паузы, разгон и торможение плавные.
@@ -3931,65 +4370,39 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         el += last == null ? 0 : Math.min(now - last, 34); last = now;
         const k = Math.max(0, Math.min(1, el / dur)), e = k < .5 ? 2 * k * k : 1 - Math.pow(2 - 2 * k, 2) / 2;
         const cur = from + (t - from) * e;
-        // лёгкий щелчок, когда человечек проходит лагерь; на вершине — «успех»
-        if (MT_CAMPS.some(c => (prevT * 100 < c - 1e-6) !== (cur * 100 < c - 1e-6))) safeHaptic('soft');
+        // дошёл до лагеря — в него бьют нити, и он загорается со щелчком; на вершине — «успех»
+        MT_CAMPS.forEach(c => { if (prevT * 100 < c - 1e-6 && cur * 100 >= c - 1e-6 && !hit.has(c)) mtCampShot(c, () => { hit.add(c); safeHaptic('soft'); if (!MT.walk) mtDraw(MT.drawT, reached, false); }); });
+        if (shots && MT_CAMPS.some(c => prevT * 100 >= c - 1e-6 && cur * 100 < c - 1e-6)) safeHaptic('soft');
         if (k >= 1 && t >= 1 && from < 1) safeHaptic('success');
-        prevT = cur;
+        if (k >= 1) setTimeout(() => { if (MT.t === t && !fin) { fin = true; mtDraw(MT.drawT, reached, false); } }, 900);
+        prevT = cur; MT.walk = k < 1;
         mtDraw(cur, reached, el > 0 && k < 1);
         if (k < 1) MT.raf = requestAnimationFrame(step);
       };
       MT.raf = requestAnimationFrame(step);
     }
-    // Открытие горы частицами: всё, что есть на экране (хребты, ёлки, палатки, люди, флаг, облака,
-    // солнце или луна), собирается из точек снизу вверх, потом настоящая гора проявляется сквозь них.
-    // Человечек начинает подъём, когда частицы закончили. Если что-то не так — гора открывается как раньше.
-    const MTP = { s: null, wait: 0 };
-    // силуэты всего, что нарисовано: каждую фигуру сначала обводим «ластиком», потом заливаем —
-    // так между ёлкой и горой за ней остаётся тонкая щель, и точки обводят каждую фигуру отдельно
-    // detail — только мелочи (ёлки, палатки, люди, флаг, тропа, небо): им отдаём отдельную долю точек, иначе они тонут
-    function mtSilhouettes(g, svg, cr, detail) {
-      const skip = 'defs, [style*="display:none"], [style*="display: none"], g[clip-path="url(#mtClip)"], g[clip-path="url(#mtSnowClip)"]';
-      const geo = el => {
-        const A = n => +el.getAttribute(n) || 0, P = new Path2D();
-        switch (el.tagName) {
-          case 'path': return new Path2D(el.getAttribute('d') || '');
-          case 'circle': if (A('r') < 2) return null; P.arc(A('cx'), A('cy'), A('r'), 0, 7); return P;
-          case 'ellipse': P.ellipse(A('cx'), A('cy'), A('rx'), A('ry'), 0, 0, 7); return P;
-          case 'line': P.moveTo(A('x1'), A('y1')); P.lineTo(A('x2'), A('y2')); return P;
-          case 'rect': if (A('width') > 200) return null; P.rect(A('x'), A('y'), A('width'), A('height')); return P;
-        }
-        return null;
-      };
-      const at = el => { const k = el.getScreenCTM(); if (!k) return 0; g.setTransform(k.a, k.b, k.c, k.d, k.e - cr.left, k.f - cr.top); return 1 / Math.hypot(k.a, k.b); };
-      g.lineCap = g.lineJoin = 'round';
-      let fore = false;     // всё, начиная с ёлок, — передний план
-      svg.querySelectorAll('path, circle, ellipse, line, rect').forEach(el => {
-        if (el.closest(skip) || el.getAttribute('filter')) return;
-        if (el.id === 'mtPinesP') fore = true;
-        if (detail && !fore && !el.closest('#mtSkyG')) return;
-        let op = 1;
-        for (let e = el; e && e !== svg; e = e.parentNode) op *= e.getAttribute('opacity') == null ? 1 : +e.getAttribute('opacity');
-        if (op < .12) return;
-        const P = geo(el); if (!P) return;
-        const w = at(el); if (!w) return;
-        const fe = el.closest('[fill]'), fill = fe ? fe.getAttribute('fill') : '#000', stroke = el.getAttribute('stroke'), sw = +el.getAttribute('stroke-width') || 0;
-        if (el.tagName !== 'line' && fill !== 'none' && !/mtMist|mtMoon|mtFireGlow|transparent/.test(fill)) {
-          g.globalCompositeOperation = 'destination-out'; g.lineWidth = 2.6 * w; g.stroke(P);
-          g.globalCompositeOperation = 'source-over'; g.fill(P);
-          // на самой горе — скальные грани и тропа щелями, чтобы она читалась как гора, а не пятно
-          if (el.parentNode === svg && el.getAttribute('d') === MT_SHAPE) {
-            g.globalCompositeOperation = 'destination-out'; g.lineWidth = 2.2 * w;
-            svg.querySelectorAll('g[clip-path="url(#mtClip)"] > path[fill="none"]').forEach(e => g.stroke(new Path2D(e.getAttribute('d'))));
-          }
-        } else if (stroke && stroke !== 'none' && sw) {
-          g.globalCompositeOperation = 'source-over'; g.lineWidth = Math.max(sw, 2.2 * w); g.stroke(P);
-        }
-      });
-      g.globalCompositeOperation = 'source-over';
+    const MTP = { wait: 0 };
+    // три шёлковые нити из разных краёв экрана бьют в лагерь; когда первая долетела — лагерь вспыхивает
+    function mtCampShot(c, onHit) {
+      const g = document.querySelector(`.mt-camp[data-c="${c}"]`), box = $('mtShots');
+      if (!g || !box) return onHit();
+      const tg = g.querySelector('.tg'), tx = +tg.getAttribute('cx'), ty = +tg.getAttribute('cy') - 2;
+      let done = false;
+      for (let n = 0; n < 3; n++) setTimeout(() => {
+        if (!MT.open) return;
+        const svg = $('mtSvg'), P = svg.createSVGPoint();
+        const aimPx = () => { const m = svg.getScreenCTM(); P.x = tx; P.y = ty; const q = m ? P.matrixTransform(m) : P; return [q.x, q.y]; };
+        const h = () => {
+          if (done) return;
+          done = true; onHit();
+          g.classList.remove('pop'); void g.getBBox(); g.classList.add('pop');
+          // вспышка: тёплый свет разливается и кольцо света расходится от лагеря
+          box.insertAdjacentHTML('beforeend', `<g class="mt-burst"><circle class="bf" cx="${tx}" cy="${ty}" r="34" fill="url(#mtBurst)"/><circle class="br" cx="${tx}" cy="${ty}" r="12" fill="none" stroke="#FFE7A3" stroke-width="2.4"/><circle class="br b2" cx="${tx}" cy="${ty}" r="12" fill="none" stroke="#C6FF3D" stroke-width="1.6"/></g>`);
+          const b = box.lastElementChild; setTimeout(() => b.remove(), 1300);
+        };
+        if (!slShot(aimPx, h)) silkShot(box, [MT.cx, MT.cy, MT.visW, MT.visH], () => [tx, ty], MT_K, h);
+      }, n * 80);
     }
-    function mtPtHide(on) { $('mtSvg').classList.toggle('pt-hide', on); $('mtView').classList.toggle('pt-text', on); }
-    // надписи: и обычный текст экрана (заголовок, цифры, подсказка), и подписи на горе (лагеря, старт, цель, имена).
-    // Каждое слово рисуем ровно на его месте его же шрифтом
     // слово на холст ровно на его месте на экране, его же шрифтом (cr — где на экране холст)
     function ptWord(g, cr, txt, r, cs, px) {
       if (!r.width || r.bottom < cr.top || r.top > cr.bottom || r.right < cr.left || r.left > cr.right) return;
@@ -3998,74 +4411,6 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const m = g.measureText(txt), asc = m.fontBoundingBoxAscent || px * .8, desc = m.fontBoundingBoxDescent || px * .2;
       g.fillText(txt, r.left - cr.left, r.top - cr.top + (r.height - asc - desc) / 2 + asc, r.width + 1);
     }
-    // весь обычный текст внутри root — по словам, чтобы перенос строки не сбивал место
-    function ptWords(g, root, cr) {
-      const rg = document.createRange(), tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-      g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'source-over'; g.fillStyle = '#000'; g.textBaseline = 'alphabetic';
-      for (let n; (n = tw.nextNode());) {
-        const el = n.parentElement;
-        if (!el || el.closest('svg, canvas, .off, [hidden]') || !n.nodeValue.trim()) continue;
-        const cs = getComputedStyle(el), up = cs.textTransform === 'uppercase';
-        if (cs.display === 'none' || cs.visibility === 'hidden') continue;
-        for (const mm of n.nodeValue.matchAll(/\S+/g)) {
-          rg.setStart(n, mm.index); rg.setEnd(n, mm.index + mm[0].length);
-          ptWord(g, cr, up ? mm[0].toUpperCase() : mm[0], rg.getBoundingClientRect(), cs, parseFloat(cs.fontSize));
-        }
-      }
-    }
-    function mtTexts(g, svg, cr) {
-      const seen = op => op >= .12, word = (...a) => ptWord(g, cr, ...a);
-      ptWords(g, $('mtView'), cr);
-      // подписи на горе
-      svg.querySelectorAll('text').forEach(el => {
-        if (el.closest('defs, [style*="display:none"], [style*="display: none"]') || !el.textContent.trim()) return;
-        let op = 1;
-        for (let e = el; e && e !== svg; e = e.parentNode) op *= e.getAttribute('opacity') == null ? 1 : +e.getAttribute('opacity');
-        const k = el.getScreenCTM();
-        if (!seen(op) || !k) return;
-        const cs = getComputedStyle(el);
-        word(el.textContent.trim(), el.getBoundingClientRect(), cs, parseFloat(cs.fontSize) * Math.hypot(k.a, k.b));
-      });
-    }
-    function mtParticles() {
-      const view = $('mtView'), svg = $('mtSvg');
-      let cv = view.querySelector('.mt-pt');
-      if (!cv) { cv = document.createElement('canvas'); cv.className = 'mt-pt'; cv.setAttribute('aria-hidden', 'true'); view.appendChild(cv); }
-      if (MTP.s) MTP.s.stop();
-      const cr = cv.getBoundingClientRect();
-      if (!cr.width) return false;
-      let shown = false;
-      // пряди обводят хребты, человечков и подписи, потом проявляется настоящая гора; нет WebGL — частицы
-      MTP.s = SL.scene(cv, {
-        fly: .6, form: 1.4,
-        mask: g => { mtSilhouettes(g, svg, cr, false); mtSilhouettes(g, svg, cr, true); mtTexts(g, svg, cr); },
-        show: () => mtPtHide(false), stopped: () => mtPtHide(false)
-      }) || PT.scene(cv, {
-        n: 9000, nWide: 3, lagK: 1.4, snap: true,
-        shape: (W, H, N) => {
-          // доли точек: гора и хребты, мелочи переднего плана, надписи — иначе мелкое и текст тонут
-          const nd = Math.round(N * .26), nt = Math.round(N * .2);
-          const parts = [PT.sample(W, H, g => mtSilhouettes(g, svg, cr, false), N - nd - nt, false, .72),
-            PT.sample(W, H, g => mtSilhouettes(g, svg, cr, true), nd, false, .6),
-            PT.sample(W, H, g => mtTexts(g, svg, cr), nt, false, .55)].filter(r => r.pts);
-          if (!parts.length) return { pts: null };
-          const pts = new Float32Array(parts.reduce((a, r) => a + r.pts.length, 0)); let o = 0;
-          parts.forEach(r => { pts.set(r.pts, o); o += r.pts.length; });
-          return { pts };
-        },
-        lag: (x, y, W, H, r2) => PT.clamp(y / H * .85 + r2 * .15),          // нижние точки встают на место первыми
-        spawn: (p, W, H) => PT.ARRIVE.rise(p, W, H),
-        gather: t => PT.clamp((t - .1) / 1.25),
-        exit: (i, t, x, y, W, H, r1, r2) => t < 1.55 ? null : [(r1 - .5) * .05, -.06 - r2 * .1, PT.clamp(1 - (t - 1.55) / .5)],
-        over: (ctx, W, H, t) => { if (!shown && t >= 1.45) { shown = true; mtPtHide(false); } },
-        done: t => t > 2.15,
-        stopped: () => mtPtHide(false)
-      });
-      MTP.s.start();
-      if (!MTP.s.alive) return false;
-      mtPtHide(true);
-      return true;
-    }
     function openMountain() {
       if (MT.open) return;
       MT.open = true; MT.t = null; MT.follow = true;
@@ -4073,22 +4418,15 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       $('mtView').classList.add('open');
       navPush(closeMountain);
       if (!MT.last) return;
-      // подъём ждёт, пока гора соберётся из точек
-      const pt = !PT.reduce && !calm(), svg = $('mtSvg');
-      MTP.wait = pt ? 2700 : 0;
+      // гора просто открывается (решение Вадима 19.10), человечек идёт по шёлковой тропе
+      MTP.wait = calm() ? 0 : 450;
       renderMountain(...MT.last);
-      if (!pt) return;
-      // гора уже спрятана; точки берём после первого кадра, когда камера и человечки стоят на своих местах
-      mtPtHide(true);
-      requestAnimationFrame(() => requestAnimationFrame(() => {
-        if (!MT.open) return mtPtHide(false);
-        try { if (!mtParticles()) mtPtHide(false); } catch (e) { mtPtHide(false); }
-      }));
+      const sc = $('mtScout'); if (sc) silkStart(sc);
     }
     function closeMountain() {
       MT.open = false; MTP.wait = 0;
-      if (MTP.s) MTP.s.stop();
       cancelAnimationFrame(MT.raf);
+      ['mtSilk', 'mtScout'].forEach(id => { if ($(id)) SILK.list.delete($(id)); });
       $('mtView').classList.remove('open');
       navForget(closeMountain);
     }
@@ -4740,7 +5078,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         const done = (start >= goal) ? start - target.weight : target.weight - start;
         const pct = Math.max(0, Math.min(100, total > 0 ? Math.round(done / total * 100) : 100));
         $('progressText').textContent = `${pct}%`;
-        fillTicks(Math.round(pct * 30 / 100));
+        fillTicks(pct);
         const leftKg = parseFloat(Math.abs(target.weight - goal).toFixed(1));
         $('laneGoal').textContent = `${fmt(goal)} кг`;
         // Цель взята, если вес дошёл до неё или прошёл дальше (раньше при весе ниже
@@ -4859,7 +5197,49 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         }
       });
       if (reveal) startReveal(chartInstance); else chartInstance.$reveal = 1;
+      clearTimeout(MS.tm); MS.tm = setTimeout(mainSilk, reveal ? 1000 : 0);
     }
+
+    // ===== Линия тренда на главном — шёлковые пряди, как на заставке и в сторис =====
+    // WebGL-сцена одна на всё приложение: пока идут заставка, сторис или медаль, ждём; без WebGL — обычная линия Chart.js
+    const MS = { s: null, cv: null, tm: 0, quiet: false };
+    function mainSilkLine(on) {
+      const c = chartInstance; if (!c) return;
+      const d = c.data.datasets[0], col = on ? cssVar('--volt') : 'transparent';
+      if (d.borderColor !== col) { d.borderColor = col; c.update('none'); }
+    }
+    const msCovered = () => !!(MT.open || $('story').classList.contains('open') || document.querySelector('.screen.open'));
+    function msPts() {
+      const ch = chartInstance; if (!ch) return null;
+      const pts = ch.getDatasetMeta(0).data.filter(p => p && !p.skip && isFinite(p.x) && isFinite(p.y)).map(p => [p.x, p.y]);
+      if (pts.length < 2) return null;
+      // длинный период — не больше ~120 точек, тренд и так плавный
+      const k = Math.ceil(pts.length / 120);
+      return k > 1 ? pts.filter((p, i) => i % k === 0 || i === pts.length - 1) : pts;
+    }
+    function mainSilk() {
+      clearTimeout(MS.tm);
+      const c = chartInstance;
+      if (!c || calm() || typeof SL === 'undefined') return;
+      if (!$('splash').classList.contains('gone') || msCovered() || SL.busy(MS.s)) { MS.tm = setTimeout(mainSilk, 800); return; }
+      // меньше двух точек тренда — линии не по чему течь, оставляем обычную
+      if (!msPts()) { if (MS.s && MS.s.alive) { MS.quiet = true; MS.s.stop(); MS.quiet = false; } mainSilkLine(true); return; }
+      const box = $('weightChart').parentNode;
+      if (!MS.cv) { MS.cv = document.createElement('canvas'); MS.cv.className = 'ms-pt'; MS.cv.setAttribute('aria-hidden', 'true'); }
+      if (MS.cv.parentNode !== box) box.appendChild(MS.cv);
+      if (!MS.s) MS.s = SL.scene(MS.cv, {
+        fly: 1e5, keep: true, flat: true, scale: .12,
+        // главный экран закрыт горой, медалями или сторис — пряди не крутим зря, вернёмся, когда закроют
+        done: msCovered,
+        path: msPts,
+        // другая сцена забрала WebGL — пока возвращаем обычную линию и ждём
+        stopped: () => { if (MS.quiet) return; mainSilkLine(true); MS.tm = setTimeout(mainSilk, 800); }
+      });
+      if (!MS.s) { mainSilkLine(true); return; }
+      MS.quiet = true; MS.s.start(); MS.quiet = false;
+      mainSilkLine(false);
+    }
+    window.addEventListener('resize', () => { if (MS.s && MS.s.alive) { clearTimeout(MS.tm); MS.tm = setTimeout(mainSilk, 300); } });
 
     // ===== Живое построение графика: линии прорисовываются слева направо =====
     const hexA = (hex, a) => {
@@ -4957,15 +5337,13 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       });
     }
 
-    // 30 сегментов пути к цели; при открытии загораются по очереди
-    function fillTicks(on) {
-      const box = $('ticks');
-      if (box.childElementCount !== 30) box.innerHTML = '<i></i>'.repeat(30);
-      const anim = intro && !calm(), gen = box.$gen = (box.$gen || 0) + 1;
-      [...box.children].forEach((el, i) => {
-        if (anim) { el.classList.remove('on'); if (i < on) setTimeout(() => { if (box.$gen === gen) el.classList.add('on'); }, 200 + i * 28); }
-        else el.classList.toggle('on', i < on);
-      });
+    // путь к цели — тонкая шёлковая нить до текущего процента (дальше — тихая дорожка); при открытии нить протягивается
+    function fillTicks(pct) {
+      const box = $('ticks'), k = Math.max(0, Math.min(1, pct / 100)), anim = intro && !calm(), xe = 2 + 296 * k;
+      const pts = [...Array(25)].map((_, i) => [2 + (xe - 2) * i / 24, 8]);
+      box.innerHTML = `<svg viewBox="0 0 300 16" preserveAspectRatio="none"><line class="tk-rest" x1="${xe.toFixed(1)}" y1="8" x2="298" y2="8"/>${k > .01 ? silkRaw(pts, { n: 7, a: .65, w: 1.3, full: !anim }) : ''}</svg>
+        ${k > .01 ? `<i class="tk-end${anim ? ' in' : ''}" style="left:${(xe / 3).toFixed(2)}%"></i>` : ''}`;
+      if (k > .01) silkStart(box);
     }
 
     // Крупный белый (тёмная тема) и чёрный (светлая) текст — заголовки и большие цифры — переливом лайм → мята → бирюза,
