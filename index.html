@@ -5283,13 +5283,15 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       if (!on && C.liveSv) C.liveSv.forEach(sv => sv.pauseAnimations());
       if (!on && C.liveLy) C.liveLy.forEach(l => l.classList.add('paused'));
     }
-    // каждый кадр: двигается только сторона, что к тебе (у ребра — обе); вторая стоит и не нагружает телефон
+    // каждый кадр (только живой SVG): двигается сторона, что к тебе (у ребра — обе); вторая стоит
     function coinLiveSide() {
       if (!C.liveOn) return;
       const c = Math.cos(C.angle * Math.PI / 180), side = Math.abs(c) < .25 ? 2 : c > 0 ? 0 : 1;
       if (side === C.liveSide) return;
       C.liveSide = side;
-      if (C.liveLy && C.liveLy.length) { C.liveLy.forEach((l, i) => l.classList.toggle('paused', side !== 2 && side !== i)); return; }
+      // слои не ставим на паузу по сторонам: переключение паузы на каждом полуобороте давало рывок (Вадим, 24.10),
+      // а двигать готовые картинки видеочипу почти ничего не стоит
+      if (C.liveLy) return;
       if (C.liveSv) C.liveSv.forEach((sv, i) => side === 2 || side === i ? sv.unpauseAnimations() : sv.pauseAnimations());
     }
     function coinLiveDrop() {
@@ -5335,6 +5337,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       $('cInfo').classList.toggle('wait', !!award);
       $('coinBurst').classList.remove('go');
       if (!award) safeHaptic('light');
+      // живые медали витрины под монетой стоят: их перерисовка отнимала кадры у вращения (Вадим, 24.10: «микролаги»)
+      if ($('achScreen').classList.contains('open')) liveTilesOff();
       const grand = buildCoin(m);
       $('cTitle').textContent = m.title;
       $('cDesc').textContent = m.desc;
@@ -5441,6 +5445,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     function closeCoin() {
       if (C.pt) { C.pt.stop(); C.pt = null; }
       coinLive(false);   // замирает как есть; убирается при следующей сборке монеты
+      if ($('achScreen').classList.contains('open')) liveTiles($('achScreen'));
       $('coinStage').querySelector('.coin-zoom').style.opacity = '';
       MedalRaster.pause(false);
       if (C.tiltOn) { C.tiltOn = false; tiltStop(); }
