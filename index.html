@@ -586,6 +586,11 @@
     #achScreen .m-tile.dim .mw > img, #achScreen .m-tile.dim .mw > svg { filter: grayscale(1) brightness(.55); opacity: .45; }
     #achScreen .m-tile.lit .mw > img, #achScreen .m-tile.lit .mw > svg { transition: filter .2s ease .22s, opacity .2s ease .22s, transform .15s ease; }
     #achScreen .m-tile.lit .mw { animation: achFlip .65s cubic-bezier(.3,1.25,.5,1) both; }
+    /* толщина на время переворота: слои той же картинки за лицом — ребро повторяет силуэт медали (у звёздных — лучи) */
+    #achScreen .m-tile .mw.thick { transform-style: preserve-3d; }
+    .mw > .th { position: absolute; left: 0; top: 0; width: 100%; aspect-ratio: 1; transform-style: preserve-3d; pointer-events: none; }
+    .mw > .th > * { position: absolute; inset: 0; width: 100%; height: 100%; }
+    #achScreen .m-tile .mw.thick > img { opacity: 1; }
     #achScreen .m-tile.lit .mw::after { animation: achGlint .6s ease .45s both; }
     @keyframes achFlip { 0% { transform: perspective(520px) rotateY(0) scale(.96); } 45% { transform: perspective(520px) rotateY(90deg) scale(1.04); } 100% { transform: perspective(520px) rotateY(360deg); } }
     #shotSl { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 46; }
@@ -2807,8 +2812,28 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       if (!sv) { document.body.insertAdjacentHTML('beforeend', '<svg id="achShots" aria-hidden="true"></svg>'); sv = $('achShots'); }
       sv.setAttribute('viewBox', `0 0 ${W} ${H}`);
       // попала — медаль переворачивается в цвет
-      const hit = () => { t.classList.replace('dim', 'lit'); safeHaptic('soft'); };
+      const hit = () => { coinThick(mw); t.classList.replace('dim', 'lit'); safeHaptic('soft'); };
       if (!slShot(aim, hit)) silkShot(sv, [0, 0, W, H], aim, 1, hit);
+    }
+    // Плоская картинка ребром превращается в нитку (Вадим, 24.10: «плоские»). На время переворота за лицом
+    // встают слои той же картинки — тёмные, как ребро, и последний — светлая оборотная сторона. Толщина ~7% ширины,
+    // как у монеты на вручении. После переворота слои убираются: в покое витрина остаётся лёгкой
+    function coinThick(mw) {
+      // обычно медаль — готовая картинка; если осталась SVG (растр не удался), слоёв меньше: SVG тяжелее
+      const pic = mw.querySelector(':scope > img, :scope > svg');
+      if (!pic) return;
+      const th = document.createElement('i'), n = pic.tagName === 'IMG' ? 14 : 6, T = mw.offsetWidth * .07;
+      th.className = 'th';
+      for (let i = 1; i <= n; i++) {
+        const c = pic.cloneNode(true), last = i === n;
+        c.removeAttribute('aria-label'); c.setAttribute('aria-hidden', 'true');
+        c.style.transform = `translateZ(${(-T * i / n).toFixed(2)}px)` + (last ? ' rotateY(180deg)' : '');
+        c.style.filter = last ? 'brightness(.9)' : `brightness(${(.42 + .2 * Math.sin(i / n * Math.PI)).toFixed(2)}) saturate(.75)`;
+        th.appendChild(c);
+      }
+      mw.classList.add('thick'); mw.prepend(th);
+      clearTimeout(mw.$th);
+      mw.$th = setTimeout(() => { th.remove(); mw.classList.remove('thick'); }, 760);
     }
     // шёлковая нить выстреливает дугой в цель aim() → [x, y] (цель может двигаться) из случайного места видимой области v = [x, y, w, h]:
     // с боков на разной высоте, снизу, из углов или из центра (не из самой цели). k — масштаб (единиц на пиксель)
