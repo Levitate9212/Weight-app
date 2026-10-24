@@ -637,7 +637,9 @@
     .coin .face { width: 240px; height: 240px; margin: -120px 0 0 -120px; border-radius: 50%; overflow: hidden; }
     .coin .face svg { width: 100%; height: 100%; display: block; }
     .coin .face svg.live { position: absolute; left: 0; top: 0; }
-    .coin .face canvas.live-cv { position: absolute; left: -4px; top: -4px; width: 248px; height: 248px; display: block; }
+    .coin .face .mly { position: absolute; left: -4px; top: -4px; width: 248px; height: 248px; pointer-events: none; }
+    .coin .face.ly > img, .coin .face.ly > svg:not(.live) { visibility: hidden; }
+    .mly.paused, .mly.paused * { animation-play-state: paused !important; }
     .coin .face img { position: absolute; left: -4px; top: -4px; width: 248px; height: 248px; display: block; }
     .coin .edge { backface-visibility: visible; -webkit-backface-visibility: visible; }
     .sheen-mask { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; pointer-events: none; }
@@ -2976,11 +2978,11 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         return fontP;
       }
       // SVG разбирается так же, как на странице (повторные атрибуты и т.п. прощаются), и сохраняется строгим XML для картинки
-      const toImg = (svg, px, css) => new Promise((res, rej) => {
+      const toImg = (svg, px, css, h = px) => new Promise((res, rej) => {
         const t = document.createElement('template');
         t.innerHTML = svg.trim();
         const el = t.content.firstElementChild;
-        el.setAttribute('width', px); el.setAttribute('height', px);
+        el.setAttribute('width', px); el.setAttribute('height', h);
         const st = document.createElementNS('http://www.w3.org/2000/svg', 'style');
         st.textContent = css;
         el.insertBefore(st, el.firstChild);
@@ -3055,34 +3057,205 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       // Сбросить всё нарисованное (новые данные с сервера)
       function reset() { gen++; Object.keys(urls).forEach(k => { URL.revokeObjectURL(urls[k]); delete urls[k]; }); }
       function drop(key) { if (urls[key]) { URL.revokeObjectURL(urls[key]); delete urls[key]; } }
-      // Живая картинка: SVG с анимацией как <img>. Браузер крутит её анимацию, только пока картинка на странице —
-      // держим её невидимой точкой в углу, а кадры рисуем на холст (так живёт большая монета)
-      let holder = null, animP = null;
-      async function liveImg(svg, px) {
-        const img = await toImg(svg, px, (await fontCss()) || '');
-        if (!holder) {
-          holder = document.createElement('div'); holder.setAttribute('aria-hidden', 'true');
-          holder.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none;z-index:-1';
-          document.body.appendChild(holder);
+      // Набор картинок произвольного размера [{ svg, w, h }] (в пикселях) → холсты по порядку (null — не вышло).
+      // Слои живой монеты: тем же путём, что и медали витрины, — со шрифтом внутри и проверкой для Safari
+      async function pics(list) {
+        const css = await fontCss();
+        if (!css) return null;
+        const check = await fontReady(css).catch(() => null);
+        if (!check) return null;
+        const imgs = [];
+        // шрифт — только в картинки с надписями: разбор встроенного шрифта в каждой картинке дорогой
+        for (const it of list) { try { imgs.push(await toImg(it.svg, it.w, it.text === false ? '' : css, it.h)); } catch (e) { imgs.push(null); } }
+        let ok = false;
+        for (let i = 0; i < 25 && (ok = check()) === false; i++) await wait(80);
+        if (!ok) return null;
+        // готовые холсты (без перекодирования в PNG — это долго на больших слоях)
+        const out = [];
+        for (let i = 0; i < list.length; i++) {
+          const it = list[i], img = imgs[i];
+          if (!img) { out.push(null); continue; }
+          const c = document.createElement('canvas'); c.width = it.w; c.height = it.h;
+          c.getContext('2d').drawImage(img, 0, 0, it.w, it.h);
+          out.push(c);
         }
-        img.style.cssText = 'display:block;width:1px;height:1px';
-        holder.appendChild(img);
-        return img;
+        return out;
       }
-      // умеет ли браузер отдавать на холст текущий кадр анимации картинки (проверка один раз)
-      function animOk() {
-        if (!animP) animP = (async () => {
-          const img = await liveImg('<svg viewBox="0 0 100 100"><rect width="20" height="100" fill="#f00"><animate attributeName="x" from="0" to="80" dur="1s" repeatCount="indefinite"/></rect></svg>', 100);
-          const c = document.createElement('canvas'); c.width = 100; c.height = 100;
-          const g = c.getContext('2d');
-          const at = () => { g.clearRect(0, 0, 100, 100); g.drawImage(img, 0, 0, 100, 100); const d = g.getImageData(0, 50, 100, 1).data; for (let j = 0; j < 100; j++) if (d[j * 4 + 3] > 200) return j; return -1; };
-          const a = at(); await wait(160); const b = at();
-          img.remove();
-          return a >= 0 && b >= 0 && a !== b;
-        })().catch(() => false);
-        return animP;
+      return { render, reset, drop, pics, get: k => urls[k], pause: v => { paused = !!v; } };
+    })();
+
+    // =====================================================================
+    // ЖИВАЯ МЕДАЛЬ СЛОЯМИ (большая монета). Живой SVG на вращающейся монете перерисовывался каждый кадр и лагал,
+    // а холст на iPhone рисовал его с ошибками. Поэтому живая медаль разбирается на готовые картинки:
+    // неподвижные части — по порядку слоёв, каждая двигающаяся часть — своей картинкой, а движение
+    // (сдвиг, поворот, масштаб, мигание) переводится в CSS-анимацию. Такие слои двигает видеочип,
+    // и вращение монеты их не перерисовывает. Первый кадр слоёв совпадает с неподвижной картинкой.
+    // =====================================================================
+    const MedalLayers = (function () {
+      const NS = 'http://www.w3.org/2000/svg', V = 248, OFF = 4;   // viewBox="-4 -4 248 248"
+      const LEAF = new Set(['path', 'circle', 'rect', 'polygon', 'polyline', 'ellipse', 'line', 'text', 'use', 'image']);
+      const ANIM = new Set(['animate', 'animateTransform', 'animateMotion', 'set']);
+      let kn = 0, sheet = null, box = null;
+      const addCss = t => { if (!sheet) { sheet = document.createElement('style'); document.head.appendChild(sheet); } sheet.appendChild(document.createTextNode(t)); };
+      const nums = v => String(v).trim().split(/[\s,]+/).map(Number);
+      const secs = v => { v = String(v || '0').trim(); return /ms$/.test(v) ? parseFloat(v) / 1000 : parseFloat(v) || 0; };
+      const mtx = m => `matrix(${[m.a, m.b, m.c, m.d, m.e, m.f].map(x => +x.toFixed(5)).join(',')})`;
+
+      // анимация SMIL → { prop, name, css } (null — не умеем: такая часть просто стоит)
+      function keyframes(an, owner) {
+        const nm = an.localName, attr = an.getAttribute('attributeName'), type = an.getAttribute('type') || 'translate';
+        let vals = an.getAttribute('values');
+        vals = vals ? vals.split(';').map(x => x.trim()).filter(x => x !== '') : [an.getAttribute('from'), an.getAttribute('to')];
+        if (vals.length < 2 || vals.some(x => x == null)) return null;
+        let prop, f;
+        if (nm === 'animateTransform' && attr === 'transform') {
+          prop = 'transform';
+          f = v => {
+            const a = nums(v);
+            if (type === 'translate') return `translate(${a[0] || 0}px,${a[1] || 0}px)`;
+            if (type === 'scale') return `scale(${a[0]},${a.length > 1 ? a[1] : a[0]})`;
+            if (type === 'rotate') return `translate(${a[1] || 0}px,${a[2] || 0}px) rotate(${a[0]}deg) translate(${-(a[1] || 0)}px,${-(a[2] || 0)}px)`;
+            if (type === 'skewY') return `skewY(${a[0]}deg)`;
+            if (type === 'skewX') return `skewX(${a[0]}deg)`;
+            return null;
+          };
+        } else if (nm === 'animate' && attr === 'opacity') { prop = 'opacity'; f = v => String(+v); }
+        else if (nm === 'animate' && /^(x|cx|y|cy)$/.test(attr)) {
+          prop = 'transform'; const b = parseFloat(owner.getAttribute(attr)) || 0, hz = /x$/.test(attr);
+          f = v => hz ? `translate(${+v - b}px,0px)` : `translate(0px,${+v - b}px)`;
+        } else return null;
+        if (vals.map(f).some(x => x == null)) return null;
+        const n = vals.length, kt = (an.getAttribute('keyTimes') || '').split(';').filter(x => x.trim() !== '').map(Number);
+        const t = kt.length === n ? kt : vals.map((_, i) => i / (n - 1));
+        const spl = an.getAttribute('calcMode') === 'spline' ? (an.getAttribute('keySplines') || '').split(';').map(x => nums(x)) : null;
+        return { prop, tr: nm === 'animateTransform', vals, t, spl, f, dur: secs(an.getAttribute('dur')), begin: secs(an.getAttribute('begin')), inf: an.getAttribute('repeatCount') === 'indefinite' };
       }
-      return { render, reset, drop, liveImg, animOk, get: k => urls[k], pause: v => { paused = !!v; } };
+      function animCss(k, pre, post) {
+        const name = 'mly' + (kn++);
+        let body = '';
+        k.vals.forEach((v, i) => {
+          const pc = (k.t[i] * 100).toFixed(3);
+          const val = k.prop === 'transform' ? `${pre} ${k.f(v)} ${post}` : k.f(v);
+          const tf = k.spl && k.spl[i] && k.spl[i].length === 4 ? `animation-timing-function:cubic-bezier(${k.spl[i].join(',')});` : '';
+          body += `${pc}%{${k.prop}:${val};${tf}}`;
+        });
+        addCss(`@keyframes ${name}{${body}}`);
+        return `${name} ${k.dur}s ${k.spl ? 'ease' : 'linear'} ${k.begin}s ${k.inf ? 'infinite' : '1'} both`;
+      }
+
+      // svgStr — живой SVG медали; k — пикселей картинки на единицу рисунка. → Promise<div> (или null)
+      async function build(svgStr, k) {
+        if (!box) {
+          box = document.createElement('div'); box.setAttribute('aria-hidden', 'true');
+          box.style.cssText = `position:fixed;left:-10000px;top:0;width:${V}px;height:${V}px;visibility:hidden;pointer-events:none`;
+          document.body.appendChild(box);
+        }
+        const tp = document.createElement('template'); tp.innerHTML = svgStr.trim();
+        const svg = tp.content.firstElementChild;
+        svg.setAttribute('width', V); svg.setAttribute('height', V);
+        let idn = 0; svg.querySelectorAll('*').forEach(e => e.setAttribute('data-q', idn++));
+        // владельцы анимаций и сами анимации; чего не умеем — убираем (часть стоит)
+        const owners = new Map();
+        [...svg.querySelectorAll('*')].filter(e => ANIM.has(e.localName)).forEach(an => {
+          const o = an.parentNode;
+          if (o.closest('defs')) { an.remove(); return; }
+          const kf = keyframes(an, o);
+          an.remove();
+          if (!kf) return;
+          if (!owners.has(o)) owners.set(o, []);
+          owners.get(o).push({ kf, additive: an.getAttribute('additive') === 'sum' });
+        });
+        box.appendChild(svg);
+        try {
+          const sr = svg.getBoundingClientRect();
+          const plan = [], root = document.createElement('div');
+          root.className = 'mly';
+          // по порядку рисования: неподвижные куски между двигающимися частями
+          const slice = (C, host, inside) => {
+            let leaves = [];
+            // место картинки занимаем сразу — так порядок слоёв совпадает с порядком рисования
+            const flush = () => { if (!leaves.length) return; const im = document.createElement('i'); host.appendChild(im); plan.push({ leaves, im, inside }); leaves = []; };
+            const walk = el => {
+              for (const ch of el.children) {
+                if (ch.localName === 'defs' || ch.localName === 'clipPath' || ch.localName === 'mask') continue;
+                if (owners.has(ch)) { flush(); part(ch, host, inside); continue; }
+                if (LEAF.has(ch.localName)) leaves.push(ch); else walk(ch);
+              }
+            };
+            if (C !== svg && LEAF.has(C.localName)) leaves.push(C); else walk(C);
+            flush();
+          };
+          // двигающаяся часть: обёртки-анимации (в координатах картинки), внутри — её содержимое
+          const part = (o, host, nested) => {
+            // обрезка полем (круг) и маска нитей — свойствами обёртки
+            const cg = !nested && o.parentNode.closest('[clip-path]'), mg = cg && o.parentNode.closest('[mask]');
+            if (cg) {
+              const cid = (cg.getAttribute('clip-path').match(/#([^)]+)\)/) || [])[1], c = cid && svg.querySelector(`[id="${cid}"] circle`);
+              if (c) {
+                const cx = +c.getAttribute('cx') + OFF, cy = +c.getAttribute('cy') + OFF, r = +c.getAttribute('r');
+                const key = cid + (mg ? '|m' : '');
+                let w = host.lastElementChild && host.lastElementChild.$clip === key ? host.lastElementChild : null;
+                if (!w) {
+                  w = document.createElement('div'); w.$clip = key;
+                  w.style.cssText = `position:absolute;left:${cx - r}px;top:${cy - r}px;width:${2 * r}px;height:${2 * r}px;border-radius:50%;overflow:hidden;` +
+                    (mg ? '-webkit-mask-image:radial-gradient(closest-side,#000 55%,transparent 100%);mask-image:radial-gradient(closest-side,#000 55%,transparent 100%);' : '');
+                  const inner = document.createElement('div');
+                  inner.style.cssText = `position:absolute;left:${r - cx}px;top:${r - cy}px;width:${V}px;height:${V}px`;
+                  w.appendChild(inner); host.appendChild(w);
+                }
+                host = w.firstElementChild;
+              }
+            }
+            for (const { kf, additive } of owners.get(o)) {
+              const d = document.createElement('div');
+              d.style.cssText = `position:absolute;left:0;top:0;width:${V}px;height:${V}px;transform-origin:0 0`;
+              let pre = '', post = '';
+              if (kf.prop === 'transform') {
+                // движение — в своих координатах части: M·A(t)·M⁻¹ в координатах картинки.
+                // Анимация transform без additive заменяет собственный transform части — его в картинке нет
+                if (kf.tr && !additive && o.hasAttribute('transform')) o.removeAttribute('transform');
+                const M = o.getCTM();
+                pre = mtx(M); post = mtx(M.inverse());
+              }
+              d.style.animation = animCss(kf, pre, post);
+              if (kf.prop === 'opacity') o.removeAttribute('opacity');
+              host.appendChild(d); host = d;
+            }
+            slice(o, host, true);
+          };
+          slice(svg, root, false);
+          // картинки кусков: весь рисунок, но видны только листья куска; внутри частей — без обрезки полем
+          const jobs = plan.map(p => {
+            const keep = new Set(p.leaves.map(e => e.getAttribute('data-q')));
+            let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+            p.leaves.forEach(e => { const r = e.getBoundingClientRect(); if (!r.width && !r.height) return; x0 = Math.min(x0, r.left - sr.left); y0 = Math.min(y0, r.top - sr.top); x1 = Math.max(x1, r.right - sr.left); y1 = Math.max(y1, r.bottom - sr.top); });
+            if (x0 > x1) return null;
+            const pad = 8; x0 -= pad; y0 -= pad; x1 += pad; y1 += pad;
+            if (!p.inside) { x0 = Math.max(0, x0); y0 = Math.max(0, y0); x1 = Math.min(V, x1); y1 = Math.min(V, y1); }
+            const cl = svg.cloneNode(true);
+            cl.querySelectorAll('*').forEach(e => { if (LEAF.has(e.localName) && !e.closest('defs,clipPath,mask') && !keep.has(e.getAttribute('data-q'))) e.remove(); });
+            if (p.inside) cl.querySelectorAll('[clip-path],[mask]').forEach(e => { if (!e.closest('defs')) { e.removeAttribute('clip-path'); e.removeAttribute('mask'); } });
+            cl.setAttribute('viewBox', `${x0 - OFF} ${y0 - OFF} ${x1 - x0} ${y1 - y0}`);
+            cl.removeAttribute('width'); cl.removeAttribute('height');
+            // длинные слои нитей (тонкие светлые линии) — не больше ~1 Мп: иначе долго и много памяти
+            const kk = Math.min(k, Math.sqrt(1e6 / ((x1 - x0) * (y1 - y0))));
+            const w = Math.max(1, Math.round((x1 - x0) * kk)), h = Math.max(1, Math.round((y1 - y0) * kk));
+            return { p, x0, y0, cw: x1 - x0, ch: y1 - y0, svg: cl.outerHTML, w, h, text: p.leaves.some(e => e.localName === 'text') };
+          });
+          plan.forEach((p, i) => { if (!jobs[i]) p.im.remove(); });
+          const live = jobs.filter(Boolean);
+          const cvs = await MedalRaster.pics(live.map(j => ({ svg: j.svg, w: j.w, h: j.h, text: j.text })));
+          if (!cvs || cvs.some(c => !c)) return null;
+          live.forEach((j, i) => {
+            const c = cvs[i];
+            c.style.cssText = `position:absolute;left:${j.x0}px;top:${j.y0}px;width:${j.cw}px;height:${j.ch}px;display:block`;
+            j.p.im.replaceWith(c);
+          });
+          return root;
+        } finally { svg.remove(); }
+      }
+      const drop = el => { if (el) el.remove(); };
+      return { build, drop };
     })();
 
     // Экран достижений собирается заранее, в паузе после открытия главного экрана,
@@ -5019,9 +5192,10 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         }).catch(() => {}),
         new Promise(r => setTimeout(r, 2500))
       ]);
-      C.ready.then(() => { if (C.build === token) C.rasterOk = true; });
       // большая медаль живая всё время: и пока летит, и пока крутишь (Вадим, 24.10)
-      coinLivePrep(); coinLive(true);
+      coinLive(true);
+      coinLivePrep();
+      C.ready.then(() => { if (C.build === token) C.rasterOk = true; });
       // свечение за монетой — в цвет медали
       const o = medalOpts(m), f = (grand && o.grandField) || o.field;
       const col = grand ? '#F2B53A' : (f && f.enamel) || (MedalArt.M[o.rim] || MedalArt.M.gunmetal).mid;
@@ -5057,24 +5231,38 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       }
     }
     // Большая медаль живая всё время: и пока летит, и пока крутишь, и в покое (Вадим, 24.10).
-    // Живой SVG прямо на вращающейся монете перерисовывался при каждом повороте и лагал. Поэтому анимация
-    // рисуется кадрами на холст, а вращается уже готовый холст — как картинка, без перерисовки.
-    // Рисуем только сторону, которая к тебе. Холст ложится поверх картинки с первым нарисованным кадром.
-    // Если браузер не отдаёт кадры анимации на холст — живой SVG поверх картинки, при вращении он замирает
+    // Живой SVG прямо на вращающейся монете перерисовывался каждый кадр и лагал, холст на iPhone рисовал
+    // медаль с ошибками. Поэтому монета живёт слоями (MedalLayers): готовые картинки частей двигает видеочип.
+    // Слои собираются, когда сторона уже стала картинкой, и ложатся поверх неё с первым кадром — он совпадает.
+    // Не получилось — живой SVG поверх картинки, при вращении он замирает
+    // собранные слои монеты помним (последние 4 медали): повторное открытие оживает сразу
+    const LY_CACHE = new Map();
+    function coinLayers(m) {
+      const key = activeUserId + '|' + medalKey(m) + '|' + m.date;
+      if (LY_CACHE.has(key)) { const v = LY_CACHE.get(key); LY_CACHE.delete(key); LY_CACHE.set(key, v); return v; }
+      const svgs = [MedalB.medal(medalOpts(m), true), coinBack(m, true)];
+      const k = Math.min(3, Math.max(2, window.devicePixelRatio || 2)) * 300 / 248;
+      // по очереди: лицо первым — его видно сразу
+      const v = { svgs, p: (async () => { const a = await MedalLayers.build(svgs[0], k).catch(() => null); const b = a && await MedalLayers.build(svgs[1], k).catch(() => null); return [a, b]; })() };
+      v.p.then(ly => { if (ly.some(x => !x)) LY_CACHE.delete(key); });
+      LY_CACHE.set(key, v);
+      while (LY_CACHE.size > 4) { const [k0, v0] = LY_CACHE.entries().next().value; LY_CACHE.delete(k0); v0.p.then(ly => ly.forEach(MedalLayers.drop)); }
+      return v;
+    }
     function coinLivePrep() {
-      if (calm() || C.liveSv || C.liveCv || !C.front || !C.m) return;
-      const build = C.build, m = C.m, svgs = [MedalB.medal(medalOpts(m), true), coinBack(m, true)];
-      C.liveCv = [];
-      MedalRaster.animOk().then(ok => {
+      if (calm() || C.liveSv || C.liveLy || !C.front || !C.m) return;
+      const build = C.build, v = coinLayers(C.m);
+      C.liveLy = [];
+      v.p.then(ly => {
         if (C.build !== build) return;
-        if (!ok) { C.liveCv = null; coinLiveSvg(svgs); return; }
-        const px = Math.round(248 * Math.min(2, window.devicePixelRatio || 2));
-        C.liveCv = [C.front, C.backFace].map((f, i) => {
-          const cv = document.createElement('canvas'), o = { f, cv, g: null, img: null, px };
-          cv.className = 'live-cv'; cv.width = cv.height = px; cv.setAttribute('aria-hidden', 'true'); o.g = cv.getContext('2d');
-          MedalRaster.liveImg(svgs[i], px).then(img => { if (C.build !== build) img.remove(); else o.img = img; }).catch(() => {});
-          return o;
+        if (ly.some(x => !x)) { C.liveLy = null; coinLiveSvg(v.svgs); return; }
+        C.liveLy = ly;
+        [C.front, C.backFace].forEach((f, i) => {
+          const pic = f.querySelector(':scope > img, :scope > svg');
+          if (pic) pic.after(ly[i]); else f.prepend(ly[i]);
+          f.classList.add('ly');
         });
+        C.liveSide = null; coinLiveSide();
       });
     }
     function coinLiveSvg(svgs) {
@@ -5092,30 +5280,24 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     function coinLive(on) {
       if (on === !!C.liveOn) return;
       C.liveOn = on; C.liveSide = null;
-      if (C.liveSv && !on) C.liveSv.forEach(sv => sv.pauseAnimations());
+      if (!on && C.liveSv) C.liveSv.forEach(sv => sv.pauseAnimations());
+      if (!on && C.liveLy) C.liveLy.forEach(l => l.classList.add('paused'));
     }
-    // каждый кадр: на холст — текущий кадр стороны, что к тебе (у ребра — обеих)
+    // каждый кадр: двигается только сторона, что к тебе (у ребра — обе); вторая стоит и не нагружает телефон
     function coinLiveSide() {
       if (!C.liveOn) return;
-      const c = Math.cos(C.angle * Math.PI / 180);
-      if (C.liveCv && C.liveCv.length) {
-        C.liveCv.forEach((o, i) => {
-          if (!o.img || (i === 0 ? c < -.25 : c > .25)) return;
-          o.g.clearRect(0, 0, o.px, o.px); o.g.drawImage(o.img, 0, 0, o.px, o.px);
-          if (!o.cv.parentNode) { const pic = o.f.querySelector(':scope > img, :scope > svg'); if (pic) pic.after(o.cv); else o.f.prepend(o.cv); }
-        });
-        return;
-      }
-      if (!C.liveSv) return;
-      const side = c >= 0 ? 0 : 1;
+      const c = Math.cos(C.angle * Math.PI / 180), side = Math.abs(c) < .25 ? 2 : c > 0 ? 0 : 1;
       if (side === C.liveSide) return;
       C.liveSide = side;
-      C.liveSv.forEach((sv, i) => i === side ? sv.unpauseAnimations() : sv.pauseAnimations());
+      if (C.liveLy && C.liveLy.length) { C.liveLy.forEach((l, i) => l.classList.toggle('paused', side !== 2 && side !== i)); return; }
+      if (C.liveSv) C.liveSv.forEach((sv, i) => side === 2 || side === i ? sv.unpauseAnimations() : sv.pauseAnimations());
     }
     function coinLiveDrop() {
       if (C.liveSv) C.liveSv.forEach(sv => sv.remove());
-      if (C.liveCv) C.liveCv.forEach(o => { o.cv.remove(); if (o.img) o.img.remove(); });
-      C.liveSv = C.liveCv = null; C.liveOn = false;
+      // слои остаются в кэше; снятые со страницы, при следующем показе они начнут с первого кадра
+      if (C.liveLy) C.liveLy.forEach(l => { l.remove(); l.classList.remove('paused'); });
+      [C.front, C.backFace].forEach(f => f && f.classList.remove('ly'));
+      C.liveSv = C.liveLy = null; C.liveOn = false;
     }
     function coinLoop(t) {
       if (C.mode === 'tween') {
@@ -5138,7 +5320,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         }
       } else if (C.mode === 'idle' && !C.dragging) {
         const k = (t - C.idleT0) / 1000, ramp = Math.min(1, k / 1.2);
-        if (!C.liveOn && (C.liveSv || C.liveCv) && $('coinView').classList.contains('open')) coinLive(true);   // остановилась — снова двигается с того же кадра
+        if (!C.liveOn && (C.liveSv || C.liveLy) && $('coinView').classList.contains('open')) coinLive(true);   // остановилась — снова двигается с того же кадра
         C.angle = C.base + 9 * Math.sin(k * 1.1) * ramp;
         C.tilt = 3 * Math.sin(k * 0.8) * ramp;
       }
