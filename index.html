@@ -632,17 +632,20 @@
     #coinView { z-index: 35; display: flex; flex-direction: column; }
     #coinView .screen-inner { flex: 1; display: flex; flex-direction: column; width: 100%; }
     .stage { flex: 1; min-height: 300px; display: flex; align-items: center; justify-content: center; perspective: 1200px; touch-action: none; position: relative; }
-    .coin { position: relative; width: 240px; height: 240px; transform-style: preserve-3d; will-change: transform; }
+    .coin, .coin-fly { position: relative; width: 240px; height: 240px; transform-style: preserve-3d; will-change: transform; }
     .coin .face, .coin .edge { position: absolute; left: 50%; top: 50%; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
     .coin .face { width: 240px; height: 240px; margin: -120px 0 0 -120px; border-radius: 50%; overflow: hidden; }
     .coin .face svg { width: 100%; height: 100%; display: block; }
     .coin .face svg.live { position: absolute; left: 0; top: 0; }
     .coin .face .mly { position: absolute; left: -4px; top: -4px; width: 248px; height: 248px; pointer-events: none; }
-    .coin .face.ly > img, .coin .face.ly > svg:not(.live) { visibility: hidden; }
+    /* под живыми слоями неподвижная сторона не нужна вовсе (display, а не visibility: надписи SVG иначе пересчитываются на каждом кадре) */
+    .coin .face.ly > img, .coin .face.ly > svg:not(.live), .coin .face.ly > canvas.still { display: none; }
+    .coin .face canvas.still { position: absolute; left: -4px; top: -4px; width: 248px; height: 248px; display: block; }
     .mly.paused, .mly.paused * { animation-play-state: paused !important; }
     .coin .face img { position: absolute; left: -4px; top: -4px; width: 248px; height: 248px; display: block; }
     .coin .edge { backface-visibility: visible; -webkit-backface-visibility: visible; }
     .sheen-mask { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; pointer-events: none; }
+    .sheen-w { position: absolute; inset: 0; will-change: transform; }
     /* лучистый ободок: лучи не обрезаем кругом, блик — только внутри */
     .coin .face.grand { border-radius: 0; overflow: visible; }
     .coin .face.grand svg { overflow: visible; }
@@ -908,7 +911,7 @@
   <div id="coinView" class="screen" role="dialog" aria-label="Медаль">
     <div class="screen-inner">
       <button class="back-btn" onclick="navBack()">‹ Назад</button>
-      <div class="stage" id="coinStage"><div class="halo" id="coinHalo"></div><div class="burst" id="coinBurst"></div><div class="coin-shadow"></div><div class="coin-zoom"><div class="coin" id="coin"></div></div></div>
+      <div class="stage" id="coinStage"><div class="halo" id="coinHalo"></div><div class="burst" id="coinBurst"></div><div class="coin-shadow"></div><div class="coin-zoom"><div class="coin-fly" id="coinFly"><div class="coin" id="coin"></div></div></div></div>
       <div class="coin-info award-info" id="cInfo">
         <p class="award-tag" id="cTag">Новая медаль</p>
         <h3 id="cTitle"></h3>
@@ -3014,6 +3017,12 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         };
       }
       const wait = ms => new Promise(r => setTimeout(r, ms));
+      // проба шрифта для слоёв монеты — одна на всё время: каждая новая проба — лишняя картинка со шрифтом
+      let probeP = null, probeOk = false;
+      const fontProbe = css => {
+        if (!probeP) probeP = fontReady(css).then(c => c && (() => { if (probeOk) return true; const r = c(); if (r === true) probeOk = true; return r; }), () => null);
+        return probeP;
+      };
       const idle = () => new Promise(r => window.requestIdleCallback ? requestIdleCallback(r, { timeout: 600 }) : setTimeout(r, 30));
 
       // Нарисовать набор медалей: [{ key, svg, size }] (size — сторона в CSS-пикселях).
@@ -3062,7 +3071,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       async function pics(list) {
         const css = await fontCss();
         if (!css) return null;
-        const check = await fontReady(css).catch(() => null);
+        const check = await fontProbe(css);
         if (!check) return null;
         const imgs = [];
         // шрифт — только в картинки с надписями: разбор встроенного шрифта в каждой картинке дорогой
@@ -3070,9 +3079,11 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         let ok = false;
         for (let i = 0; i < 25 && (ok = check()) === false; i++) await wait(80);
         if (!ok) return null;
-        // готовые холсты (без перекодирования в PNG — это долго на больших слоях)
+        // готовые холсты (без перекодирования в PNG — это долго на больших слоях);
+        // по одному за задачу, чтобы между ними успевали касания и кадры
         const out = [];
         for (let i = 0; i < list.length; i++) {
+          if (i) await wait(0);
           const it = list[i], img = imgs[i];
           if (!img) { out.push(null); continue; }
           const c = document.createElement('canvas'); c.width = it.w; c.height = it.h;
@@ -3776,11 +3787,31 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       }
       return h + '</g>';
     }
+    // Главный экран под полноэкранными окнами (витрина, монета, гора, истории) не видно: его SVG-анимации
+    // и шёлк стоят. Иначе телефон каждый кадр пересобирал картинку вместе со слоями монеты (Вадим, 24.10)
+    const COVER = { on: false, ids: ['achScreen', 'coinView', 'mtView', 'story'], sel: '#achScreen.open, #coinView.open, #mtView.open, #story.open' };
+    function coverCheck() {
+      const on = !!document.querySelector(COVER.sel);
+      if (on === COVER.on) return;
+      COVER.on = on;
+      const d = $('dashboard');
+      if (d) d.querySelectorAll('svg').forEach(sv => { if (!sv.ownerSVGElement) on ? sv.pauseAnimations() : sv.unpauseAnimations(); });
+      if (!on && SILK.list.size && !SILK.raf) SILK.raf = requestAnimationFrame(silkTick);
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+      const mo = new MutationObserver(coverCheck);
+      COVER.ids.forEach(id => { const e = $(id); if (e) mo.observe(e, { attributes: true, attributeFilter: ['class'] }); });
+    });
     function silkTick(now) {
       SILK.raf = 0;
       const ease = x => x <= 0 ? 0 : x >= 1 ? 1 : 1 - Math.pow(1 - x, 3), f = v => v.toFixed(1);
+      // шёлк под открытым окном (витрина, монета, гора, истории) не видно — его не перерисовываем: это отнимало кадры у монеты
+      const top = COVER.on && document.querySelector(COVER.sel);
+      let busy = false;
       SILK.list.forEach(g => {
         if (!g.isConnected) { SILK.list.delete(g); return; }
+        if (top && !top.contains(g)) return;
+        busy = true;
         const t = PT.reduce ? 9 : (now - g.__t0) / 1000, c = g.__c, n = c.length, u = g.__u != null ? g.__u : PT.reduce ? 1 : ease((t - .1) / 1.2), m = Math.max(2, Math.ceil(u * (n - 1)) + 1);
         // свечение — по средней линии
         if (g.__sg) {
@@ -3805,7 +3836,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         });
         if (PT.reduce) SILK.list.delete(g);
       });
-      if (SILK.list.size) SILK.raf = requestAnimationFrame(silkTick);
+      // всё закрыто окном — кадры не заказываем; окно закроется — coverCheck запустит снова
+      if (SILK.list.size && (busy || !top)) SILK.raf = requestAnimationFrame(silkTick);
     }
     function stChart(w, bare) {
       if (w.ws.length < 2) return w.ws.length ? `<div class="st-chart"><svg viewBox="0 0 300 120"><circle cx="150" cy="60" r="6" fill="var(--volt)"/><text x="150" y="92" text-anchor="middle">${fmt(w.ws[0].w)} кг</text></svg></div>` : '';
@@ -5023,15 +5055,19 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       Tilt.g0 += (gamma - Tilt.g0) * 0.004;
       Tilt.tx = Math.max(-1, Math.min(1, (gamma - Tilt.g0) / 22));
       Tilt.ty = Math.max(-1, Math.min(1, (beta - Tilt.b0) / 22));
+      if (Tilt.users && !Tilt.raf) Tilt.raf = requestAnimationFrame(tiltLoop);
     }
     function tiltLoop() {
       Tilt.x += (Tilt.tx - Tilt.x) * 0.18; Tilt.y += (Tilt.ty - Tilt.y) * 0.18;
-      if (Math.abs(Tilt.x - Tilt.wx) > 0.004 || Math.abs(Tilt.y - Tilt.wy) > 0.004) {
+      // открыта монета — наклон двигает только её; витрину под ней не пересчитываем
+      if (C.open) coinTilt();
+      else if (Math.abs(Tilt.x - Tilt.wx) > 0.004 || Math.abs(Tilt.y - Tilt.wy) > 0.004) {
         Tilt.wx = Tilt.x; Tilt.wy = Tilt.y;
         const st = $('achScreen').style;          // только витрина, а не весь документ
         st.setProperty('--tiltX', Tilt.x.toFixed(3)); st.setProperty('--tiltY', Tilt.y.toFixed(3));
       }
-      Tilt.raf = requestAnimationFrame(tiltLoop);
+      // наклон не меняется — кадры не заказываем (каждый лишний кадр пересобирает картинку экрана)
+      Tilt.raf = Math.abs(Tilt.tx - Tilt.x) + Math.abs(Tilt.ty - Tilt.y) > .002 ? requestAnimationFrame(tiltLoop) : 0;
     }
     const onTgTilt = () => { const d = window.Telegram.WebApp.DeviceOrientation; tiltSample(d.beta * 180 / Math.PI, d.gamma * 180 / Math.PI); };
     const onWinTilt = e => tiltSample(e.beta, e.gamma);
@@ -5058,7 +5094,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         if (Tilt.src === 'win') window.removeEventListener('deviceorientation', onWinTilt);
       } catch (e) {}
       Tilt.src = null; Tilt.b0 = null; Tilt.tx = Tilt.ty = 0;
-      cancelAnimationFrame(Tilt.raf);
+      cancelAnimationFrame(Tilt.raf); Tilt.raf = 0;
       document.documentElement.classList.remove('tilt-on');
     }
 
@@ -5083,7 +5119,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         big: dayMonth(m.date), caption: (u.medals.owner || u.name || '').toUpperCase(), band: false }), !!anim);
     }
 
-    const C = { scale: 1, landed: null, angle: 0, vel: 0, tilt: 0, dragging: false, lastX: 0, startY: 0, lastT: 0, mode: 'idle', tween: null, base: 0, idleT0: 0, raf: 0, sheens: null };
+    const C = { scale: 1, landed: null, angle: 0, vel: 0, tilt: 0, dragging: false, lastX: 0, startY: 0, lastT: 0, mode: 'idle', tween: null, base: 0, idleT0: 0, raf: 0, sheens: [], glints: [], anims: [], plan: null, open: false, zoom: 1 };
     // лучи особых медалей (24 луча, как burst(24) в MedalArt) в блоке 248×248: звезда минус круг поля
     const STAR_RING = 'M' + [...Array(48)].map((_, i) => { const a = i * Math.PI / 24, r = i % 2 ? 110 : 122.5;
       return `${(124 + r * Math.sin(a)).toFixed(1)} ${(124 - r * Math.cos(a)).toFixed(1)}`; }).join('L') + 'Z M16 124a108 108 0 1 0 216 0a108 108 0 1 0 -216 0Z';
@@ -5124,10 +5160,10 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         box.$i = i;
       }
     }
-    function buildCoin(m) {
+    function buildCoin(m, award) {
       const coin = $('coin');
       coin.innerHTML = '';
-      C.sheens = null; C.glints = null;
+      coinStop(); C.sheens = []; C.glints = [];
       const style = MedalArt.STYLE[m.section](m.metal, m.art);
       // у особых медалей ободок — золотая звезда: ребро монеты золотое и прячется под впадинами лучей
       const grand = !!(style.grand || (MedalArt.ART[m.art] || {}).grand);
@@ -5163,7 +5199,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         const f = document.createElement('div');
         f.className = 'face' + (grand ? ' grand' : '');
         f.style.transform = back ? `rotateY(180deg) translateZ(${T / 2}px)` : `translateZ(${T / 2}px)`;
-        f.innerHTML = svg.replace('viewBox="-4 -4 248 248"', 'viewBox="0 0 240 240"') + '<div class="sheen-mask"><div class="sheen"></div></div>' +
+        f.innerHTML = svg.replace('viewBox="-4 -4 248 248"', 'viewBox="0 0 240 240"') + '<div class="sheen-mask"><div class="sheen-w"><div class="sheen"></div></div></div>' +
           (grand ? '<div class="ray-glint"></div>' : '');
         if (grand) buildGlint(f.querySelector('.ray-glint'));
         coin.appendChild(f);
@@ -5178,8 +5214,9 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       (C.rasterKeys || []).forEach(k => keys.indexOf(k) === -1 && MedalRaster.drop(k));
       C.rasterKeys = keys;
       const token = C.build = {};
-      // C.ready — обе стороны уже картинки: вручение ждёт его, иначе первые обороты крутят тяжёлый SVG и лагают
-      C.ready = Promise.race([
+      // C.ready — обе стороны уже картинки: вручение ждёт его, иначе первые обороты крутят тяжёлый SVG и лагают.
+      // При обычном открытии картинку не рисуем: монету двигает видеочип, а лицо сразу заменят живые слои
+      C.ready = !award ? Promise.resolve() : Promise.race([
         MedalRaster.render([{ key: keys[0], svg: front, size: 300 }, { key: keys[1], svg: back, size: 300 }], true).then(done => {
           if (C.build !== token) return;
           return Promise.all(faces.map((f, i) => {
@@ -5192,9 +5229,19 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         }).catch(() => {}),
         new Promise(r => setTimeout(r, 2500))
       ]);
+      // При обычном открытии стороны становятся готовыми картинками-холстами (без перекодирования в PNG):
+      // надписи живого SVG на движущейся монете пересчитывались бы каждый кадр
+      if (!award) {
+        const px = Math.round(300 * Math.min(3, Math.max(2, window.devicePixelRatio || 2)));
+        MedalRaster.pics([{ svg: front, w: px, h: px }, { svg: back, w: px, h: px }]).then(cvs => {
+          if (C.build !== token || !cvs) return;
+          faces.forEach((f, i) => { const old = f.querySelector(':scope > svg:not(.live)'); if (cvs[i] && old) { cvs[i].className = 'still'; old.replaceWith(cvs[i]); } });
+        }).catch(() => {});
+      }
       // большая медаль живая всё время: и пока летит, и пока крутишь (Вадим, 24.10)
       coinLive(true);
-      coinLivePrep();
+      // слои собираем после первого кадра вылета: сборка не задерживает начало движения
+      requestAnimationFrame(() => setTimeout(() => { if (C.build === token) coinLivePrep(); }, 0));
       C.ready.then(() => { if (C.build === token) C.rasterOk = true; });
       // свечение за монетой — в цвет медали
       const o = medalOpts(m), f = (grand && o.grandField) || o.field;
@@ -5218,17 +5265,110 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       clearTimeout(confetti.t);
       confetti.t = setTimeout(() => { box.innerHTML = ''; }, 4000);
     }
-    function coinApply() {
-      // наклон телефона чуть доворачивает монету и гонит блик
-      const tx = C.dragging ? 0 : Tilt.x, ty = C.dragging ? 0 : Tilt.y;
-      $('coin').style.transform = `scale(${C.scale}) rotateX(${(C.tilt - ty * 7).toFixed(2)}deg) rotateY(${(C.angle + tx * 9).toFixed(2)}deg)`;
-      const shift = (-Math.sin(C.angle * Math.PI / 180) * 30 - Tilt.x * 34).toFixed(1) + '%';
-      if (!C.sheens) { C.sheens = $('coin').querySelectorAll('.sheen'); C.glints = $('coin').querySelectorAll('.ray-glint'); }
-      C.sheens.forEach(el => { el.style.transform = `translateX(${shift})`; });
-      if (C.glints.length) {
-        const ga = C.angle * 0.6 + Tilt.x * 140 + Tilt.y * 70 + 300;
-        C.glints.forEach(el => turnGlint(el, ga));
+    // Монету двигает видеочип: вылет, докрутка после пальца и покачивание — готовые CSS-анимации (Web Animations).
+    // Скрипт её каждый кадр не трогает: перестановка монеты из скрипта на каждом кадре заставляла телефон
+    // пересобирать все её слои, и открытие тормозило (Вадим, 24.10). Пальцем монета крутится напрямую.
+    // У каждого элемента — одна анимация (две на одном свойстве видеочип не берёт, их считает скрипт):
+    // вылет и докрутка — у .coin-fly, покачивание — у самой монеты, блик — у .sheen и .sheen-w.
+    // Наклон телефона — у обёртки .coin-zoom, отблеск по наклону — свойством translate у блика.
+    const FPS = 60;
+    const coinTf = (a, x, s) => `scale(${+s.toFixed(4)}) rotateX(${x.toFixed(2)}deg) rotateY(${a.toFixed(2)}deg)`;
+    const sheenTf = a => `translateX(${(-Math.sin(a * Math.PI / 180) * 30).toFixed(1)}%)`;
+    // покачивание: в начале стоит и разгоняется плавно (значение и скорость — ноль), повторяется ровно через ~23 с
+    const SWAY_W = .275, SWAY_T = 2 * Math.PI / SWAY_W;
+    const swayAt = k => ({ a: 4.5 * (Math.cos(2 * SWAY_W * k) - Math.cos(4 * SWAY_W * k)), x: 1.8 * (Math.cos(SWAY_W * k) - Math.cos(3 * SWAY_W * k)) });
+    function coinStop() { (C.anims || []).forEach(a => a.cancel()); C.anims = []; C.plan = null; }
+    // поза по плану в текущий момент (для пальца, отблеска лучей и запасного живого SVG)
+    function coinNow() {
+      const p = C.plan;
+      if (!p) return { a: C.angle, x: C.tilt, s: C.scale };
+      const t = (document.timeline.currentTime - p.t0) / 1000;
+      if (t <= 0) return p.pts[0];
+      const n = p.pts.length - 1, f = t * FPS;
+      if (f < n) { const i = Math.floor(f), q = f - i, A = p.pts[i], B = p.pts[i + 1]; return { a: A.a + (B.a - A.a) * q, x: A.x + (B.x - A.x) * q, s: A.s + (B.s - A.s) * q }; }
+      const w = swayAt((t - n / FPS) % SWAY_T), E = p.pts[n];
+      return { a: E.a + w.a, x: E.x + w.x, s: E.s };
+    }
+    // проиграть позы pts (по кадру 1/60 с) через delay мс, дальше — покачивание вокруг последней позы
+    function coinPlay(pts, delay = 0, done) {
+      coinStop();
+      if (pts.length < 2) pts = [pts[0], pts[0]];
+      const fly = $('coinFly'), coin = $('coin'), base = pts[pts.length - 1].a, side = Math.cos(base * Math.PI / 180) < 0 ? -1 : 1;
+      const dur = (pts.length - 1) * 1000 / FPS, sw = [];
+      for (let i = 0, N = Math.round(SWAY_T * 10); i <= N; i++) sw.push(swayAt(i / N * SWAY_T));
+      const one = { duration: dur, delay, fill: 'both' }, loop = { duration: SWAY_T * 1000, delay: delay + dur, iterations: Infinity };
+      const add = (el, kf, opt) => C.anims.push(el.animate(kf, opt));
+      fly.style.transform = coin.style.transform = '';
+      add(fly, pts.map(p => ({ transform: coinTf(p.a, p.x, p.s) })), one);
+      add(coin, sw.map(w => ({ transform: `rotateX(${w.x.toFixed(2)}deg) rotateY(${w.a.toFixed(2)}deg)` })), loop);
+      C.sheens.forEach(el => {
+        el.style.transform = '';
+        add(el, pts.map(p => ({ transform: sheenTf(p.a) })), one);
+        // блик в покачивании: у лица и у оборота сдвиг в разные стороны (ширина .sheen-w — треть блика)
+        add(el.parentNode, sw.map(w => ({ transform: `translateX(${(-side * Math.sin(w.a * Math.PI / 180) * 90).toFixed(2)}%)` })), loop);
+      });
+      C.plan = { pts, t0: document.timeline.currentTime + delay };
+      C.angle = base;
+      clearTimeout(C.endT);
+      C.endT = setTimeout(() => { C.mode = 'idle'; coinLive(true); if (done) done(); }, delay + dur);
+      coinTick();
+    }
+    // вылет: оборот с замедлением, у вручения — ещё и из глубины с лёгким перелётом
+    function coinTween(tw, delay = 0) {
+      const n = Math.max(1, Math.round(tw.dur / 1000 * FPS)), pts = [];
+      for (let i = 0; i <= n; i++) {
+        const k = i / n, e = 1 - Math.pow(1 - k, 3);
+        const b = 1 + 2.2 * Math.pow(k - 1, 3) + 1.2 * Math.pow(k - 1, 2);
+        pts.push({ a: tw.from + (tw.to - tw.from) * e, x: 0, s: tw.scaleFrom != null ? tw.scaleFrom + (1 - tw.scaleFrom) * b : 1 });
       }
+      C.mode = 'tween';
+      coinPlay(pts, delay, () => { C.scale = 1; if (C.landed) { const f = C.landed; C.landed = null; f(); } });
+    }
+    // отпустил палец: докрутка по инерции до ближайшей стороны — тем же расчётом, что был покадрово
+    function coinRelease() {
+      let a = C.angle, v = C.vel, x = C.tilt;
+      const pts = [{ a, x, s: 1 }];
+      for (let i = 0; i < 600; i++) {
+        a += v; v *= 0.95; x *= 0.88;
+        if (Math.abs(v) < 0.5) {
+          const target = Math.round((a + v * 6) / 180) * 180;
+          a += (target - a) * 0.14;
+          if (Math.abs(target - a) < 0.3) { pts.push({ a: target, x: 0, s: 1 }); break; }
+        }
+        pts.push({ a, x, s: 1 });
+      }
+      coinPlay(pts);
+    }
+    // палец: монета стоит там, где её поймали, и дальше идёт за пальцем
+    function coinDrag() {
+      $('coinFly').style.transform = coinTf(C.angle, C.tilt, 1);
+      const t = sheenTf(C.angle);
+      C.sheens.forEach(el => { el.style.transform = t; });
+    }
+    // наклон телефона: обёртка монеты и блик (только когда наклон заметно сменился)
+    function coinTilt() {
+      const tx = Tilt.x, ty = Tilt.y;
+      if (C.tw && Math.abs(tx - C.tw[0]) < .02 && Math.abs(ty - C.tw[1]) < .02) return;
+      C.tw = [tx, ty];
+      $('coinStage').querySelector('.coin-zoom').style.transform = `scale(${C.zoom}) rotateX(${(-ty * 7).toFixed(2)}deg) rotateY(${(tx * 9).toFixed(2)}deg)`;
+      const sh = (-tx * 34).toFixed(1) + '% 0';
+      C.sheens.forEach(el => { el.style.translate = sh; });
+    }
+    // покадрово остаётся только то, что видеочипу не отдать: отблеск лучей особых медалей и запасной живой SVG
+    function coinTick() {
+      cancelAnimationFrame(C.raf);
+      if (!C.open || !(C.glints.length || C.liveSv)) return;
+      const loop = () => {
+        if (!C.open) return;
+        if (!C.dragging) C.angle = coinNow().a;
+        if (C.glints.length) {
+          const ga = C.angle * 0.6 + Tilt.x * 140 + Tilt.y * 70 + 300;
+          C.glints.forEach(el => turnGlint(el, ga));
+        }
+        coinLiveSide();
+        C.raf = requestAnimationFrame(loop);
+      };
+      C.raf = requestAnimationFrame(loop);
     }
     // Большая медаль живая всё время: и пока летит, и пока крутишь, и в покое (Вадим, 24.10).
     // Живой SVG прямо на вращающейся монете перерисовывался каждый кадр и лагал, холст на iPhone рисовал
@@ -5253,23 +5393,32 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       if (calm() || C.liveSv || C.liveLy || !C.front || !C.m) return;
       const build = C.build, v = coinLayers(C.m);
       C.liveLy = [];
-      v.p.then(ly => {
+      const frame = () => new Promise(r => requestAnimationFrame(() => r()));
+      v.p.then(async ly => {
         if (C.build !== build) return;
-        if (ly.some(x => !x)) { C.liveLy = null; coinLiveSvg(v.svgs); return; }
-        C.liveLy = ly;
-        [C.front, C.backFace].forEach((f, i) => {
-          const pic = f.querySelector(':scope > img, :scope > svg');
+        if (ly.some(x => !x)) { C.liveLy = null; coinLiveSvg(v.svgs); coinTick(); return; }
+        // ложатся, когда монета долетела: подгрузка картинок слоёв в видеочип посреди вылета дала бы рывок
+        while (C.build === build && C.mode === 'tween') await new Promise(r => setTimeout(r, 60));
+        // по стороне за кадр, на паузе на первом кадре (он совпадает с картинкой под ними) — и оживают вместе
+        for (let i = 0; i < 2; i++) {
+          if (C.build !== build) return;
+          const f = i ? C.backFace : C.front, pic = f.querySelector(':scope > img, :scope > svg, :scope > canvas.still');
+          ly[i].classList.add('paused');
           if (pic) pic.after(ly[i]); else f.prepend(ly[i]);
-          f.classList.add('ly');
-        });
-        C.liveSide = null; coinLiveSide();
+          await frame();
+        }
+        await frame();
+        if (C.build !== build) return;
+        C.liveLy = ly;
+        [C.front, C.backFace].forEach(f => f.classList.add('ly'));
+        if (C.liveOn) ly.forEach(l => l.classList.remove('paused'));
       });
     }
     function coinLiveSvg(svgs) {
       const fix = h => h.replace('viewBox="-4 -4 248 248"', 'viewBox="0 0 240 240"').trim();
       C.liveSv = [C.front, C.backFace].map((f, i) => {
         const tp = document.createElement('template'); tp.innerHTML = fix(svgs[i]);
-        const sv = tp.content.firstElementChild, pic = f.querySelector(':scope > img, :scope > svg');
+        const sv = tp.content.firstElementChild, pic = f.querySelector(':scope > img, :scope > svg, :scope > canvas.still');
         sv.classList.add('live'); sv.setAttribute('aria-hidden', 'true');
         if (pic) pic.after(sv); else f.prepend(sv);
         sv.pauseAnimations();
@@ -5281,7 +5430,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       if (on === !!C.liveOn) return;
       C.liveOn = on; C.liveSide = null;
       if (!on && C.liveSv) C.liveSv.forEach(sv => sv.pauseAnimations());
-      if (!on && C.liveLy) C.liveLy.forEach(l => l.classList.add('paused'));
+      if (C.liveLy) C.liveLy.forEach(l => l.classList.toggle('paused', !on));
     }
     // каждый кадр (только живой SVG): двигается сторона, что к тебе (у ребра — обе); вторая стоит
     function coinLiveSide() {
@@ -5301,34 +5450,6 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       [C.front, C.backFace].forEach(f => f && f.classList.remove('ly'));
       C.liveSv = C.liveLy = null; C.liveOn = false;
     }
-    function coinLoop(t) {
-      if (C.mode === 'tween') {
-        // время по кадрам: долгий кадр (сборка экрана, загрузка) не даёт монете перескочить
-        const tw = C.tween, dt = tw.last == null ? 0 : Math.min(t - tw.last, 34);
-        tw.last = t; if (t >= tw.t0) tw.el = (tw.el || 0) + dt;
-        const k = Math.max(0, Math.min(1, (tw.el || 0) / tw.dur)), e = 1 - Math.pow(1 - k, 3);
-        C.angle = C.tween.from + (C.tween.to - C.tween.from) * e;
-        if (C.tween.scaleFrom != null) {                    // вручение: вылетает из глубины с лёгким перелётом
-          const b = 1 + 2.2 * Math.pow(k - 1, 3) + 1.2 * Math.pow(k - 1, 2);
-          C.scale = C.tween.scaleFrom + (1 - C.tween.scaleFrom) * b;
-        }
-        if (k >= 1) { C.mode = 'idle'; C.idleT0 = t; C.base = C.tween.to; C.scale = 1; if (C.landed) { const f = C.landed; C.landed = null; f(); } }
-      } else if (!C.dragging && C.mode === 'spin') {
-        C.angle += C.vel; C.vel *= 0.95; C.tilt *= 0.88;
-        if (Math.abs(C.vel) < 0.5) {
-          const target = Math.round((C.angle + C.vel * 6) / 180) * 180;
-          C.angle += (target - C.angle) * 0.14;
-          if (Math.abs(target - C.angle) < 0.3) { C.angle = target; C.base = target; C.mode = 'idle'; C.idleT0 = t; }
-        }
-      } else if (C.mode === 'idle' && !C.dragging) {
-        const k = (t - C.idleT0) / 1000, ramp = Math.min(1, k / 1.2);
-        if (!C.liveOn && (C.liveSv || C.liveLy) && $('coinView').classList.contains('open')) coinLive(true);   // остановилась — снова двигается с того же кадра
-        C.angle = C.base + 9 * Math.sin(k * 1.1) * ramp;
-        C.tilt = 3 * Math.sin(k * 0.8) * ramp;
-      }
-      coinApply(); coinLiveSide();
-      C.raf = requestAnimationFrame(coinLoop);
-    }
     function openCoin(m, award) {
       const view = $('coinView'), zm = $('coinStage').querySelector('.coin-zoom');
       if (C.pt) { C.pt.stop(); C.pt = null; }
@@ -5339,26 +5460,33 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       if (!award) safeHaptic('light');
       // живые медали витрины под монетой стоят: их перерисовка отнимала кадры у вращения (Вадим, 24.10: «микролаги»)
       if ($('achScreen').classList.contains('open')) liveTilesOff();
-      const grand = buildCoin(m);
+      const zm0 = $('coinStage').querySelector('.coin-zoom');
+      zm0.style.transform = '';
+      C.zoom = new DOMMatrix(getComputedStyle(zm0).transform).a || 1;
+      const grand = buildCoin(m, !!award);
+      C.sheens = [...$('coin').querySelectorAll('.sheen')]; C.glints = [...$('coin').querySelectorAll('.ray-glint')];
+      C.open = true; C.tw = null; coinTilt();
       $('cTitle').textContent = m.title;
       $('cDesc').textContent = m.desc;
       $('cWhen').textContent = 'Получена ' + dayMonth(m.date);
       $('coinView').classList.add('open');
       navPush(closeCoin);
       C.tilt = 0; C.dragging = false; C.mode = 'tween'; C.scale = 1; C.landed = null;
-      C.tween = { from: -200, to: 0, dur: 800, t0: performance.now() };
+      C.tween = { from: -200, to: 0, dur: 800 };
+      if (!award) coinTween(C.tween);
       if (award) {
         $('cNext').textContent = award.more ? `Дальше · ещё ${award.more}` : 'Забрать';
         C.scale = .12;
         // монета вылетает, только когда её стороны готовы картинками; до этого её не видно
-        C.tween = { from: -1080, to: 0, dur: 1700, t0: Infinity, scaleFrom: .12 };
+        C.tween = { from: -1080, to: 0, dur: 1700, scaleFrom: .12 };
         const stage = $('coinStage'), tw = C.tween;
         stage.style.opacity = '0';
+        coinStop(); $('coinFly').style.transform = coinTf(-1080, 0, .12);
         C.ready.then(() => requestAnimationFrame(() => {
           if (C.tween !== tw) return;
           stage.style.opacity = '';
           if (awardParticles(tw)) return;     // частицы слетаются в медаль, монета проявится сама
-          tw.t0 = performance.now() + 120;
+          coinTween(tw, 120);
           setTimeout(() => safeHaptic('medium'), 120);
         }));
         C.landed = () => {
@@ -5372,8 +5500,6 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           }
         };
       }
-      cancelAnimationFrame(C.raf);
-      C.raf = requestAnimationFrame(coinLoop);
       if (!C.tiltOn) { C.tiltOn = true; tiltStart(); }
     }
     // Вручение: цветные частицы (каждая — цвета своей точки на медали) слетаются и складываются в медаль,
@@ -5390,7 +5516,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         im.onload = () => { URL.revokeObjectURL(url); res(im); }; im.onerror = () => { URL.revokeObjectURL(url); rej(); };
         im.src = url;
       });
-      const fallback = () => { zoom.style.opacity = ''; if (C.tween === tw) { tw.t0 = performance.now(); safeHaptic('medium'); } };
+      const fallback = () => { zoom.style.opacity = ''; if (C.tween === tw) { coinTween(tw); safeHaptic('medium'); } };
       load.then(img => { if (C.tween === tw) runAward(img); }, fallback);
       return true;
       function runAward(img) {
@@ -5404,7 +5530,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         let shown = false;
         const reveal = () => {
           zoom.style.transition = 'opacity .3s ease'; zoom.style.opacity = '';
-          tw.from = -360; tw.dur = 900; tw.scaleFrom = .9; tw.t0 = performance.now();
+          tw.from = -360; tw.dur = 900; tw.scaleFrom = .9;
+          if (C.tween === tw) coinTween(tw);
           safeHaptic('medium');
         };
         // пряди вихрем собираются в контур медали и её светлых частей, потом проявляется сама монета
@@ -5452,8 +5579,10 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       $('coinView').classList.remove('open');
       $('confetti').innerHTML = '';
       navForget(closeCoin);
-      C.landed = null;
-      setTimeout(() => cancelAnimationFrame(C.raf), 320);
+      C.landed = null; C.open = false;
+      cancelAnimationFrame(C.raf); clearTimeout(C.endT);
+      // покачивание ещё видно, пока экран закрывается
+      setTimeout(() => { if (!C.open) coinStop(); }, 320);
       if (awardQueue.length || $('coinView').classList.contains('award-mode')) setTimeout(showNextAward, 380);
     }
 
@@ -5526,9 +5655,13 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const st = $('coinStage');
       st.addEventListener('pointerdown', e => {
         if (C.mode === 'tween') return;
-        // запасной путь (живой SVG без холста): крутишь — рисунок замирает, иначе лагает
+        // запасной путь (живой SVG без слоёв): крутишь — рисунок замирает, иначе лагает
         if (C.liveSv) coinLive(false);
+        const p = coinNow();
+        coinStop(); clearTimeout(C.endT);
+        C.angle = p.a; C.tilt = p.x; C.scale = 1;
         C.dragging = true; C.mode = 'spin'; C.vel = 0;
+        coinDrag();
         C.lastX = e.clientX; C.startY = e.clientY; C.lastT = performance.now();
         st.setPointerCapture(e.pointerId);
       });
@@ -5538,8 +5671,9 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         C.angle += dx * 0.6; C.vel = dx * 0.6 * (16 / dt);
         C.tilt = Math.max(-18, Math.min(18, -(e.clientY - C.startY) * 0.15));
         C.lastX = e.clientX; C.lastT = now;
+        coinDrag();
       });
-      const release = () => { if (!C.dragging) return; C.dragging = false; C.vel = Math.max(-38, Math.min(38, C.vel)); safeHaptic('light'); };
+      const release = () => { if (!C.dragging) return; C.dragging = false; C.vel = Math.max(-38, Math.min(38, C.vel)); safeHaptic('light'); coinRelease(); };
       st.addEventListener('pointerup', release);
       st.addEventListener('pointercancel', release);
       if (window.Telegram?.WebApp?.initData) document.documentElement.classList.add('in-tg');
