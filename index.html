@@ -637,6 +637,7 @@
     .coin .face { width: 240px; height: 240px; margin: -120px 0 0 -120px; border-radius: 50%; overflow: hidden; }
     .coin .face svg { width: 100%; height: 100%; display: block; }
     .coin .face svg.live { position: absolute; left: 0; top: 0; }
+    .coin .face canvas.live-cv { position: absolute; left: -4px; top: -4px; width: 248px; height: 248px; display: block; }
     .coin .face img { position: absolute; left: -4px; top: -4px; width: 248px; height: 248px; display: block; }
     .coin .edge { backface-visibility: visible; -webkit-backface-visibility: visible; }
     .sheen-mask { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; pointer-events: none; }
@@ -3054,7 +3055,34 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       // Сбросить всё нарисованное (новые данные с сервера)
       function reset() { gen++; Object.keys(urls).forEach(k => { URL.revokeObjectURL(urls[k]); delete urls[k]; }); }
       function drop(key) { if (urls[key]) { URL.revokeObjectURL(urls[key]); delete urls[key]; } }
-      return { render, reset, drop, get: k => urls[k], pause: v => { paused = !!v; } };
+      // Живая картинка: SVG с анимацией как <img>. Браузер крутит её анимацию, только пока картинка на странице —
+      // держим её невидимой точкой в углу, а кадры рисуем на холст (так живёт большая монета)
+      let holder = null, animP = null;
+      async function liveImg(svg, px) {
+        const img = await toImg(svg, px, (await fontCss()) || '');
+        if (!holder) {
+          holder = document.createElement('div'); holder.setAttribute('aria-hidden', 'true');
+          holder.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none;z-index:-1';
+          document.body.appendChild(holder);
+        }
+        img.style.cssText = 'display:block;width:1px;height:1px';
+        holder.appendChild(img);
+        return img;
+      }
+      // умеет ли браузер отдавать на холст текущий кадр анимации картинки (проверка один раз)
+      function animOk() {
+        if (!animP) animP = (async () => {
+          const img = await liveImg('<svg viewBox="0 0 100 100"><rect width="20" height="100" fill="#f00"><animate attributeName="x" from="0" to="80" dur="1s" repeatCount="indefinite"/></rect></svg>', 100);
+          const c = document.createElement('canvas'); c.width = 100; c.height = 100;
+          const g = c.getContext('2d');
+          const at = () => { g.clearRect(0, 0, 100, 100); g.drawImage(img, 0, 0, 100, 100); const d = g.getImageData(0, 50, 100, 1).data; for (let j = 0; j < 100; j++) if (d[j * 4 + 3] > 200) return j; return -1; };
+          const a = at(); await wait(160); const b = at();
+          img.remove();
+          return a >= 0 && b >= 0 && a !== b;
+        })().catch(() => false);
+        return animP;
+      }
+      return { render, reset, drop, liveImg, animOk, get: k => urls[k], pause: v => { paused = !!v; } };
     })();
 
     // Экран достижений собирается заранее, в паузе после открытия главного экрана,
@@ -5028,39 +5056,67 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         C.glints.forEach(el => turnGlint(el, ga));
       }
     }
-    // Крупная медаль живая, пока монета спокойно покачивается. Крутят пальцем, вручают, закрывают —
-    // снова неподвижная картинка: так вращение остаётся плавным
-    // Живая сторона большой медали ложится поверх картинки сразу при сборке монеты и двигается, пока монета
-    // летит и стоит; пока крутишь пальцем — замирает в текущем кадре. Без подмены картинки на анимацию
-    // (Вадим, 24.10: «переход тормозит», «всегда анимацию», «вращение лагает»)
+    // Большая медаль живая всё время: и пока летит, и пока крутишь, и в покое (Вадим, 24.10).
+    // Живой SVG прямо на вращающейся монете перерисовывался при каждом повороте и лагал. Поэтому анимация
+    // рисуется кадрами на холст, а вращается уже готовый холст — как картинка, без перерисовки.
+    // Рисуем только сторону, которая к тебе. Холст ложится поверх картинки с первым нарисованным кадром.
+    // Если браузер не отдаёт кадры анимации на холст — живой SVG поверх картинки, при вращении он замирает
     function coinLivePrep() {
-      if (calm() || C.liveSv || !C.front || !C.m) return;
+      if (calm() || C.liveSv || C.liveCv || !C.front || !C.m) return;
+      const build = C.build, m = C.m, svgs = [MedalB.medal(medalOpts(m), true), coinBack(m, true)];
+      C.liveCv = [];
+      MedalRaster.animOk().then(ok => {
+        if (C.build !== build) return;
+        if (!ok) { C.liveCv = null; coinLiveSvg(svgs); return; }
+        const px = Math.round(248 * Math.min(2, window.devicePixelRatio || 2));
+        C.liveCv = [C.front, C.backFace].map((f, i) => {
+          const cv = document.createElement('canvas'), o = { f, cv, g: null, img: null, px };
+          cv.className = 'live-cv'; cv.width = cv.height = px; cv.setAttribute('aria-hidden', 'true'); o.g = cv.getContext('2d');
+          MedalRaster.liveImg(svgs[i], px).then(img => { if (C.build !== build) img.remove(); else o.img = img; }).catch(() => {});
+          return o;
+        });
+      });
+    }
+    function coinLiveSvg(svgs) {
       const fix = h => h.replace('viewBox="-4 -4 248 248"', 'viewBox="0 0 240 240"').trim();
-      // обе стороны: лицо и оборот (Вадим, 24.10: «обратная сторона статичная»)
-      C.liveSv = [[C.front, fix(MedalB.medal(medalOpts(C.m), true))], [C.backFace, fix(coinBack(C.m, true))]].map(([f, h]) => {
-        if (!f) return null;
-        const tp = document.createElement('template'); tp.innerHTML = h;
+      C.liveSv = [C.front, C.backFace].map((f, i) => {
+        const tp = document.createElement('template'); tp.innerHTML = fix(svgs[i]);
         const sv = tp.content.firstElementChild, pic = f.querySelector(':scope > img, :scope > svg');
         sv.classList.add('live'); sv.setAttribute('aria-hidden', 'true');
         if (pic) pic.after(sv); else f.prepend(sv);
         sv.pauseAnimations();
         return sv;
-      }).filter(Boolean);
+      });
+      C.liveSide = null;
     }
     function coinLive(on) {
-      if (!C.liveSv || on === !!C.liveOn) return;
+      if (on === !!C.liveOn) return;
       C.liveOn = on; C.liveSide = null;
-      if (!on) C.liveSv.forEach(sv => sv.pauseAnimations()); else coinLiveSide();
+      if (C.liveSv && !on) C.liveSv.forEach(sv => sv.pauseAnimations());
     }
-    // двигается только та сторона, что сейчас к тебе: вторая стоит и не нагружает телефон
+    // каждый кадр: на холст — текущий кадр стороны, что к тебе (у ребра — обеих)
     function coinLiveSide() {
-      if (!C.liveOn || !C.liveSv) return;
-      const side = Math.cos(C.angle * Math.PI / 180) >= 0 ? 0 : 1;
+      if (!C.liveOn) return;
+      const c = Math.cos(C.angle * Math.PI / 180);
+      if (C.liveCv && C.liveCv.length) {
+        C.liveCv.forEach((o, i) => {
+          if (!o.img || (i === 0 ? c < -.25 : c > .25)) return;
+          o.g.clearRect(0, 0, o.px, o.px); o.g.drawImage(o.img, 0, 0, o.px, o.px);
+          if (!o.cv.parentNode) { const pic = o.f.querySelector(':scope > img, :scope > svg'); if (pic) pic.after(o.cv); else o.f.prepend(o.cv); }
+        });
+        return;
+      }
+      if (!C.liveSv) return;
+      const side = c >= 0 ? 0 : 1;
       if (side === C.liveSide) return;
       C.liveSide = side;
       C.liveSv.forEach((sv, i) => i === side ? sv.unpauseAnimations() : sv.pauseAnimations());
     }
-    function coinLiveDrop() { if (C.liveSv) C.liveSv.forEach(sv => sv.remove()); C.liveSv = null; C.liveOn = false; }
+    function coinLiveDrop() {
+      if (C.liveSv) C.liveSv.forEach(sv => sv.remove());
+      if (C.liveCv) C.liveCv.forEach(o => { o.cv.remove(); if (o.img) o.img.remove(); });
+      C.liveSv = C.liveCv = null; C.liveOn = false;
+    }
     function coinLoop(t) {
       if (C.mode === 'tween') {
         // время по кадрам: долгий кадр (сборка экрана, загрузка) не даёт монете перескочить
@@ -5082,7 +5138,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         }
       } else if (C.mode === 'idle' && !C.dragging) {
         const k = (t - C.idleT0) / 1000, ramp = Math.min(1, k / 1.2);
-        if (!C.liveOn && C.liveSv && $('coinView').classList.contains('open')) coinLive(true);   // остановилась — снова двигается с того же кадра
+        if (!C.liveOn && (C.liveSv || C.liveCv) && $('coinView').classList.contains('open')) coinLive(true);   // остановилась — снова двигается с того же кадра
         C.angle = C.base + 9 * Math.sin(k * 1.1) * ramp;
         C.tilt = 3 * Math.sin(k * 0.8) * ramp;
       }
@@ -5283,8 +5339,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const st = $('coinStage');
       st.addEventListener('pointerdown', e => {
         if (C.mode === 'tween') return;
-        // крутишь — рисунок замирает (без подмены картинки): живой SVG при вращении перерисовывался каждый кадр и лагал (Вадим, 24.10)
-        coinLive(false);
+        // запасной путь (живой SVG без холста): крутишь — рисунок замирает, иначе лагает
+        if (C.liveSv) coinLive(false);
         C.dragging = true; C.mode = 'spin'; C.vel = 0;
         C.lastX = e.clientX; C.startY = e.clientY; C.lastT = performance.now();
         st.setPointerCapture(e.pointerId);
