@@ -5030,8 +5030,9 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     }
     // Крупная медаль живая, пока монета спокойно покачивается. Крутят пальцем, вручают, закрывают —
     // снова неподвижная картинка: так вращение остаётся плавным
-    // Живая сторона большой медали ложится поверх картинки сразу при сборке монеты и двигается всё время:
-    // без подмены картинки на анимацию (Вадим, 24.10: «переход тормозит», «всегда анимацию»)
+    // Живая сторона большой медали ложится поверх картинки сразу при сборке монеты и двигается, пока монета
+    // летит и стоит; пока крутишь пальцем — замирает в текущем кадре. Без подмены картинки на анимацию
+    // (Вадим, 24.10: «переход тормозит», «всегда анимацию», «вращение лагает»)
     function coinLivePrep() {
       if (calm() || C.liveSv || !C.front || !C.m) return;
       const fix = h => h.replace('viewBox="-4 -4 248 248"', 'viewBox="0 0 240 240"').trim();
@@ -5081,6 +5082,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         }
       } else if (C.mode === 'idle' && !C.dragging) {
         const k = (t - C.idleT0) / 1000, ramp = Math.min(1, k / 1.2);
+        if (!C.liveOn && C.liveSv && $('coinView').classList.contains('open')) coinLive(true);   // остановилась — снова двигается с того же кадра
         C.angle = C.base + 9 * Math.sin(k * 1.1) * ramp;
         C.tilt = 3 * Math.sin(k * 0.8) * ramp;
       }
@@ -5281,6 +5283,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const st = $('coinStage');
       st.addEventListener('pointerdown', e => {
         if (C.mode === 'tween') return;
+        // крутишь — рисунок замирает (без подмены картинки): живой SVG при вращении перерисовывался каждый кадр и лагал (Вадим, 24.10)
+        coinLive(false);
         C.dragging = true; C.mode = 'spin'; C.vel = 0;
         C.lastX = e.clientX; C.startY = e.clientY; C.lastT = performance.now();
         st.setPointerCapture(e.pointerId);
