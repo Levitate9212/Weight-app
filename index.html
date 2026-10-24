@@ -211,8 +211,10 @@
     .st-wks { width: 100%; }
     .st-slide .st-sleep.big { width: 100%; height: 130px; }
     .st-slide .st-sleep.big i { border-radius: 10px; }
-    .st-mw { position: relative; display: block; }
-    .st-mw > svg.live { position: absolute; left: 0; top: 0; filter: none; animation: lvIn .4s ease both; }
+    .st-mw { position: relative; display: block; isolation: isolate; }
+    .st-mw > svg.live { filter: none; }
+    .st-medal1 .st-mw::before { content: ""; position: absolute; inset: -14%; z-index: -1; border-radius: 50%;
+      background: radial-gradient(closest-side, color-mix(in srgb, var(--pt-a) 30%, transparent), transparent); }
     .st-medal1 svg, .st-medal1 img { width: 170px; height: 170px; display: block; filter: drop-shadow(0 10px 40px color-mix(in srgb, var(--pt-a) 35%, transparent)); }
     .st-mt { font-family: var(--num); font-weight: 800; font-size: 36px; line-height: 1; max-width: 16ch;
       background-image: linear-gradient(90deg, var(--pt-a), var(--pt-b) 70%); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
@@ -594,8 +596,7 @@
     .mw > .th > * { position: absolute; inset: 0; width: 100%; height: 100%; }
     #achScreen .m-tile .mw.thick > img { opacity: 1; }
     /* живая медаль: тень не фильтром (он перерисовывался бы каждый кадр), а у обёртки */
-    .m-tile .mw > svg.live { position: absolute; left: 0; top: 0; filter: none; animation: lvIn .4s ease both; }
-    @keyframes lvIn { from { opacity: 0; } }
+    .m-tile .mw > svg.live { position: absolute; left: 0; top: 0; filter: none; }
     #achScreen .m-tile.lit .mw::after { animation: achGlint .6s ease .45s both; }
     @keyframes achFlip { 0% { transform: perspective(520px) rotateY(0) scale(.96); } 45% { transform: perspective(520px) rotateY(90deg) scale(1.04); } 100% { transform: perspective(520px) rotateY(360deg); } }
     #shotSl { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 46; }
@@ -3092,7 +3093,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       if (!seen) { flipSave(all.map(t => t.$m && t.$m.key).filter(Boolean)); return; }
       const tiles = all.filter(t => t.$m && seen.indexOf(t.$m.key) === -1);
       if (!tiles.length) return;
-      tiles.forEach(t => t.classList.add('dim'));
+      tiles.forEach(t => { tileLive(t, false); t.classList.add('dim'); });
       if (!('IntersectionObserver' in window)) return tiles.forEach(t => t.classList.replace('dim', 'lit'));
       // экран ещё выезжает — стреляем, когда он встал
       ACH.t = setTimeout(() => {
@@ -3122,40 +3123,55 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     }
     // Живые медали витрины (Вадим, 24.10): двигаются только полученные медали, которые сейчас видно,
     // и только когда уже перевернулись в цвет. Ушла с экрана — снова неподвижная картинка: 50 живых разом тормозили бы
-    const LIVE_T = { io: null };
+    // Живая медаль подкладывается заранее — пока её ещё не видно (при сборке экрана и на 500px вперёд при прокрутке) —
+    // и стоит на паузе в первом кадре, который совпадает с картинкой. Показалась — просто снимается с паузы,
+    // ушла — снова пауза. Так не видно ни подмены, ни ожидания (Вадим, 24.10: «тормозит переход»)
+    const LIVE_T = { near: null, vis: null, q: [], busy: 0 };
+    const liveOf = t => t.querySelector('.mw > svg.live');
     function liveTiles(sc) {
       liveTilesOff();
       if (calm() || !('IntersectionObserver' in window)) return;
-      LIVE_T.io = new IntersectionObserver(es => es.forEach(e => {
-        const t = e.target;
-        clearTimeout(t.$lv);
-        if (e.isIntersecting) t.$lv = setTimeout(() => liveQueue(t), 300); else tileLive(t, false);
-      }), { root: sc, rootMargin: '24px' });
-      sc.querySelectorAll('.m-tile:not(.locked)').forEach(t => LIVE_T.io.observe(t));
+      LIVE_T.near = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting && !liveOf(e.target)) liveQueue(e.target); }),
+        { root: sc, rootMargin: '500px 0px' });
+      LIVE_T.vis = new IntersectionObserver(es => es.forEach(e => {
+        const t = e.target, sv = liveOf(t);
+        t.$vis = e.isIntersecting;
+        if (sv) t.$vis ? sv.unpauseAnimations() : sv.pauseAnimations();
+      }), { root: sc, rootMargin: '30px 0px' });
+      sc.querySelectorAll('.m-tile:not(.locked)').forEach(t => { LIVE_T.near.observe(t); LIVE_T.vis.observe(t); });
     }
-    // оживляем по одной медали за раз: несколько SVG разом давали рывок при прокрутке (Вадим, 24.10: «дёргается»)
+    // подкладываем по одной: несколько SVG разом дали бы рывок при прокрутке
     function liveQueue(t) {
-      LIVE_T.q = (LIVE_T.q || []).filter(x => x !== t); LIVE_T.q.push(t);
+      if (LIVE_T.q.indexOf(t) === -1) LIVE_T.q.push(t);
       if (LIVE_T.busy) return;
       const next = () => {
         const x = LIVE_T.q.shift();
         if (!x) { LIVE_T.busy = 0; return; }
-        if (LIVE_T.io) tileLive(x, true);
-        LIVE_T.busy = setTimeout(next, 140);
+        tileLive(x, true);
+        LIVE_T.busy = setTimeout(next, 60);
       };
       next();
     }
+    // экран закрыт — живые медали остаются, но стоят: при следующем открытии они уже на месте
     function liveTilesOff() {
-      if (LIVE_T.io) LIVE_T.io.disconnect(); LIVE_T.io = null;
+      [LIVE_T.near, LIVE_T.vis].forEach(o => o && o.disconnect()); LIVE_T.near = LIVE_T.vis = null;
       LIVE_T.q = []; clearTimeout(LIVE_T.busy); LIVE_T.busy = 0;
-      document.querySelectorAll('#achScreen .m-tile').forEach(t => { clearTimeout(t.$lv); tileLive(t, false); });
+      document.querySelectorAll('#achScreen .m-tile').forEach(t => { clearTimeout(t.$lv); t.$vis = false; const sv = liveOf(t); if (sv) sv.pauseAnimations(); });
+    }
+    // при сборке экрана в паузе: живые медали первого экрана подкладываются заранее, по одной в свободное время
+    function livePrewarm(sc) {
+      if (calm()) return;
+      const tiles = [...sc.querySelectorAll('.m-tile:not(.locked)')].slice(0, 12);
+      const idle = f => window.requestIdleCallback ? requestIdleCallback(f, { timeout: 1500 }) : setTimeout(f, 50);
+      const step = () => { const t = tiles.shift(); if (!t || !t.isConnected) return; tileLive(t, true); idle(step); };
+      idle(step);
     }
     function tileLive(t, on) {
       const mw = t.querySelector('.mw'), m = t.$m;
       if (!mw || !m || m.status !== 'earned') return;
       const cur = mw.querySelector(':scope > svg.live');
       // ещё серая или переворачивается — подождать
-      if (on && (t.classList.contains('dim') || mw.classList.contains('thick'))) { t.$lv = setTimeout(() => liveQueue(t), 500); return; }
+      if (on && (t.classList.contains('dim') || mw.classList.contains('thick'))) { clearTimeout(t.$lv); t.$lv = setTimeout(() => LIVE_T.vis && liveQueue(t), 500); return; }
       if (on === !!cur) return;
       if (on) {
         const pic = mw.querySelector(':scope > img, :scope > svg');
@@ -3163,8 +3179,9 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         tp.innerHTML = MedalB.medal(medalOpts(m), true).trim();
         const sv = tp.content.firstElementChild;
         sv.classList.add('live'); sv.setAttribute('aria-hidden', 'true');
-        // живая ложится поверх готовой картинки: тень и форма остаются те же, подмена не видна
+        // живая ложится поверх готовой картинки: тень и форма остаются те же; пока не видно — стоит в первом кадре
         if (pic) pic.after(sv); else mw.prepend(sv);
+        if (!t.$vis) sv.pauseAnimations();
       } else cur.remove();
     }
     // Плоская картинка ребром превращается в нитку (Вадим, 24.10: «плоские»). На время переворота за лицом
@@ -3306,6 +3323,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         box.appendChild(sec);
       });
       rasterTiles(u);
+      livePrewarm($('achScreen'));
     }
     // Нарисовать медали витрины картинками и тихо подменить ими живые SVG
     function rasterTiles(u) {
@@ -3909,7 +3927,6 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       ST.sl = null; cancelAnimationFrame(ST.dk);
       pg.innerHTML = `<div class="st-card${anim && dir ? ' ' + dir : ''}">${v.html()}</div>`;
       if (anim) pg.scrollTop = 0;
-      stLive(pg);
       stChartGo();
     }
     // экраны недели после обложки листаются руками, без таймера: свайп или тап справа — дальше, слева — назад;
@@ -3922,30 +3939,11 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         <div class="st-pn"><button onclick="stSlide(-1)" ${ST.si ? '' : 'disabled'} aria-label="Назад">‹</button><span>${ST.si + 1} / ${n}</span><button onclick="stSlide(1)" ${ST.si < n - 1 ? '' : 'disabled'} aria-label="Дальше">›</button></div></div>`;
       pg.scrollTop = 0;
       silkStart(pg);
-      stLive(pg);
     }
-    // медали в сторис живые, как в витрине (Вадим, 24.10). Сначала готовая картинка, живая ложится поверх
-    // по одной, когда экран уже въехал — чтобы листание не дёргалось
-    const ST_MED = {};
-    function stPic(md) { const k = medalKey(md); ST_MED[k] = md; return `<span class="st-mw" data-k="${esc(k)}">${medalPic(md)}</span>`; }
-    function stLive(root) {
-      clearTimeout(ST.lvT);
-      if (calm()) return;
-      const els = [...root.querySelectorAll('.st-mw[data-k]')];
-      let i = 0;
-      const step = () => {
-        const el = els[i++], m = el && ST_MED[el.dataset.k];
-        if (!el || !el.isConnected) return;
-        if (m && !el.querySelector(':scope > svg.live')) {
-          const tp = document.createElement('template');
-          tp.innerHTML = MedalB.medal(medalOpts(m), true).trim();
-          const sv = tp.content.firstElementChild;
-          sv.classList.add('live'); sv.setAttribute('aria-hidden', 'true');
-          el.appendChild(sv);
-        }
-        ST.lvT = setTimeout(step, 120);
-      };
-      ST.lvT = setTimeout(step, 450);
+    // медали в сторис сразу живые, как в витрине (Вадим, 24.10): без промежуточной картинки
+    function stPic(md) {
+      if (calm()) return `<span class="st-mw">${medalPic(md)}</span>`;
+      return `<span class="st-mw">${MedalB.medal(medalOpts(md), true).trim().replace('<svg', '<svg class="live" aria-hidden="true"')}</span>`;
     }
     function stSlideTo(k) { if (ST.sl && k !== ST.si) { const d = k > ST.si ? 'in-r' : 'in-l'; ST.si = k; safeHaptic('selection'); stDeck(d); } }
     function stSlide(d) {
@@ -4017,7 +4015,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       });
     }
     function closeStory() {
-      ST.req++; ST.posterOn = false; ST.hold = false; cancelAnimationFrame(ST.dk); clearTimeout(ST.lvT);
+      ST.req++; ST.posterOn = false; ST.hold = false; cancelAnimationFrame(ST.dk);
       $('story').classList.remove('open'); $('story').setAttribute('aria-hidden', 'true');
       cancelAnimationFrame(ST.timer);
       navForget(closeStory);
