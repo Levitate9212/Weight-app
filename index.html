@@ -212,7 +212,7 @@
     .st-slide .st-sleep.big { width: 100%; height: 130px; }
     .st-slide .st-sleep.big i { border-radius: 10px; }
     .st-mw { position: relative; display: block; }
-    .st-mw > svg.live { position: absolute; left: 0; top: 0; filter: none; }
+    .st-mw > svg.live { position: absolute; left: 0; top: 0; filter: none; animation: lvIn .4s ease both; }
     .st-medal1 svg, .st-medal1 img { width: 170px; height: 170px; display: block; filter: drop-shadow(0 10px 40px color-mix(in srgb, var(--pt-a) 35%, transparent)); }
     .st-mt { font-family: var(--num); font-weight: 800; font-size: 36px; line-height: 1; max-width: 16ch;
       background-image: linear-gradient(90deg, var(--pt-a), var(--pt-b) 70%); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
@@ -594,7 +594,8 @@
     .mw > .th > * { position: absolute; inset: 0; width: 100%; height: 100%; }
     #achScreen .m-tile .mw.thick > img { opacity: 1; }
     /* живая медаль: тень не фильтром (он перерисовывался бы каждый кадр), а у обёртки */
-    .m-tile .mw > svg.live { position: absolute; left: 0; top: 0; filter: none; }
+    .m-tile .mw > svg.live { position: absolute; left: 0; top: 0; filter: none; animation: lvIn .4s ease both; }
+    @keyframes lvIn { from { opacity: 0; } }
     #achScreen .m-tile.lit .mw::after { animation: achGlint .6s ease .45s both; }
     @keyframes achFlip { 0% { transform: perspective(520px) rotateY(0) scale(.96); } 45% { transform: perspective(520px) rotateY(90deg) scale(1.04); } 100% { transform: perspective(520px) rotateY(360deg); } }
     #shotSl { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 46; }
@@ -2617,15 +2618,15 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           // покачивание вверх-вниз
           bob: (dy, dur, begin = 0) => anim ? `<animateTransform attributeName="transform" type="translate" values="0 0;0 ${dy};0 0" dur="${dur}s" begin="${begin}s" repeatCount="indefinite" calcMode="spline" keyTimes="0;.5;1" keySplines="${ease(2)}" additive="sum"/>` : '',
           slide: (dx, dy, dur, begin = 0) => anim ? `<animateTransform attributeName="transform" type="translate" values="0 0;${dx} ${dy};0 0" dur="${dur}s" begin="${begin}s" repeatCount="indefinite" calcMode="spline" keyTimes="0;.5;1" keySplines="${ease(2)}" additive="sum"/>` : '',
-          swing: (deg, cx, cy, dur, begin = 0) => anim ? `<animateTransform attributeName="transform" type="rotate" values="${-deg} ${cx} ${cy};${deg} ${cx} ${cy};${-deg} ${cx} ${cy}" dur="${dur}s" begin="${begin}s" repeatCount="indefinite" calcMode="spline" keyTimes="0;.5;1" keySplines="${ease(2)}" additive="sum"/>` : '',
+          swing: (deg, cx, cy, dur, begin = 0) => anim ? `<animateTransform attributeName="transform" type="rotate" values="0 ${cx} ${cy};${deg} ${cx} ${cy};0 ${cx} ${cy};${-deg} ${cx} ${cy};0 ${cx} ${cy}" dur="${dur}s" begin="${begin}s" repeatCount="indefinite" calcMode="spline" keyTimes="0;.25;.5;.75;1" keySplines="${ease(4)}" additive="sum"/>` : '',
           spin: (cx, cy, dur, dir = 1) => anim ? `<animateTransform attributeName="transform" type="rotate" from="0 ${cx} ${cy}" to="${360 * dir} ${cx} ${cy}" dur="${dur}s" repeatCount="indefinite" additive="sum"/>` : '',
           // пульс вокруг точки: scale с переносом центра
           pulse: (body, cx, cy, vals, dur, begin = 0) => anim
             ? `<g transform="translate(${cx} ${cy})"><g><animateTransform attributeName="transform" type="scale" values="${vals}" dur="${dur}s" begin="${begin}s" repeatCount="indefinite"/><g transform="translate(${-cx} ${-cy})">${body}</g></g></g>`
             : body,
-          blink: (lo, hi, dur, begin = 0) => anim ? `<animate attributeName="opacity" values="${lo};${hi};${lo}" dur="${dur}s" begin="${begin}s" repeatCount="indefinite"/>` : '',
+          blink: (lo, hi, dur, begin = 0) => anim ? `<animate attributeName="opacity" values="${hi};${lo};${hi}" dur="${dur}s" begin="${begin}s" repeatCount="indefinite"/>` : '',
           // нить рисуется и стирается (обводка по длине)
-          draw: (len, dur, begin = 0) => anim ? `<animate attributeName="stroke-dashoffset" values="${len};0;0;${-len}" keyTimes="0;.45;.7;1" dur="${dur}s" begin="${begin}s" repeatCount="indefinite"/>` : '',
+          draw: (len, dur, begin = 0) => anim ? `<animate attributeName="stroke-dashoffset" values="0;0;${-len};${len};0" keyTimes="0;.25;.55;.55;1" dur="${dur}s" begin="${begin}s" repeatCount="indefinite"/>` : '',
           dash: len => anim ? `stroke-dasharray="${len} ${len}"` : '',
           // искры-угольки поднимаются и гаснут
           embers: (pts, col) => anim ? pts.map(([x, y, r, d, b]) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${col}" opacity="0"><animate attributeName="cy" values="${y};${y - 46}" dur="${d}s" begin="${b}s" repeatCount="indefinite"/><animate attributeName="opacity" values="0;1;0" dur="${d}s" begin="${b}s" repeatCount="indefinite"/><animate attributeName="cx" values="${x};${x + 6};${x - 4}" dur="${d}s" begin="${b}s" repeatCount="indefinite"/></circle>`).join('') : '',
@@ -2645,7 +2646,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
             <defs><linearGradient id="${id}fl" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#FFD23A"/><stop offset=".45" stop-color="#FF8A1E"/><stop offset="1" stop-color="#E5341F"/></linearGradient>
             <linearGradient id="${id}fc" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#FFFBE0"/><stop offset="1" stop-color="#FFD23A"/></linearGradient>
             <filter id="${id}fg" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="6"/></filter></defs>
-            <path d="M120 46 C140 72,152 90,144 114 C139 128,129 134,120 134 C107 134,96 126,95 111 C94 98,103 89,108 80 C110 93,116 98,121 98 C118 82,115 64,120 46 Z" fill="#FF8A1E" filter="url(#${id}fg)" opacity=".75">${x.blink(.55, .9, 1.3)}</path>
+            <path d="M120 46 C140 72,152 90,144 114 C139 128,129 134,120 134 C107 134,96 126,95 111 C94 98,103 89,108 80 C110 93,116 98,121 98 C118 82,115 64,120 46 Z" fill="#FF8A1E" filter="url(#${id}fg)" opacity=".75">${x.blink(.45, .75, 1.3)}</path>
             ${x.pulse(`<path d="${e[0].match(/d="([^"]+)"/)[1]}" fill="url(#${id}fl)"/>`, 120, 132, '1 1;1.05 .93;.96 1.07;1.03 .97;1 1', 1.1)}
             ${x.pulse(`<path d="${C.match(/d="([^"]+)"/)[1]}" fill="url(#${id}fc)"/>`, 120, 124, '1 1;.92 1.1;1.06 .9;1 1', .8, .2)}
           </g>`;
@@ -2657,7 +2658,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           return `<defs><linearGradient id="${id}mn" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFF3A6"/><stop offset="1" stop-color="#FFC531"/></linearGradient>
             <linearGradient id="${id}cd" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#B9CEF2"/></linearGradient>
             <filter id="${id}mg" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="7"/></filter></defs>
-            <g fill="#FFD54A" filter="url(#${id}mg)" opacity=".55">${e[0]}${x.blink(.35, .75, 3.2)}</g>
+            <g fill="#FFD54A" filter="url(#${id}mg)" opacity=".55">${e[0]}${x.blink(.2, .55, 3.2)}</g>
             <g fill="url(#${id}mn)">${e[0]}${x.swing(4, 140, 72, 6)}</g>
             <g fill="url(#${id}cd)" filter="url(#${id}sh)">${e.slice(1, 5).join('')}${x.slide(5, 0, 7)}</g>
             ${x.twinkle(`<g fill="#FFF3A6">${e[5]}</g>`, 86, 76, 2.1)}${x.twinkle(`<g fill="#FFF3A6">${e[6]}</g>`, 105.5, 56, 2.6, .8)}`;
@@ -2699,7 +2700,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         road: (A, C, x) => {
           const e = els(A), d = els(C);
           return x.raised(e.slice(0, 3).join('')) + x.flag(e[3], 121.8, 42, 1.6)
-            + d.map((r, i) => `<g fill="${x.cutCol}">${r}${x.blink(.25, 1, 1.2, -i * .4)}</g>`).join('');
+            + d.map((r, i) => `<g fill="${x.cutCol}">${r}${x.blink(.25, 1, 1.2, i * .4)}</g>`).join('');
         },
         // весы: стрелка вниз покачивается, стрелка шкалы дрожит
         belt: (A, C, x) => { const e = els(A), c = els(C); return x.raised(e[0]) + x.raised(`<g>${e[1]}${x.bob(7, 1.6)}</g>`) + x.engrave(c[0] + c[2]) + `<g fill="${x.cutCol}">${c[1]}${x.swing(14, 94, 112, 2.4)}</g>`; },
@@ -2754,11 +2755,12 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           const yc = y0 + (y1 - y0) * (k + .5) / n + (rnd() - .5) * 14, f = .018 + rnd() * .014, ph = rnd() * 6.28, tilt = (rnd() - .5) * .5, a = amp * (.6 + rnd() * .6);
           // живая медаль: волна бежит вдоль нити. Вторая гармоника ровно 2f — тогда сдвиг на длину волны бесшовный,
           // наклон — поворотом всей линии, а не в формуле (иначе сдвиг был бы виден)
-          const L = 2 * Math.PI / f, x0 = anim ? -L - 20 : 6, x1 = anim ? 260 + L : 234, h2 = anim ? 2 : 2.3;
+          // неподвижная медаль — ровно первый кадр живой: картинка сменяется анимацией без рывка (Вадим, 24.10)
+          const L = 2 * Math.PI / f, x0 = -L - 20, x1 = 260 + L, h2 = 2;
           let line = '';
           for (let j = 0; j < strands; j++) {
             const off = (j - (strands - 1) / 2) * 1.7, ph2 = ph + j * .16;
-            const pts = []; for (let x = x0; x <= x1; x += 12) pts.push([x, yc + off + (anim ? 0 : tilt * (x - 120)) + a * Math.sin(f * x + ph2) + a * .35 * Math.sin(f * h2 * x + ph2 * 1.7)]);
+            const pts = []; for (let x = x0; x <= x1; x += 12) pts.push([x, yc + off + a * Math.sin(f * x + ph2) + a * .35 * Math.sin(f * h2 * x + ph2 * 1.7)]);
             let d = `M${pts[0][0]} ${pts[0][1].toFixed(1)}`;
             for (let i = 0; i < pts.length - 1; i++) {
               const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
@@ -2767,8 +2769,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
             const edge = Math.abs(j - (strands - 1) / 2) / ((strands - 1) / 2 || 1);
             line += `<path d="${d}" fill="none" stroke="${grad}" stroke-width="${(w * (1.15 - edge * .5)).toFixed(2)}" stroke-linecap="round" opacity="${(op * (1 - edge * .55)).toFixed(2)}"/>`;
           }
-          if (!anim) { out += line; continue; }
           const dur = (7 + rnd() * 6).toFixed(1), dir = k % 2 ? -1 : 1;
+          if (!anim) { out += `<g transform="rotate(${(tilt * 28).toFixed(1)} 120 ${yc.toFixed(0)})"><g${dir > 0 ? '' : ` transform="translate(${-L.toFixed(1)} 0)"`}>${line}</g></g>`; continue; }
           out += `<g transform="rotate(${(tilt * 28).toFixed(1)} 120 ${yc.toFixed(0)})"><g>${line}<animateTransform attributeName="transform" type="translate" from="${dir > 0 ? 0 : -L.toFixed(1)} 0" to="${dir > 0 ? -L.toFixed(1) : 0} 0" dur="${dur}s" repeatCount="indefinite"/></g></g>`;
         }
         return out;
