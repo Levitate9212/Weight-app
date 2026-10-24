@@ -3166,7 +3166,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       let h = `<g class="silk thin${o.px ? ' px' : ''}"${o.px ? ` data-px="${o.px}"` : ''} data-c="${pts.map(p => f(p[0]) + ',' + f(p[1])).join(' ')}"${o.a ? ` data-a="${o.a}"` : ''}${o.loop ? ' data-loop="1"' : ''}${o.full ? ' data-full="1"' : ''}${o.id ? ` id="${o.id}"` : ''}>`;
       if (o.sheen) h += `<path class="sg sh" style="stroke-width:${o.sheen}"/>`;
       for (let j = 0; j < n; j++) {
-        const gold = j % 4 === 2, w = ((o.w || 1) * (.55 + (j * 7 % 5) * .14)).toFixed(2), op = (.5 + (j * 3 % 6) * .09).toFixed(2);
+        const gold = j % 4 === 2, w = ((o.w || 1) * (.55 + (j * 7 % 5) * .14)).toFixed(2), op = o.op || (.5 + (j * 3 % 6) * .09).toFixed(2);
         h += `<path class="sl${gold ? ' au' : o.gid ? '' : j % 2 ? ' sl-b' : ' sl-a'}" style="${!gold && o.gid ? `stroke:url(#${o.gid});` : ''}stroke-width:${w};opacity:${op}"/>`;
       }
       return h + '</g>';
@@ -5189,6 +5189,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       for (let r = 0; r < 3; r++) y = y.map((v, i) => i && i < y.length - 1 ? (y[i - 1] + 2 * v + y[i + 1]) / 4 : v);
       return q.map((p, i) => [p[0], y[i]]);
     }
+    // главный график — одна живая линия: тот же шёлк, но одна прядь потолще; она мягко колышется, по ней бежит блик
+    const MAIN_SILK = anim => ({ n: 1, w: 4.2, px: 1.4, op: 1, gid: 'msG', full: !anim || calm() });
     function mainSilk(anim) {
       clearTimeout(MS.tm);
       const c = chartInstance, box = $('weightChart').parentNode, old = box.querySelector('.ms-svg'), pts = c && msPts();
@@ -5199,7 +5201,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const sv = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       sv.setAttribute('class', 'ms-svg'); sv.setAttribute('aria-hidden', 'true');
       sv.setAttribute('viewBox', `0 0 ${W} ${H}`); sv.style.width = W + 'px'; sv.style.height = H + 'px'; sv.style.left = c.canvas.offsetLeft + 'px'; sv.style.top = c.canvas.offsetTop + 'px';
-      sv.innerHTML = `<defs>${silkGrad('msG', W)}</defs>` + silkRaw(silkCurve(pts, Math.max(2, Math.round(240 / pts.length))), { ...LINE_SILK, gid: 'msG', full: !anim || calm() });
+      sv.innerHTML = `<defs>${silkGrad('msG', W)}</defs>` + silkRaw(silkCurve(pts, Math.max(2, Math.round(240 / pts.length))), MAIN_SILK(anim));
       if (old) old.replaceWith(sv); else box.appendChild(sv);
       silkStart(sv);
       mainSilkLine(false);
