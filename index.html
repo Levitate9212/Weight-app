@@ -636,6 +636,7 @@
     .coin .face, .coin .edge { position: absolute; left: 50%; top: 50%; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
     .coin .face { width: 240px; height: 240px; margin: -120px 0 0 -120px; border-radius: 50%; overflow: hidden; }
     .coin .face svg { width: 100%; height: 100%; display: block; }
+    .coin .face svg.live { position: absolute; left: 0; top: 0; }
     .coin .face img { position: absolute; left: -4px; top: -4px; width: 248px; height: 248px; display: block; }
     .coin .edge { backface-visibility: visible; -webkit-backface-visibility: visible; }
     .sheen-mask { position: absolute; inset: 0; border-radius: 50%; overflow: hidden; pointer-events: none; }
@@ -4963,7 +4964,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       };
       const front = MedalB.medal(medalOpts(m), false), back = coinBack(m);
       const faces = [face(front, false), face(back, true)];
-      C.m = m; C.front = faces[0]; C.liveOn = false; C.rasterOk = false;
+      coinLiveDrop();
+      C.m = m; C.front = faces[0]; C.rasterOk = false;
       // крупная монета тоже становится картинкой (с запасом под увеличение сцены)
       const keys = ['coin|' + medalKey(m), 'coinback|' + activeUserId + '|' + medalKey(m) + '|' + m.date];
       (C.rasterKeys || []).forEach(k => keys.indexOf(k) === -1 && MedalRaster.drop(k));
@@ -4983,7 +4985,12 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         }).catch(() => {}),
         new Promise(r => setTimeout(r, 2500))
       ]);
-      C.ready.then(() => { if (C.build === token) C.rasterOk = true; });
+      C.ready.then(() => {
+        if (C.build !== token) return;
+        C.rasterOk = true;
+        const idle = f => window.requestIdleCallback ? requestIdleCallback(f, { timeout: 800 }) : setTimeout(f, 60);
+        idle(() => { if (C.build === token) coinLivePrep(); });
+      });
       // свечение за монетой — в цвет медали
       const o = medalOpts(m), f = (grand && o.grandField) || o.field;
       const col = grand ? '#F2B53A' : (f && f.enamel) || (MedalArt.M[o.rim] || MedalArt.M.gunmetal).mid;
@@ -5020,19 +5027,25 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     }
     // Крупная медаль живая, пока монета спокойно покачивается. Крутят пальцем, вручают, закрывают —
     // снова неподвижная картинка: так вращение остаётся плавным
+    // Живая сторона большой медали готовится заранее, когда монета уже долетела, и ложится поверх картинки
+    // на паузе в первом кадре (он совпадает с картинкой). В покое — снимается с паузы, тянешь — снова пауза.
+    // Никакой подмены в момент перехода (Вадим, 24.10: «переход тормозит»)
+    function coinLivePrep() {
+      if (calm() || C.liveSv || !C.front || !C.m || !$('coinView').classList.contains('open')) return;
+      const tp = document.createElement('template');
+      tp.innerHTML = MedalB.medal(medalOpts(C.m), true).replace('viewBox="-4 -4 248 248"', 'viewBox="0 0 240 240"').trim();
+      const sv = tp.content.firstElementChild, pic = C.front.querySelector(':scope > img, :scope > svg');
+      sv.classList.add('live'); sv.setAttribute('aria-hidden', 'true');
+      if (pic) pic.after(sv); else C.front.prepend(sv);
+      sv.pauseAnimations();
+      C.liveSv = sv;
+    }
     function coinLive(on) {
-      if (on === !!C.liveOn || !C.front || !C.m) return;
-      if (on && calm()) return;
-      const f = C.front, cur = f.querySelector(':scope > svg.live');
-      if (on) {
-        const pic = f.querySelector(':scope > img, :scope > svg');
-        const tp = document.createElement('template');
-        tp.innerHTML = MedalB.medal(medalOpts(C.m), true).replace('viewBox="-4 -4 248 248"', 'viewBox="0 0 240 240"').trim();
-        const sv = tp.content.firstElementChild; sv.classList.add('live');
-        if (pic) { C.frontPic = pic; pic.replaceWith(sv); } else f.prepend(sv);
-      } else if (cur && C.frontPic) cur.replaceWith(C.frontPic);
+      if (!C.liveSv || on === !!C.liveOn) return;
+      on ? C.liveSv.unpauseAnimations() : C.liveSv.pauseAnimations();
       C.liveOn = on;
     }
+    function coinLiveDrop() { if (C.liveSv) C.liveSv.remove(); C.liveSv = null; C.liveOn = false; }
     function coinLoop(t) {
       if (C.mode === 'tween') {
         // время по кадрам: долгий кадр (сборка экрана, загрузка) не даёт монете перескочить
@@ -5054,7 +5067,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         }
       } else if (C.mode === 'idle' && !C.dragging) {
         const k = (t - C.idleT0) / 1000, ramp = Math.min(1, k / 1.2);
-        if (k > .5 && !C.liveOn && C.rasterOk && $('coinView').classList.contains('open')) coinLive(true);
+        if (k > .5 && !C.liveOn && C.liveSv && $('coinView').classList.contains('open')) coinLive(true);
         C.angle = C.base + 9 * Math.sin(k * 1.1) * ramp;
         C.tilt = 3 * Math.sin(k * 0.8) * ramp;
       }
@@ -5174,7 +5187,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     }
     function closeCoin() {
       if (C.pt) { C.pt.stop(); C.pt = null; }
-      coinLive(false);
+      coinLive(false);   // замирает как есть; убирается при следующей сборке монеты
       $('coinStage').querySelector('.coin-zoom').style.opacity = '';
       MedalRaster.pause(false);
       if (C.tiltOn) { C.tiltOn = false; tiltStop(); }
