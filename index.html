@@ -99,6 +99,8 @@
     #splash.sl::before { content: ""; position: absolute; left: -20%; right: -20%; bottom: 0; height: 46%; pointer-events: none;
       background: radial-gradient(48% 62% at 34% 100%, rgba(189,235,91,.30), rgba(189,235,91,0) 70%), radial-gradient(52% 70% at 68% 100%, rgba(92,200,232,.26), rgba(92,200,232,0) 72%), radial-gradient(40% 46% at 50% 100%, rgba(118,226,168,.24), rgba(118,226,168,0) 70%);
       filter: blur(18px); animation: spAurora 7s ease-in-out infinite alternate; transition: opacity .4s ease; }
+    /* заставка ушла — сияние замирает на месте: размытый слой иначе крутился бы невидимым всё время */
+    #splash.gone::before { animation-play-state: paused; }
     @keyframes spAurora { 0% { transform: translateX(-4%) scaleY(.9); opacity: .75; } 50% { opacity: 1; } 100% { transform: translateX(4%) scaleY(1.08); opacity: .8; } }
     #splash.sl-out::before { opacity: 0; }
     @media (prefers-reduced-motion: reduce) { #splash.sl::before { animation: none; } }
@@ -450,7 +452,7 @@
     #mtView { position: fixed; inset: 0; z-index: 44; background: #121621; color: var(--ink); display: flex; flex-direction: column;
       opacity: 0; pointer-events: none; transform: translateY(24px); transition: opacity .25s ease, transform .35s cubic-bezier(.3,.8,.3,1); }
     #mtView.open { opacity: 1; pointer-events: auto; transform: none; }
-    #mtSvg.silky #mtDone { opacity: .35; stroke-width: 1.4; }
+    #mtStage.silky #mtDone { opacity: .35; stroke-width: 1.4; }
     /* весь путь до вершины — тихая шёлковая тропа (вместо пунктира), пройденное — яркая нить поверх */
     #mtTrailG { opacity: .5; }
     .mt-camp.pop { animation: campPop .55s cubic-bezier(.3,1.6,.5,1); transform-box: fill-box; transform-origin: 50% 70%; }
@@ -464,8 +466,8 @@
     @keyframes burstF { 0% { opacity: 0; transform: scale(.4); } 18% { opacity: 1; transform: scale(1.25); } 100% { opacity: 0; transform: scale(1.7); } }
     @keyframes burstR { 0% { opacity: 1; transform: scale(.6); } 100% { opacity: 0; transform: scale(5); } }
     #mtTrailG .sl-a { stroke: #DDE3EA; } #mtTrailG .sl-b { stroke: #9FB3C8; }
-    #mtSvg > g, #mtSvg > path, #mtSvg > image, #mtSvg > line, #mtSvg > text { transition: opacity .7s ease; }
-    #mtSvg #mtSkyG > g, #mtSvg #mtSkyG > circle[cx="330"] { transition: opacity .7s ease; }
+    #mtStage .mt-l > g, #mtStage .mt-l > path, #mtStage .mt-l > image, #mtStage .mt-l > line, #mtStage .mt-l > text { transition: opacity .7s ease; }
+    #mtSkyG > g, #mtSkyG > circle[cx="330"] { transition: opacity .7s ease; }
     .mt-top { position: relative; z-index: 2; padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 0; max-width: 460px; width: 100%; margin: 0 auto; }
     .mt-top .back-btn { padding-bottom: 6px; }
     .mt-top h2 { font-family: var(--display); font-weight: 700; font-size: 30px; line-height: 1.1; }
@@ -478,19 +480,19 @@
     .mt-next b { color: var(--ink); font-weight: 600; }
     .mt-hint { position: absolute; left: 0; right: 0; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); text-align: center; font-size: 12.5px; font-weight: 600; color: rgba(242,243,240,.55); pointer-events: none; transition: opacity .4s ease; }
     .mt-hint.off { opacity: 0; }
-    #mtSvg .mt-baked { opacity: 0; transition: opacity .5s; }
-    #mtSvg .mt-baked.on { opacity: 1; }
+    #mtStage .mt-baked { opacity: 0; transition: opacity .5s; }
+    #mtStage .mt-baked.on { opacity: 1; }
     /* огонь факела чуть колышется */
-    #mtSvg .mt-flame { transform-box: fill-box; transform-origin: 50% 100%; animation: mtFlick 1.3s ease-in-out infinite alternate; }
-    #mtSvg .mt-flame.b { animation-duration: .9s; animation-delay: -.4s; }
+    #mtStage .mt-flame { transform-box: fill-box; transform-origin: 50% 100%; animation: mtFlick 1.3s ease-in-out infinite alternate; }
+    #mtStage .mt-flame.b { animation-duration: .9s; animation-delay: -.4s; }
     @keyframes mtFlick { from { transform: scale(1, 1); } 50% { transform: scale(.94, 1.07) skewX(-3deg); } to { transform: scale(1.04, .95) skewX(2deg); } }
     /* погода у человечка: капли и снежинки падают, туман у ног плывёт, сияние дышит, иногда падает звезда */
-    #mtSvg .mt-drop { animation: mtDrop .8s linear infinite; }
-    #mtSvg .mt-flake { animation: mtFlake 2.8s linear infinite; }
-    #mtSvg .mt-fogd { animation: mtFogD 5s ease-in-out infinite alternate; }
-    #mtSvg .mt-fogd.b { animation-duration: 7s; animation-direction: alternate-reverse; }
-    #mtSvg .mt-glow { animation: mtGlowP 5s ease-in-out infinite alternate; }
-    #mtSvg .mt-shoot { opacity: 0; animation: mtShoot 11s linear 2s infinite; }
+    #mtStage .mt-drop { animation: mtDrop .8s linear infinite; }
+    #mtStage .mt-flake { animation: mtFlake 2.8s linear infinite; }
+    #mtStage .mt-fogd { animation: mtFogD 5s ease-in-out infinite alternate; }
+    #mtStage .mt-fogd.b { animation-duration: 7s; animation-direction: alternate-reverse; }
+    #mtStage .mt-glow { animation: mtGlowP 5s ease-in-out infinite alternate; }
+    #mtStage .mt-shoot { opacity: 0; animation: mtShoot 11s linear 2s infinite; }
     @keyframes mtDrop { from { transform: translateY(-4px); opacity: 0; } 20% { opacity: .9; } to { transform: translateY(46px); opacity: 0; } }
     @keyframes mtFlake { from { transform: translate(0, -2px); opacity: 0; } 15% { opacity: 1; } to { transform: translate(6px, 46px); opacity: 0; } }
     @keyframes mtFogD { from { transform: translateX(-7px); } to { transform: translateX(7px); } }
@@ -503,9 +505,14 @@
     .mt-wx div b { font-weight: 700; }
     .mt-wx svg { width: 18px; height: 18px; flex: none; }
     html.light .mt-wx { color: #15171A; }
-    @media (prefers-reduced-motion: reduce) { #mtSvg .mt-flame, #mtSvg .mt-drop, #mtSvg .mt-flake, #mtSvg .mt-fogd, #mtSvg .mt-glow, #mtSvg .mt-shoot { animation: none; } #mtSvg .mt-shoot { display: none; } }
+    @media (prefers-reduced-motion: reduce) { #mtStage .mt-flame, #mtStage .mt-drop, #mtStage .mt-flake, #mtStage .mt-fogd, #mtStage .mt-glow, #mtStage .mt-shoot { animation: none; } #mtStage .mt-shoot { display: none; } }
     /* гора на весь экран под шапкой; в колонке flex Safari считал ширину по пропорциям картинки, и справа оставалась полоса фона */
-    #mtSvg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; }
+    /* гора — стопка слоёв: небо стоит, дальние хребты, сама гора и всё живое на ней сдвигаются целиком (видеочип),
+       а не перерисовываются при каждом движении пальца (Вадим, 24.10: «микрофризы») */
+    #mtStage { position: absolute; inset: 0; overflow: hidden; touch-action: none; cursor: grab; }
+    #mtStage .mt-l { position: absolute; left: 0; top: 0; display: block; overflow: hidden; will-change: transform; }
+    #mtStage .mt-sky { width: 100%; height: 100%; will-change: auto; }
+    #mtStage .mt-w { width: calc(1700px / 1.05); height: calc(1230px / 1.05); }
     .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; touch-action: pan-y; }
     .day {
       display: flex; flex-direction: column; align-items: center; gap: 1px;
@@ -597,6 +604,7 @@
     #achScreen .m-tile .mw.thick > img { opacity: 1; }
     /* живая медаль: тень не фильтром (он перерисовывался бы каждый кадр), а у обёртки */
     .m-tile .mw > svg.live { position: absolute; left: 0; top: 0; filter: none; }
+    .m-tile .mw > .mly.tile { position: absolute; left: 0; top: 0; width: 248px; height: 248px; transform-origin: 0 0; pointer-events: none; }
     #achScreen .m-tile.lit .mw::after { animation: achGlint .6s ease .45s both; }
     @keyframes achFlip { 0% { transform: perspective(520px) rotateY(0) scale(.96); } 45% { transform: perspective(520px) rotateY(90deg) scale(1.04); } 100% { transform: perspective(520px) rotateY(360deg); } }
     #shotSl { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 46; }
@@ -895,7 +903,14 @@
       <p class="mt-next" id="mtNext"></p>
       <div class="mt-wx" id="mtWx"></div>
     </div>
-    <svg id="mtSvg" viewBox="0 560 410 650" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Гора: тропа от стартового веса к цели"></svg>
+    <div id="mtStage">
+      <svg id="mtSkyS" class="mt-l mt-sky" aria-hidden="true"></svg>
+      <svg id="mtFar2S" class="mt-l mt-w" aria-hidden="true"></svg>
+      <svg id="mtFarS" class="mt-l mt-w" aria-hidden="true"></svg>
+      <svg id="mtMidS" class="mt-l mt-w" aria-hidden="true"></svg>
+      <svg id="mtSvg" class="mt-l mt-w" role="img" aria-label="Гора: тропа от стартового веса к цели"></svg>
+      <svg id="mtFgS" class="mt-l mt-w" aria-hidden="true"></svg>
+    </div>
   </div>
 
   <!-- Экран всех медалей -->
@@ -3345,17 +3360,21 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     // Живая медаль подкладывается заранее — пока её ещё не видно (при сборке экрана и на 500px вперёд при прокрутке) —
     // и стоит на паузе в первом кадре, который совпадает с картинкой. Показалась — просто снимается с паузы,
     // ушла — снова пауза. Так не видно ни подмены, ни ожидания (Вадим, 24.10: «тормозит переход»)
+    // Живые медали витрины — слоями, как монета (MedalLayers): готовые картинки частей двигает видеочип.
+    // Живой SVG в каждой медали перерисовывался каждый кадр и держал процессор занятым, телефон грелся (Вадим, 24.10).
+    // Слои собираются по одной медали в свободное время; не вышло — запасной живой SVG, как раньше
     const LIVE_T = { near: null, vis: null, q: [], busy: 0 };
-    const liveOf = t => t.querySelector('.mw > svg.live');
+    const liveOf = t => t.querySelector('.mw > .mly, .mw > svg.live');
+    const livePause = (el, on) => { if (!el) return; if (el.tagName === 'DIV') el.classList.toggle('paused', on); else on ? el.pauseAnimations() : el.unpauseAnimations(); };
     function liveTiles(sc) {
       liveTilesOff();
       if (calm() || !('IntersectionObserver' in window)) return;
       LIVE_T.near = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting && !liveOf(e.target)) liveQueue(e.target); }),
         { root: sc, rootMargin: '500px 0px' });
       LIVE_T.vis = new IntersectionObserver(es => es.forEach(e => {
-        const t = e.target, sv = liveOf(t);
+        const t = e.target;
         t.$vis = e.isIntersecting;
-        if (sv) t.$vis ? sv.unpauseAnimations() : sv.pauseAnimations();
+        livePause(liveOf(t), !t.$vis);
       }), { root: sc, rootMargin: '30px 0px' });
       sc.querySelectorAll('.m-tile:not(.locked)').forEach(t => { LIVE_T.near.observe(t); LIVE_T.vis.observe(t); });
     }
@@ -3363,11 +3382,12 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     function liveQueue(t) {
       if (LIVE_T.q.indexOf(t) === -1) LIVE_T.q.push(t);
       if (LIVE_T.busy) return;
+      // по одной: следующая собирается, когда готова предыдущая
       const next = () => {
         const x = LIVE_T.q.shift();
         if (!x) { LIVE_T.busy = 0; return; }
-        tileLive(x, true);
-        LIVE_T.busy = setTimeout(next, 60);
+        LIVE_T.busy = -1;
+        Promise.resolve(tileLive(x, true)).then(() => { if (LIVE_T.busy === -1) LIVE_T.busy = setTimeout(next, 60); });
       };
       next();
     }
@@ -3375,23 +3395,38 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     function liveTilesOff() {
       [LIVE_T.near, LIVE_T.vis].forEach(o => o && o.disconnect()); LIVE_T.near = LIVE_T.vis = null;
       LIVE_T.q = []; clearTimeout(LIVE_T.busy); LIVE_T.busy = 0;
-      document.querySelectorAll('#achScreen .m-tile').forEach(t => { clearTimeout(t.$lv); t.$vis = false; const sv = liveOf(t); if (sv) sv.pauseAnimations(); });
+      document.querySelectorAll('#achScreen .m-tile').forEach(t => { clearTimeout(t.$lv); t.$vis = false; livePause(liveOf(t), true); });
     }
     // при сборке экрана в паузе: живые медали первого экрана подкладываются заранее, по одной в свободное время
     function livePrewarm(sc) {
       if (calm()) return;
       const tiles = [...sc.querySelectorAll('.m-tile:not(.locked)')].slice(0, 12);
       const idle = f => window.requestIdleCallback ? requestIdleCallback(f, { timeout: 1500 }) : setTimeout(f, 50);
-      const step = () => { const t = tiles.shift(); if (!t || !t.isConnected) return; tileLive(t, true); idle(step); };
+      const step = () => { const t = tiles.shift(); if (!t || !t.isConnected) return; Promise.resolve(tileLive(t, true)).then(() => idle(step)); };
       idle(step);
     }
     function tileLive(t, on) {
       const mw = t.querySelector('.mw'), m = t.$m;
       if (!mw || !m || m.status !== 'earned') return;
-      const cur = mw.querySelector(':scope > svg.live');
+      const cur = liveOf(t);
       // ещё серая или переворачивается — подождать
       if (on && (t.classList.contains('dim') || mw.classList.contains('thick'))) { clearTimeout(t.$lv); t.$lv = setTimeout(() => LIVE_T.vis && liveQueue(t), 500); return; }
+      if (on && t.$lyP) return t.$lyP;
       if (on === !!cur) return;
+      if (on && !t.$lyNo) {
+        const w = mw.offsetWidth || 104, k = Math.min(3, Math.max(2, window.devicePixelRatio || 2)) * w / 248;
+        return t.$lyP = MedalLayers.build(MedalB.medal(medalOpts(m), true), k).catch(() => null).then(ly => {
+          t.$lyP = null;
+          if (!ly) { t.$lyNo = true; return tileLive(t, true); }
+          if (!t.isConnected || liveOf(t)) return;
+          // слои ложатся поверх готовой картинки (первый кадр совпадает); пока медаль не видно — стоят
+          ly.classList.add('tile'); ly.setAttribute('aria-hidden', 'true');
+          ly.style.transform = `scale(${(w / 248).toFixed(5)})`;
+          if (!t.$vis) ly.classList.add('paused');
+          const pic = mw.querySelector(':scope > img, :scope > svg');
+          if (pic) pic.after(ly); else mw.prepend(ly);
+        });
+      }
       if (on) {
         const pic = mw.querySelector(':scope > img, :scope > svg');
         const tp = document.createElement('template');
@@ -3804,6 +3839,10 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     });
     function silkTick(now) {
       SILK.raf = 0;
+      // нити, что уже легли и только тихо колышутся, перерисовываем через кадр (~30 раз в секунду): глазу не видно,
+      // а процессору вдвое легче — телефон грелся (Вадим, 24.10). Пока нить бежит или летит — каждый кадр
+      if (now - (SILK.last || 0) < 28 && ![...SILK.list].some(g => g.__u != null || now - g.__t0 < 1600)) { SILK.raf = requestAnimationFrame(silkTick); return; }
+      SILK.last = now;
       const ease = x => x <= 0 ? 0 : x >= 1 ? 1 : 1 - Math.pow(1 - x, 3), f = v => v.toFixed(1);
       // шёлк под открытым окном (витрина, монета, гора, истории) не видно — его не перерисовываем: это отнимало кадры у монеты
       const top = COVER.on && document.querySelector(COVER.sel);
@@ -4300,6 +4339,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     // как у настоящих гор, по склону спускаются скальные отроги с тенью от луны,
     // у вершины снег с языками по кулуарам. Случайность фиксированная — гора всегда одна и та же.
     const MT_W = 1600, MT_H = 1180, MT_K = 1.05;
+    // слои горы целиком: сколько может попасть в кадр при любом положении камеры (размер — в CSS #mtStage .mt-w)
+    const MT_X0 = -60, MT_Y0 = -20, MT_WW = 1700, MT_HH = 1230;
     const mtRnd = seed => () => { seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
     // неровная линия: середина каждого отрезка смещается, на каждом шаге всё меньше
     function mtJag(pts, rough, depth, rnd, vertical) {
@@ -4737,7 +4778,15 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           <g id="mtMePill"></g>
         </g>`;
       mtBake(svg);
-      if (!svg.dataset.drag) { svg.dataset.drag = '1'; mtInitDrag(svg); }
+      // раскладываем по слоям (см. #mtStage): небо, три дальних хребта, гора, живое (тропа, люди, лагеря)
+      const lay = (id, nodes) => { const l = $(id); l.textContent = ''; nodes.forEach(n => n && l.appendChild(n)); };
+      lay('mtSkyS', [$('mtSkyG')]); lay('mtFar2S', [$('mtFar2G')]); lay('mtFarS', [$('mtFarG')]); lay('mtMidS', [$('mtMidG')]);
+      const fg = [], first = $('mtTrailG') || [...svg.children].find(n => n.id === 'mtDone' || n.id === 'mtTrailP');
+      for (let n = first; n; n = n.nextElementSibling) fg.push(n);
+      lay('mtFgS', fg);
+      ['mtFar2S', 'mtFarS', 'mtMidS', 'mtSvg', 'mtFgS'].forEach(id => $(id).setAttribute('viewBox', `${MT_X0} ${MT_Y0} ${MT_WW} ${MT_HH}`));
+      const st = $('mtStage');
+      if (!st.dataset.drag) { st.dataset.drag = '1'; mtInitDrag(st); }
     }
     // Шум (фактура камня и снега) и размытие (туман, свечение гребня) дорого считать на каждом кадре,
     // а камера двигает гору постоянно. Эти слои неподвижны: рисуем каждый один раз в картинку и
@@ -4767,16 +4816,19 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     }
     // камера: кусок горы размером с экран; дальние хребты сдвигаются медленнее (глубина)
     function mtCamera(x, y) {
-      const svg = $('mtSvg'), r = svg.getBoundingClientRect();
-      if (r.width && r.height) { MT.visW = r.width * MT_K; MT.visH = r.height * MT_K; }
+      const r = $('mtStage').getBoundingClientRect();
+      if (r.width && r.height && (r.width * MT_K !== MT.visW || r.height * MT_K !== MT.visH)) {
+        MT.visW = r.width * MT_K; MT.visH = r.height * MT_K;
+        $('mtSkyS').setAttribute('viewBox', `0 0 ${MT.visW.toFixed(1)} ${MT.visH.toFixed(1)}`);
+      }
       if (x != null) MT.cx = x;
       if (y != null) MT.cy = y;
       const clamp = (v, lo, hi) => hi < lo ? (lo + hi) / 2 : Math.max(lo, Math.min(hi, v));
       MT.cx = clamp(MT.cx, -60, MT_W + 40 - MT.visW);
       MT.cy = clamp(MT.cy, -20, MT_H + 30 - MT.visH);
-      svg.setAttribute('viewBox', `${MT.cx.toFixed(1)} ${MT.cy.toFixed(1)} ${MT.visW.toFixed(1)} ${MT.visH.toFixed(1)}`);
-      const par = (id, kx, ky) => { const g = $(id); if (g) g.setAttribute('transform', `translate(${(MT.cx * kx).toFixed(1)} ${(MT.cy * ky).toFixed(1)})`); };
-      par('mtSkyG', 1, 1); par('mtFar2G', .9, .93); par('mtFarG', .82, .88); par('mtMidG', .62, .72);
+      // слой с отставанием k (дальние хребты) сдвигается на (1 − k) от движения камеры
+      const par = (id, kx, ky) => { const l = $(id); if (l) l.style.transform = `translate3d(${((MT_X0 - MT.cx * (1 - kx)) / MT_K).toFixed(2)}px,${((MT_Y0 - MT.cy * (1 - ky)) / MT_K).toFixed(2)}px,0)`; };
+      par('mtFar2S', .9, .93); par('mtFarS', .82, .88); par('mtMidS', .62, .72); par('mtSvg', 0, 0); par('mtFgS', 0, 0);
     }
     function mtInitDrag(svg) {
       let x0 = null, y0 = 0, cx0 = 0, cy0 = 0, vx = 0, vy = 0, lastX = 0, lastY = 0, lastT = 0, glide = 0, t0 = 0, moved = 0;
@@ -4787,7 +4839,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       });
       svg.addEventListener('pointermove', e => {
         if (x0 == null) return;
-        const k = MT.visW / svg.getBoundingClientRect().width, now = performance.now();
+        const k = MT_K, now = performance.now();
         const dt = Math.max(1, now - lastT);
         vx = (e.clientX - lastX) * k / dt; vy = (e.clientY - lastY) * k / dt; lastX = e.clientX; lastY = e.clientY; lastT = now;
         moved = Math.max(moved, Math.hypot(e.clientX - x0, e.clientY - y0));
@@ -4826,7 +4878,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       if (sk) {
         silkGeo(sk, [...Array(81)].map((_, k) => mtAt(t * k / 80).slice(0, 2)));
         if (!SILK.list.has(sk)) silkStart(sk);
-        $('mtSvg').classList.add('silky');
+        $('mtStage').classList.add('silky');
       }
       const [x, y, dir] = mtAt(t);
       if (walking) MT.face = dir;
