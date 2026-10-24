@@ -1592,7 +1592,13 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           } else if (rk > 0) {
             // голову тянет к её месту на круге; каждый цвет крутится сам по себе: своя скорость, часть — навстречу,
             // свой радиус и своё поведение — ровный поток, волна лепестками, рывки, эллипс, дыхание внутрь-наружу
-            if (o.rth == null) { o.rth = k * 6.283 / NL; o.rw = RG.w * (.55 + .9 * ((k * .618) % 1)) * (k % 3 === 1 ? -1 : 1); o.rr = 1 + ((k * 5) % 9 - 4) * .025; o.rm = k % 5; }
+            // у каждой линии свои скорость, направление, радиус и поведение; одинаковое поведение — только у линий,
+            // которые идут навстречу друг другу, иначе две линии ехали параллельно, как копии (Вадим, 24.10)
+            if (o.rth == null) {
+              const SPD = [.55, 1.25, .85, 1.45, .7, 1.1, .95, 1.6, .5], DIR = [1, -1, 1, 1, -1, 1, -1, -1, -1],
+                RR = [.9, 1.06, .95, 1.1, .86, 1.0, 1.14, .92, 1.04], MODE = [0, 1, 2, 3, 4, 1, 3, 0, 2];
+              o.rth = k * 6.283 / NL; o.rw = RG.w * SPD[k % 9] * DIR[k % 9]; o.rr = RR[k % 9]; o.rm = MODE[k % 9];
+            }
             const m = o.rm;
             // скорость у каждой линии всё время немного гуляет, а радиус дышит волнами разной частоты —
             // тогда след ложится не ровной дугой, и куски линий не едут по кругу одинаково, как приклеенные
@@ -4858,7 +4864,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     // =====================================================================
     // 3D-МОНЕТА: лицо, оборот с кривой веса, ребро, вращение пальцем
     // =====================================================================
-    function coinBack(m) {
+    function coinBack(m, anim) {
       const u = globalData[activeUserId];
       const until = m.date ? new Date(m.date + 'T23:59:59').getTime() : Infinity;
       const pts = u.entries.filter(e => e.timestamp <= until).map(e => e.weight);
@@ -4873,7 +4879,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       // оборот в тех же цветах, что лицо: тот же ободок (у главных — золотые лучи), то же поле
       const { art, cut, paint, ...face } = medalOpts(m);
       return MedalB.medal(Object.assign(face, { label: 'оборот', artKey: '', art: title + curve,
-        big: dayMonth(m.date), caption: (u.medals.owner || u.name || '').toUpperCase(), band: false }), false);
+        big: dayMonth(m.date), caption: (u.medals.owner || u.name || '').toUpperCase(), band: false }), !!anim);
     }
 
     const C = { scale: 1, landed: null, angle: 0, vel: 0, tilt: 0, dragging: false, lastX: 0, startY: 0, lastT: 0, mode: 'idle', tween: null, base: 0, idleT0: 0, raf: 0, sheens: null };
@@ -4965,7 +4971,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const front = MedalB.medal(medalOpts(m), false), back = coinBack(m);
       const faces = [face(front, false), face(back, true)];
       coinLiveDrop();
-      C.m = m; C.front = faces[0]; C.rasterOk = false;
+      C.m = m; C.front = faces[0]; C.backFace = faces[1]; C.rasterOk = false;
       // крупная монета тоже становится картинкой (с запасом под увеличение сцены)
       const keys = ['coin|' + medalKey(m), 'coinback|' + activeUserId + '|' + medalKey(m) + '|' + m.date];
       (C.rasterKeys || []).forEach(k => keys.indexOf(k) === -1 && MedalRaster.drop(k));
@@ -5028,20 +5034,32 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     // без подмены картинки на анимацию (Вадим, 24.10: «переход тормозит», «всегда анимацию»)
     function coinLivePrep() {
       if (calm() || C.liveSv || !C.front || !C.m) return;
-      const tp = document.createElement('template');
-      tp.innerHTML = MedalB.medal(medalOpts(C.m), true).replace('viewBox="-4 -4 248 248"', 'viewBox="0 0 240 240"').trim();
-      const sv = tp.content.firstElementChild, pic = C.front.querySelector(':scope > img, :scope > svg');
-      sv.classList.add('live'); sv.setAttribute('aria-hidden', 'true');
-      if (pic) pic.after(sv); else C.front.prepend(sv);
-      sv.pauseAnimations();
-      C.liveSv = sv;
+      const fix = h => h.replace('viewBox="-4 -4 248 248"', 'viewBox="0 0 240 240"').trim();
+      // обе стороны: лицо и оборот (Вадим, 24.10: «обратная сторона статичная»)
+      C.liveSv = [[C.front, fix(MedalB.medal(medalOpts(C.m), true))], [C.backFace, fix(coinBack(C.m, true))]].map(([f, h]) => {
+        if (!f) return null;
+        const tp = document.createElement('template'); tp.innerHTML = h;
+        const sv = tp.content.firstElementChild, pic = f.querySelector(':scope > img, :scope > svg');
+        sv.classList.add('live'); sv.setAttribute('aria-hidden', 'true');
+        if (pic) pic.after(sv); else f.prepend(sv);
+        sv.pauseAnimations();
+        return sv;
+      }).filter(Boolean);
     }
     function coinLive(on) {
       if (!C.liveSv || on === !!C.liveOn) return;
-      on ? C.liveSv.unpauseAnimations() : C.liveSv.pauseAnimations();
-      C.liveOn = on;
+      C.liveOn = on; C.liveSide = null;
+      if (!on) C.liveSv.forEach(sv => sv.pauseAnimations()); else coinLiveSide();
     }
-    function coinLiveDrop() { if (C.liveSv) C.liveSv.remove(); C.liveSv = null; C.liveOn = false; }
+    // двигается только та сторона, что сейчас к тебе: вторая стоит и не нагружает телефон
+    function coinLiveSide() {
+      if (!C.liveOn || !C.liveSv) return;
+      const side = Math.cos(C.angle * Math.PI / 180) >= 0 ? 0 : 1;
+      if (side === C.liveSide) return;
+      C.liveSide = side;
+      C.liveSv.forEach((sv, i) => i === side ? sv.unpauseAnimations() : sv.pauseAnimations());
+    }
+    function coinLiveDrop() { if (C.liveSv) C.liveSv.forEach(sv => sv.remove()); C.liveSv = null; C.liveOn = false; }
     function coinLoop(t) {
       if (C.mode === 'tween') {
         // время по кадрам: долгий кадр (сборка экрана, загрузка) не даёт монете перескочить
@@ -5066,7 +5084,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         C.angle = C.base + 9 * Math.sin(k * 1.1) * ramp;
         C.tilt = 3 * Math.sin(k * 0.8) * ramp;
       }
-      coinApply();
+      coinApply(); coinLiveSide();
       C.raf = requestAnimationFrame(coinLoop);
     }
     function openCoin(m, award) {
