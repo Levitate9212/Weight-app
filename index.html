@@ -5021,7 +5021,12 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       mtCompany(u, t);
       cancelAnimationFrame(MT.raf);
       // лагерь загорается, когда в него попадают шёлковые нити (человечек дошёл); пройденные раньше горят сразу
-      const hit = new Set(MT_CAMPS.filter(c => from * 100 >= c - 1e-6)), shots = !calm() && !!$('mtShots');
+      // вспышка лагеря — только в первый раз, когда до него дошли; потом он просто горит.
+      // Какие лагеря уже вспыхивали, помним на телефоне (по человеку). Первый раз после обновления — все дошедшие считаются уже виденными.
+      const ck = 'wt_mt_camp_' + (Object.keys(globalData).find(k => globalData[k] === u) || ''), cs = mtCampSeen(ck);
+      const seen = cs || MT_CAMPS.filter(c => reached0(c, t));
+      if (!cs) mtCampSave(ck, seen);
+      const hit = new Set(MT_CAMPS.filter(c => from * 100 >= c - 1e-6 || (seen.includes(c) && reached0(c, t)))), shots = !calm() && !!$('mtShots');
       let fin = !shots;
       const reached = (c, tt) => reached0(c, tt) && (fin || hit.has(c));
       if (calm() || Math.abs(t - from) < 0.002) { fin = true; MT.face = mtAt(t)[2]; mtDraw(t, reached, false); return; }
@@ -5035,7 +5040,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         const k = Math.max(0, Math.min(1, el / dur)), e = k < .5 ? 2 * k * k : 1 - Math.pow(2 - 2 * k, 2) / 2;
         const cur = from + (t - from) * e;
         // дошёл до лагеря — в него бьют нити, и он загорается со щелчком; на вершине — «успех»
-        MT_CAMPS.forEach(c => { if (prevT * 100 < c - 1e-6 && cur * 100 >= c - 1e-6 && !hit.has(c)) mtCampShot(c, () => { hit.add(c); safeHaptic('soft'); if (!MT.walk) mtDraw(MT.drawT, reached, false); }); });
+        MT_CAMPS.forEach(c => { if (prevT * 100 < c - 1e-6 && cur * 100 >= c - 1e-6 && !hit.has(c)) mtCampShot(c, () => { hit.add(c); if (!seen.includes(c)) { seen.push(c); mtCampSave(ck, seen); } safeHaptic('soft'); if (!MT.walk) mtDraw(MT.drawT, reached, false); }); });
         if (shots && MT_CAMPS.some(c => prevT * 100 >= c - 1e-6 && cur * 100 < c - 1e-6)) safeHaptic('soft');
         if (k >= 1 && t >= 1 && from < 1) safeHaptic('success');
         if (k >= 1) setTimeout(() => { if (MT.t === t && !fin) { fin = true; mtDraw(MT.drawT, reached, false); } }, 900);
@@ -5046,6 +5051,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       MT.raf = requestAnimationFrame(step);
     }
     const MTP = { wait: 0 };
+    function mtCampSeen(k) { try { const v = JSON.parse(localStorage.getItem(k) || 'null'); return Array.isArray(v) ? v : null; } catch (e) { return null; } }
+    function mtCampSave(k, l) { try { localStorage.setItem(k, JSON.stringify(l)); } catch (e) {} }
     // три шёлковые нити из разных краёв экрана бьют в лагерь; когда первая долетела — лагерь вспыхивает
     function mtCampShot(c, onHit) {
       const g = document.querySelector(`.mt-camp[data-c="${c}"]`), box = $('mtShots');
@@ -5123,8 +5130,10 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     }
     const onTgTilt = () => { const d = window.Telegram.WebApp.DeviceOrientation; tiltSample(d.beta * 180 / Math.PI, d.gamma * 180 / Math.PI); };
     const onWinTilt = e => tiltSample(e.beta, e.gamma);
+    // Вадим 24.10: покачивание от наклона телефона убрали — датчик не включаем, блик ходит сам
+    const TILT_SENSOR = false;
     function tiltStart() {
-      if (Tilt.users++ || calm()) return;
+      if (Tilt.users++ || calm() || !TILT_SENSOR) return;
       const tg = window.Telegram?.WebApp;
       try {
         if (tg?.DeviceOrientation && tg.isVersionAtLeast?.('8.0')) {
