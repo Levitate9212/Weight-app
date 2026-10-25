@@ -777,6 +777,7 @@
       background: radial-gradient(circle, var(--halo, rgba(255, 194, 26, .4)) 0%, transparent 62%);
       animation: haloBreath 4s ease-in-out infinite;
     }
+    #coinView:not(.open) .halo { animation-play-state: paused; }   /* монета закрыта — свечение не «дышит» впустую */
     @keyframes haloBreath { 0%, 100% { opacity: .75; transform: scale(.96); } 50% { opacity: 1; transform: scale(1.04); } }
     #confetti { position: fixed; inset: 0; z-index: 36; pointer-events: none; overflow: hidden; }
     #confetti i {
@@ -2974,6 +2975,33 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const dpr = Math.min(3, Math.max(2, window.devicePixelRatio || 2));
       const urls = {};                // ключ → адрес готовой картинки
       let fontP = null, gen = 0;
+      // Готовые картинки медалей хранятся в памяти телефона (Cache Storage): при следующем запуске витрина
+      // берёт их сразу и не рисует заново — раньше это занимало процессор первые секунды каждого открытия (Вадим, 25.10).
+      // Ключ — версия кода (отпечаток этого скрипта) + отпечаток данных медали (pk) + размер.
+      const SRC = (document.currentScript && document.currentScript.text) || '';
+      const hash = t => { let h = 2166136261; for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36) + t.length.toString(36); };
+      let VER = null, storeP = null;
+      const ver = () => VER || (VER = hash(SRC));
+      const store = () => storeP || (storeP = (async () => { try { return window.caches ? await caches.open('wt-medal') : null; } catch (e) { return null; } })());
+      const pkey = it => `wt-medal/${ver()}/${Math.round(it.size * dpr)}/${it.pk}`;
+      async function fromStore(list) {
+        const st = await store();
+        if (!st) return;
+        await Promise.all(list.map(async it => {
+          if (urls[it.key] || !it.pk) return;
+          try { const r = await st.match(pkey(it)); if (r && !urls[it.key]) urls[it.key] = URL.createObjectURL(await r.blob()); } catch (e) {}
+        }));
+      }
+      let pruned = false;
+      function toStore(it, blob) {
+        if (!it.pk) return;
+        store().then(st => {
+          if (!st) return;
+          st.put(pkey(it), new Response(blob, { headers: { 'Content-Type': 'image/png' } })).catch(() => {});
+          // картинки прежних версий кода — убираем (раз за запуск)
+          if (!pruned) { pruned = true; st.keys().then(ks => ks.forEach(r => r.url.indexOf('/wt-medal/' + ver() + '/') === -1 && st.delete(r))).catch(() => {}); }
+        });
+      }
 
       // Шрифт для картинок: только нужные буквы, три начертания, прямо внутри SVG
       function fontCss() {
@@ -3048,6 +3076,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const hold = async () => { for (let i = 0; paused && i < 150; i++) await wait(100); };
       async function render(list, urgent) {
         const my = gen;
+        await fromStore(list);
+        if (list.every(it => urls[it.key])) { const d = {}; list.forEach(it => { d[it.key] = urls[it.key]; }); return d; }
         const css = await fontCss();
         if (!css) return {};
         const check = await fontReady(css).catch(() => null);
@@ -3074,6 +3104,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
             const blob = await new Promise(r => c.toBlob(r));
             if (!blob || my !== gen) continue;
             done[j.it.key] = urls[j.it.key] = URL.createObjectURL(blob);
+            toStore(j.it, blob);
           } catch (e) { return done; }          // браузер не дал прочитать холст — остаёмся на SVG
         }
         return done;
@@ -3107,7 +3138,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         }
         return out;
       }
-      return { render, reset, drop, pics, get: k => urls[k], pause: v => { paused = !!v; } };
+      return { render, reset, drop, pics, get: k => urls[k], pause: v => { paused = !!v; }, warm: list => fromStore(list).catch(() => {}), hash };
     })();
 
     // =====================================================================
@@ -3280,7 +3311,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           return root;
         } finally { svg.remove(); }
       }
-      const drop = el => { if (el) el.remove(); };
+      // убрать слои и сразу отдать память холстов (iPhone иначе держит её до сборки мусора, и Telegram перезапускает приложение)
+      const drop = el => { if (!el) return; el.querySelectorAll('canvas').forEach(c => { c.width = c.height = 0; }); el.remove(); };
       return { build, drop };
     })();
 
@@ -3296,21 +3328,30 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       prebuildAchScreen.t = setTimeout(() => {
         const u = globalData[activeUserId];
         if (!u || !u.medals || !u.medals.catalog || achBuiltFor === u) return;
-        const job = ACHB.job = buildAchScreen(u, true);
+        // сначала готовые картинки из хранилища: тогда плитки сразу картинки, без сборки SVG
+        const job = ACHB.job = { u, next: () => false, wait: true };
+        MedalRaster.warm(u.medals.catalog.map(tileRasterItem)).then(() => {
+          if (ACHB.job !== job) return;
+          const real = ACHB.job = buildAchScreen(u, true);
+          go(real);
+        });
+      }, 2600);
+      const go = job => {
         const step = dl => {
           if (ACHB.job !== job) return;
           do { if (job.next()) { ACHB.job = null; return; } } while (dl && dl.timeRemaining() > 6);
           achIdle = window.requestIdleCallback ? requestIdleCallback(step, { timeout: 1500 }) : setTimeout(step, 30);
         };
         achIdle = window.requestIdleCallback ? requestIdleCallback(step, { timeout: 1500 }) : setTimeout(step, 30);
-      }, 2600);
+      };
     }
     const ACHB = { job: null };
     function openAchScreen() {
       const u = globalData[activeUserId];
       if (!u || !u.medals || !u.medals.catalog) return;
       safeHaptic('light');
-      if (ACHB.job && ACHB.job.u === u) { while (!ACHB.job.next()); ACHB.job = null; }   // достроить, что не успели заранее
+      if (ACHB.job && ACHB.job.u === u && !ACHB.job.wait) { while (!ACHB.job.next()); }   // достроить, что не успели заранее
+      ACHB.job = null;
       if (achBuiltFor !== u) buildAchScreen(u);
       $('achScreen').scrollTop = 0;
       $('achScreen').classList.add('open');
@@ -3383,9 +3424,15 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     const livePause = (el, on) => { if (!el) return; if (el.tagName === 'DIV') el.classList.toggle('paused', on); else on ? el.pauseAnimations() : el.unpauseAnimations(); };
     function liveTiles(sc) {
       liveTilesOff();
+      LIVE_T.t0 = performance.now();
       if (calm() || !('IntersectionObserver' in window)) return;
-      LIVE_T.near = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting && !liveOf(e.target)) liveQueue(e.target); }),
-        { root: sc, rootMargin: '500px 0px' });
+      // живые слои — только у медалей на экране и рядом; ушла далеко — слои убираем (память телефона)
+      LIVE_T.near = new IntersectionObserver(es => es.forEach(e => {
+        const t = e.target;
+        t.$near = e.isIntersecting;
+        if (e.isIntersecting) { if (!liveOf(t)) liveQueue(t); }
+        else { const i = LIVE_T.q.indexOf(t); if (i >= 0) LIVE_T.q.splice(i, 1); tileFree(t); }
+      }), { root: sc, rootMargin: '250px 0px' });
       LIVE_T.vis = new IntersectionObserver(es => es.forEach(e => {
         const t = e.target;
         t.$vis = e.isIntersecting;
@@ -3399,26 +3446,39 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       if (LIVE_T.busy) return;
       // по одной: следующая собирается, когда готова предыдущая
       const next = () => {
-        const x = LIVE_T.q.shift();
+        // пока витрина открывается (нить бьёт, медали переворачиваются), слои не собираем — иначе открытие дёргается
+        const w = (LIVE_T.t0 || 0) + 1500 - performance.now();
+        if (w > 0) { LIVE_T.busy = setTimeout(next, w); return; }
+        // сначала те, что на экране, потом соседние
+        const i = LIVE_T.q.findIndex(t => t.$vis);
+        const x = i > 0 ? LIVE_T.q.splice(i, 1)[0] : LIVE_T.q.shift();
         if (!x) { LIVE_T.busy = 0; return; }
         LIVE_T.busy = -1;
         Promise.resolve(tileLive(x, true)).then(() => { if (LIVE_T.busy === -1) LIVE_T.busy = setTimeout(next, 60); });
       };
       next();
     }
-    // экран закрыт — живые медали остаются, но стоят: при следующем открытии они уже на месте
+    function tileFree(t) {
+      const ly = t.querySelector('.mw > .mly');
+      if (ly) MedalLayers.drop(ly);
+      const sv = t.querySelector('.mw > svg.live');
+      if (sv) sv.remove();
+    }
+    // витрина закрыта (на главный экран): живые медали и большая монета отдают память
+    function achFree() {
+      if ($('achScreen').classList.contains('open') || C.open) return;
+      document.querySelectorAll('#achScreen .m-tile').forEach(tileFree);
+      LY_CACHE.forEach(v => v.p.then(ly => ly.forEach(MedalLayers.drop))); LY_CACHE.clear();
+      coinLiveDrop();
+      const coin = $('coin');
+      coin.querySelectorAll('canvas').forEach(c => { c.width = c.height = 0; });
+      coin.innerHTML = ''; C.build = {}; C.front = C.backFace = C.m = null;
+    }
+    // монета открыта поверх витрины — живые медали витрины стоят (и остаются на месте)
     function liveTilesOff() {
       [LIVE_T.near, LIVE_T.vis].forEach(o => o && o.disconnect()); LIVE_T.near = LIVE_T.vis = null;
       LIVE_T.q = []; clearTimeout(LIVE_T.busy); LIVE_T.busy = 0;
-      document.querySelectorAll('#achScreen .m-tile').forEach(t => { clearTimeout(t.$lv); t.$vis = false; livePause(liveOf(t), true); });
-    }
-    // при сборке экрана в паузе: живые медали первого экрана подкладываются заранее, по одной в свободное время
-    function livePrewarm(sc) {
-      if (calm()) return;
-      const tiles = [...sc.querySelectorAll('.m-tile:not(.locked)')].slice(0, 12);
-      const idle = f => window.requestIdleCallback ? requestIdleCallback(f, { timeout: 1500 }) : setTimeout(f, 50);
-      const step = () => { const t = tiles.shift(); if (!t || !t.isConnected) return; Promise.resolve(tileLive(t, true)).then(() => idle(step)); };
-      idle(step);
+      document.querySelectorAll('#achScreen .m-tile').forEach(t => { clearTimeout(t.$lv); t.$vis = t.$near = false; livePause(liveOf(t), true); });
     }
     function tileLive(t, on) {
       const mw = t.querySelector('.mw'), m = t.$m;
@@ -3433,7 +3493,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         return t.$lyP = MedalLayers.build(MedalB.medal(medalOpts(m), true), k).catch(() => null).then(ly => {
           t.$lyP = null;
           if (!ly) { t.$lyNo = true; return tileLive(t, true); }
-          if (!t.isConnected || liveOf(t)) return;
+          if (!t.isConnected || liveOf(t) || !t.$near) { MedalLayers.drop(ly); return; }
           // слои ложатся поверх готовой картинки (первый кадр совпадает); пока медаль не видно — стоят
           ly.classList.add('tile'); ly.setAttribute('aria-hidden', 'true');
           ly.style.transform = `scale(${(w / 248).toFixed(5)})`;
@@ -3599,16 +3659,17 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const finish = () => {
         achBuiltFor = u;
         rasterTiles(u);
-        livePrewarm($('achScreen'));
       };
       if (!parts) { steps.forEach(f => f()); finish(); return; }
       let i = 0;
       return { u, next() { if (i < steps.length) { steps[i++](); return false; } finish(); return true; } };
     }
+    // картинка медали витрины: svg собирается, только если готовой картинки нет (ни в памяти, ни в хранилище)
+    const tileRasterItem = m => ({ key: medalKey(m), pk: MedalRaster.hash(medalKey(m) + JSON.stringify(medalOpts(m))), size: 104, get svg() { return medalSVG(m); } });
     // Нарисовать медали витрины картинками и тихо подменить ими живые SVG
     function rasterTiles(u) {
       const seen = {}, list = [];
-      u.medals.catalog.forEach(m => { const k = medalKey(m); if (!seen[k]) { seen[k] = 1; list.push({ key: k, svg: medalSVG(m), size: 104 }); } });
+      u.medals.catalog.forEach(m => { const k = medalKey(m); if (!seen[k]) { seen[k] = 1; list.push(tileRasterItem(m)); } });
       MedalRaster.render(list).then(done => {
         if (achBuiltFor !== u) return;
         document.querySelectorAll('#achSections .mw[data-k]').forEach(el => {
@@ -3625,6 +3686,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       liveTilesOff();
       if ($('achShots')) $('achShots').innerHTML = '';
       $('achScreen').classList.remove('open');
+      setTimeout(achFree, 450);   // после того как экран уехал
       navForget(closeAchScreen);
       tiltStop();
     }
@@ -3788,7 +3850,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     // Линия графика — пучок шёлковых прядей, как на заставке: лайм, мята, бирюза и немного золота,
     // под ними мягкое свечение. Пряди тихо колышутся, у замеров собираются туже, между ними чуть расходятся.
     // Рисуется слева направо, когда график показан (класс go). Без анимаций (настройка телефона) — пряди стоят.
-    const SILK = { n: 15, list: new Set(), raf: 0 };
+    const SILK = { n: 15, list: new Set(), grads: new Set(), raf: 0 };
     function silkSvg(pts, gid) {
       const c = smoothPts(pts, 14), f = v => v.toFixed(1);
       const data = c.map(p => f(p[0]) + ',' + f(p[1]) + (p[2] ? ',1' : '')).join(' ');
@@ -3823,8 +3885,11 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       (root.classList && root.classList.contains('silk') ? [root] : root.querySelectorAll('.silk')).forEach(g => {
         if (!g.__c) silkGeo(g);
         g.__t0 = g.dataset.full ? -1e9 : performance.now();
+        g.__still = false;
         SILK.list.add(g);
       });
+      const sv = root.ownerSVGElement || root;
+      if (sv.querySelectorAll) sv.querySelectorAll('linearGradient[data-gw]').forEach(gr => SILK.grads.add(gr));
       if (!SILK.raf) SILK.raf = requestAnimationFrame(silkTick);
     }
     // тонкий шёлк без свечения (нить пути к цели, кольца, тропа): n прядей, a — размах пучка, loop — замкнутое кольцо.
@@ -3836,7 +3901,9 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     // перелив шёлка: лайм → мята → бирюза, посередине светлый блик; всё это медленно бежит вдоль линии
     const silkGrad = (id, w) => `<linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="${w}" y2="0" spreadMethod="reflect">
           <stop offset="0" class="gs0"/><stop offset=".4" class="gsm"/><stop offset=".5" class="gsh"/><stop offset=".6" class="gsm"/><stop offset="1" class="gs1"/>
-          ${PT.reduce ? '' : `<animateTransform attributeName="gradientTransform" type="translate" from="0 0" to="${2 * w} 0" dur="4s" repeatCount="indefinite"/>`}</linearGradient>`;
+          </linearGradient>`.replace('<linearGradient ', PT.reduce ? '<linearGradient ' : `<linearGradient data-gw="${w}" `);
+    // перелив двигает silkTick вместе с прядями (~30 раз в секунду), а не SMIL: SMIL перерисовывал линии
+    // 60 раз в секунду отдельно от прядей — на главном экране это была треть работы телефона в покое (Вадим, 25.10: греется)
     const silkCurve = (pts, k = 12) => smoothPts(pts, k).map(p => [p[0], p[1]]);
     function silkRaw(pts, o = {}) {
       const f = v => v.toFixed(1), n = o.n || 7;
@@ -3857,7 +3924,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       COVER.on = on;
       const d = $('dashboard');
       if (d) d.querySelectorAll('svg').forEach(sv => { if (!sv.ownerSVGElement) on ? sv.pauseAnimations() : sv.unpauseAnimations(); });
-      if (!on && SILK.list.size && !SILK.raf) SILK.raf = requestAnimationFrame(silkTick);
+      if (!on && (SILK.list.size || SILK.grads.size) && !SILK.raf) SILK.raf = requestAnimationFrame(silkTick);
     }
     document.addEventListener('DOMContentLoaded', () => {
       const mo = new MutationObserver(coverCheck);
@@ -3867,15 +3934,22 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       SILK.raf = 0;
       // нити, что уже легли и только тихо колышутся, перерисовываем через кадр (~30 раз в секунду): глазу не видно,
       // а процессору вдвое легче — телефон грелся (Вадим, 24.10). Пока нить бежит или летит — каждый кадр
-      if (now - (SILK.last || 0) < 28 && ![...SILK.list].some(g => g.__u != null || now - g.__t0 < 1600)) { SILK.raf = requestAnimationFrame(silkTick); return; }
+      if (now - (SILK.last || 0) < 28 && ![...SILK.list].some(g => !g.__still && (g.__u != null || now - g.__t0 < 1600))) { SILK.raf = requestAnimationFrame(silkTick); return; }
       SILK.last = now;
       const ease = x => x <= 0 ? 0 : x >= 1 ? 1 : 1 - Math.pow(1 - x, 3), f = v => v.toFixed(1);
       // шёлк под открытым окном (витрина, монета, гора, истории) не видно — его не перерисовываем: это отнимало кадры у монеты
       const top = COVER.on && document.querySelector(COVER.sel);
       let busy = false;
+      // перелив: сдвиг градиента на 2 ширины за 4 с (как было в SMIL)
+      SILK.grads.forEach(gr => {
+        if (!gr.isConnected) { SILK.grads.delete(gr); return; }
+        if (top && !top.contains(gr)) return;
+        busy = true;
+        gr.setAttribute('gradientTransform', `translate(${((now % 4000) / 2000 * gr.dataset.gw).toFixed(1)} 0)`);
+      });
       SILK.list.forEach(g => {
         if (!g.isConnected) { SILK.list.delete(g); return; }
-        if (top && !top.contains(g)) return;
+        if (g.__still || (top && !top.contains(g))) return;
         busy = true;
         const t = PT.reduce ? 9 : (now - g.__t0) / 1000, c = g.__c, n = c.length, u = g.__u != null ? g.__u : PT.reduce ? 1 : ease((t - .1) / 1.2), m = Math.max(2, Math.ceil(u * (n - 1)) + 1);
         // свечение — по средней линии
@@ -3899,10 +3973,12 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           }
           p.setAttribute('d', s);
         });
+        // неподвижная нить (размах 0, например главный график) легла — больше её не пересчитываем
+        if (!A && u >= 1 && !g.__sg) g.__still = true;
         if (PT.reduce) SILK.list.delete(g);
       });
       // всё закрыто окном — кадры не заказываем; окно закроется — coverCheck запустит снова
-      if (SILK.list.size && (busy || !top)) SILK.raf = requestAnimationFrame(silkTick);
+      if (busy) SILK.raf = requestAnimationFrame(silkTick);
     }
     function stChart(w, bare) {
       if (w.ws.length < 2) return w.ws.length ? `<div class="st-chart"><svg viewBox="0 0 300 120"><circle cx="150" cy="60" r="6" fill="var(--volt)"/><text x="150" y="92" text-anchor="middle">${fmt(w.ws[0].w)} кг</text></svg></div>` : '';
@@ -4711,6 +4787,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const rock = mtRock(), bands = mtBands(), flutes = mtFlutes();
       const far2 = mtRange(330, 140, 41, 5), far = mtRange(420, 170, 11, 5), mid = mtRange(560, 120, 23, 5);
       // data-bake="x y w h масштаб": слой с шумом или размытием один раз рисуется в картинку (см. mtBake)
+      // область фильтров шума = область запекания: шум считается в координатах горы, картинка та же, а работы втрое меньше
       svg.innerHTML = `<defs>
           <linearGradient id="mtSky" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="0" y2="700"><stop offset="0" stop-color="${P.sky[0]}"/><stop offset=".55" stop-color="${P.sky[1]}"/><stop offset="1" stop-color="${P.sky[2]}"/></linearGradient>
           <linearGradient id="mtLit" gradientUnits="userSpaceOnUse" x1="0" y1="210" x2="0" y2="1180"><stop offset="0" stop-color="${P.lit[0]}"/><stop offset=".35" stop-color="${P.lit[1]}"/><stop offset=".7" stop-color="${P.lit[2]}"/><stop offset="1" stop-color="${P.lit[3]}"/></linearGradient>
@@ -4727,10 +4804,10 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           <clipPath id="mtGroundClip"><path d="${MT_GROUND}V1700H-2000Z"/></clipPath>
           <clipPath id="mtFarClip"><path d="${far.d}"/></clipPath>
           <clipPath id="mtSnowClip"><path d="${rock.snow}"/></clipPath>
-          <filter id="mtGrainF" filterUnits="userSpaceOnUse" x="-300" y="150" width="2400" height="1100"><feTurbulence type="fractalNoise" baseFrequency=".03 .11" numOctaves="3" seed="7"/><feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -2.6 1.45"/></filter>
+          <filter id="mtGrainF" filterUnits="userSpaceOnUse" x="-80" y="150" width="1740" height="1080"><feTurbulence type="fractalNoise" baseFrequency=".03 .11" numOctaves="3" seed="7"/><feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -2.6 1.45"/></filter><filter id="mtGrainG" filterUnits="userSpaceOnUse" x="-80" y="1140" width="1740" height="120"><feTurbulence type="fractalNoise" baseFrequency=".03 .11" numOctaves="3" seed="7"/><feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -2.6 1.45"/></filter>
           <filter id="mtGrainL" filterUnits="userSpaceOnUse" x="-300" y="150" width="2400" height="1100"><feTurbulence type="fractalNoise" baseFrequency=".06 .2" numOctaves="2" seed="19"/><feColorMatrix values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 2.4 -1.35"/></filter>
           <filter id="mtTone" filterUnits="userSpaceOnUse" x="-300" y="150" width="2400" height="1100"><feTurbulence type="fractalNoise" baseFrequency=".0045 .007" numOctaves="2" seed="12"/><feColorMatrix values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 3.2 -1.5"/></filter>
-          <filter id="mtSnowTex" filterUnits="userSpaceOnUse" x="-300" y="150" width="2400" height="1100"><feTurbulence type="fractalNoise" baseFrequency=".012 .05" numOctaves="4" seed="3"/><feColorMatrix values="0 0 0 0 .55  0 0 0 0 .64  0 0 0 0 .78  0 0 0 -3 1.5"/></filter>
+          <filter id="mtSnowTex" filterUnits="userSpaceOnUse" x="1000" y="150" width="680" height="560"><feTurbulence type="fractalNoise" baseFrequency=".012 .05" numOctaves="4" seed="3"/><feColorMatrix values="0 0 0 0 .55  0 0 0 0 .64  0 0 0 0 .78  0 0 0 -3 1.5"/></filter>
           <filter id="mtFog" x="-20%" y="-60%" width="140%" height="220%"><feGaussianBlur stdDeviation="22"/></filter>
           <filter id="mtSoft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="40"/></filter>
           <filter id="mtGlow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3"/></filter>
@@ -4750,7 +4827,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           <rect x="-3000" y="560" width="7000" height="240" fill="url(#mtMist)" opacity=".7"/>
           <ellipse data-bake="-560 580 1520 240 .5" cx="200" cy="700" rx="700" ry="50" fill="${P.fog}" opacity="${P.fogOp * .8}" filter="url(#mtFog)"/></g>
         <path id="mtGroundP" d="M-2000 1700${MT_GROUND.replace(/^M/, 'L')}V1700Z" fill="url(#mtLit)"/>
-        <g clip-path="url(#mtGroundClip)"><g data-bake="-80 1140 1740 120 1"><rect x="-300" y="1140" width="2400" height="120" filter="url(#mtGrainF)" opacity="${P.grain}"/>
+        <g clip-path="url(#mtGroundClip)"><g data-bake="-80 1140 1740 120 1"><rect x="-300" y="1140" width="2400" height="120" filter="url(#mtGrainG)" opacity="${P.grain}"/>
           <rect x="-300" y="1140" width="2400" height="120" filter="url(#mtTone)" opacity="${P.tone}"/></g></g>
         <path d="${MT_SHAPE}" fill="url(#mtLit)"/>
         <g clip-path="url(#mtClip)">
@@ -4817,10 +4894,29 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     // Шум (фактура камня и снега) и размытие (туман, свечение гребня) дорого считать на каждом кадре,
     // а камера двигает гору постоянно. Эти слои неподвижны: рисуем каждый один раз в картинку и
     // дальше показываем её. Пока картинка готовится, слоя просто нет — он плавно появится.
+    // Туман, свечение и текстуры (шум, размытие) рисуются один раз в картинку. Это дорого (на телефоне почти секунда),
+    // поэтому готовые картинки хранятся в памяти телефона (Cache Storage) по отпечатку исходника: второй раз — сразу.
+    // Если рисовать всё же надо — по одной картинке за раз, между кадрами. MT.baked = всё готово (человечек ждёт этого)
+    const mtHash = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36) + s.length.toString(36); };
+    const mtStore = () => { try { return window.caches ? caches.open('wt-mt-bake').catch(() => null) : Promise.resolve(null); } catch (e) { return Promise.resolve(null); } };
+    function mtBakeOne(src, pw, ph) {
+      return new Promise(res => {
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const c = document.createElement('canvas'); c.width = pw; c.height = ph;
+            c.getContext('2d').drawImage(img, 0, 0, pw, ph);
+            c.toBlob(b => { c.width = c.height = 0; res(b || null); });
+          } catch (e) { res(null); }
+        };
+        img.onerror = () => res(null);
+        img.src = src;
+      });
+    }
     function mtBake(svg) {
       const NS = 'http://www.w3.org/2000/svg', ser = new XMLSerializer();
       MT.blobs.forEach(u => URL.revokeObjectURL(u)); MT.blobs = [];
-      const gen = ++MT.gen, defs = ser.serializeToString(svg.querySelector('defs'));
+      const gen = ++MT.gen, defs = ser.serializeToString(svg.querySelector('defs')), jobs = [];
       svg.querySelectorAll('[data-bake]').forEach(el => {
         const [x, y, w, h, k] = el.dataset.bake.split(' ').map(Number), pw = Math.round(w * k), ph = Math.round(h * k);
         el.removeAttribute('data-bake');
@@ -4828,17 +4924,37 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         const im = document.createElementNS(NS, 'image');
         [['x', x], ['y', y], ['width', w], ['height', h], ['preserveAspectRatio', 'none'], ['class', 'mt-baked']].forEach(([a, v]) => im.setAttribute(a, v));
         el.replaceWith(im);
-        const show = href => { if (gen !== MT.gen) return; im.setAttribute('href', href); requestAnimationFrame(() => im.classList.add('on')); };
-        const img = new Image();
-        img.onload = () => {
-          try {
-            const c = document.createElement('canvas'); c.width = pw; c.height = ph;
-            c.getContext('2d').drawImage(img, 0, 0, pw, ph);
-            c.toBlob(b => { if (!b) return show(img.src); const u = URL.createObjectURL(b); MT.blobs.push(u); show(u); });
-          } catch (e) { show(img.src); }      // браузер не дал перерисовать: показываем как есть
-        };
-        img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(src);
+        jobs.push({ src, pw, ph, im });
       });
+      MT.baked = !jobs.length;
+      if (!jobs.length) return;
+      setTimeout(() => { if (gen === MT.gen) MT.baked = true; }, 6000);   // на всякий случай человечек не ждёт вечно
+      const wait = () => new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
+      (async () => {
+        const store = await mtStore();
+        const hits = await Promise.all(jobs.map(async j => {
+          j.key = 'wt-mt-bake/' + mtHash(j.src) + '-' + j.pw + 'x' + j.ph;
+          try { const r = store && await store.match(j.key); return r ? await r.blob() : null; } catch (e) { return null; }
+        }));
+        for (let i = 0; i < jobs.length; i++) {
+          if (gen !== MT.gen) return;
+          const j = jobs[i], url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(j.src);
+          let b = hits[i];
+          if (!b) {
+            await wait();            // одна тяжёлая картинка за раз, между кадрами
+            if (gen !== MT.gen) return;
+            b = await mtBakeOne(url, j.pw, j.ph);
+            if (b && store) store.put(j.key, new Response(b, { headers: { 'Content-Type': 'image/png' } })).catch(() => {});
+          }
+          const href = b ? URL.createObjectURL(b) : url;
+          if (b) MT.blobs.push(href);
+          j.im.setAttribute('href', href);
+          requestAnimationFrame(() => j.im.classList.add('on'));
+        }
+        if (gen === MT.gen) MT.baked = true;
+        // старые картинки (другая тема, прежняя версия) — убираем, чтобы не копились
+        if (store) store.keys().then(ks => { const keep = new Set(jobs.map(j => new URL(j.key, location.href).href)); if (ks.length > 40) ks.forEach(r => keep.has(r.url) || store.delete(r)); }).catch(() => {});
+      })().catch(() => { MT.baked = true; });
     }
     // камера: кусок горы размером с экран; дальние хребты сдвигаются медленнее (глубина)
     function mtCamera(x, y) {
@@ -5061,7 +5177,10 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       // засчитывается как обычный (не больше 34 мс). Старт — после короткой паузы, разгон и торможение плавные.
       const dur = 3200 + 6400 * Math.abs(t - from);
       let el = MTP.wait ? -MTP.wait : -350, last = null, prevT = from; MTP.wait = 0;
+      let shown = false;
       const step = now => {
+        // гора ещё дорисовывает туман и текстуры — человечек стоит у старта и ждёт, потом идёт плавно (Вадим, 25.10)
+        if (!MT.baked) { if (!shown) { shown = true; mtDraw(from, reached, false); } MT.raf = requestAnimationFrame(step); return; }
         el += last == null ? 0 : Math.min(now - last, 34); last = now;
         const k = Math.max(0, Math.min(1, el / dur)), e = k < .5 ? 2 * k * k : 1 - Math.pow(2 - 2 * k, 2) / 2;
         const cur = from + (t - from) * e;
@@ -5463,7 +5582,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     // медаль с ошибками. Поэтому монета живёт слоями (MedalLayers): готовые картинки частей двигает видеочип.
     // Слои собираются, когда сторона уже стала картинкой, и ложатся поверх неё с первым кадром — он совпадает.
     // Не получилось — живой SVG поверх картинки, при вращении он замирает
-    // собранные слои монеты помним (последние 4 медали): повторное открытие оживает сразу
+    // собранные слои монеты помним только для последней медали: каждая монета — десятки МБ памяти,
+    // четыре сразу — и iPhone выгружал приложение (Вадим, 25.10: «уходит в перезагрузку»)
     const LY_CACHE = new Map();
     function coinLayers(m) {
       const key = activeUserId + '|' + medalKey(m) + '|' + m.date;
@@ -5474,7 +5594,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const v = { svgs, p: (async () => { const a = await MedalLayers.build(svgs[0], k).catch(() => null); const b = a && await MedalLayers.build(svgs[1], k).catch(() => null); return [a, b]; })() };
       v.p.then(ly => { if (ly.some(x => !x)) LY_CACHE.delete(key); });
       LY_CACHE.set(key, v);
-      while (LY_CACHE.size > 4) { const [k0, v0] = LY_CACHE.entries().next().value; LY_CACHE.delete(k0); v0.p.then(ly => ly.forEach(MedalLayers.drop)); }
+      while (LY_CACHE.size > 1) { const [k0, v0] = LY_CACHE.entries().next().value; LY_CACHE.delete(k0); v0.p.then(ly => ly.forEach(MedalLayers.drop)); }
       return v;
     }
     function coinLivePrep() {
