@@ -950,7 +950,7 @@
       <button class="back-btn" onclick="navBack()">‹ Назад</button>
       <div class="screen-top"><h2>Рекорды</h2><span id="recWho"></span></div>
       <div id="recList"></div>
-      <p class="rec-note">Время на дистанции считается по среднему темпу тренировки, которая была не короче этой дистанции: отрезков внутри тренировки бот не знает. Нажми на результат, чтобы увидеть, из какой он тренировки.</p>
+      <p class="rec-note">Если на скрине часов была таблица отрезков по километрам, время на дистанции — лучшие километры подряд. Иначе — по среднему темпу тренировки, которая была не короче этой дистанции. Нажми на результат, чтобы увидеть, из какой он тренировки.</p>
     </div>
   </div>
 
@@ -6046,7 +6046,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         c.classList.add('on');
         const r = u.records[+c.dataset.i], x = r.dist[+c.dataset.j], f = x.from, swim = /^плав/.test(r.sport);
         const pace = swim ? `${recT(f.min * 6 / f.km)} /100 м` : /^вело/.test(r.sport) ? `${fmt(Math.round(f.km / f.min * 600) / 10)} км/ч` : `${recT(f.min * 60 / f.km)} /км`;
-        src.textContent = `Из тренировки ${recDay(x.d)}: ${recKm(f.km)} за ${stMin(f.min)}` + (f.km > x.km * 1.05 ? `. Средний ${/^вело/.test(r.sport) ? 'ход' : 'темп'} ${pace}, на ${recKm(x.km)} это ${recT(x.sec)}.` : '.');
+        src.textContent = x.split ? `Лучшие ${recKm(x.km)} подряд по отрезкам с часов. Тренировка ${recDay(x.d)}: ${recKm(f.km)} за ${stMin(f.min)}.`
+          : `Из тренировки ${recDay(x.d)}: ${recKm(f.km)} за ${stMin(f.min)}` + (f.km > x.km * 1.05 ? `. Средний ${/^вело/.test(r.sport) ? 'ход' : 'темп'} ${pace}, на ${recKm(x.km)} это ${recT(x.sec)}.` : '.');
       };
       $('recScreen').scrollTop = 0;
       $('recScreen').classList.add('open');
