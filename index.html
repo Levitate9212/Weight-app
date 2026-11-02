@@ -444,9 +444,10 @@
     .week-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; min-height: 22px; }
     #todayBtn { font-size: 12.5px; font-weight: 600; color: var(--volt); }
     #todayBtn.hidden { display: block; visibility: hidden; }
-    #mtBtn { display: flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 600; color: var(--muted); padding: 2px 8px 2px 6px; border-radius: 8px; transition: color .2s ease, background .2s ease; }
-    #mtBtn svg { width: 15px; height: 15px; }
-    #mtBtn:active { color: var(--volt); background: var(--volt-dim); }
+    .wk-l { display: flex; align-items: center; gap: 4px; }
+    #mtBtn, #recBtn { display: flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 600; color: var(--muted); padding: 2px 8px 2px 6px; border-radius: 8px; transition: color .2s ease, background .2s ease; }
+    #mtBtn svg, #recBtn svg { width: 15px; height: 15px; }
+    #mtBtn:active, #recBtn:active { color: var(--volt); background: var(--volt-dim); }
 
     /* Восхождение: гора на весь экран поверх приложения */
     #mtView { position: fixed; inset: 0; z-index: 44; background: #121621; color: var(--ink); display: flex; flex-direction: column;
@@ -578,6 +579,32 @@
     #sheet dt { color: var(--muted); }
     #sheet dd { text-align: right; font-weight: 600; }
     #sheet dd.need { color: var(--ink); font-weight: 700; }
+    /* ===== Рекорды: свои лучшие результаты по видам спорта, без сравнения с другими ===== */
+    #recList { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
+    .rec-card { background: var(--panel); border-radius: 20px; padding: 14px; }
+    .rec-head { display: flex; align-items: center; gap: 10px; }
+    .rec-head .ic { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; flex-shrink: 0; }
+    .rec-head .ic svg { width: 30px; height: 30px; }
+    .rec-head b { font-size: 17px; font-weight: 700; }
+    .rec-head small { margin-left: auto; color: var(--muted); font-size: 12.5px; white-space: nowrap; }
+    .rec-dist { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin-top: 12px; }
+    .rec-c { text-align: left; background: var(--panel2); border-radius: 14px; padding: 9px 10px 8px; display: flex; flex-direction: column; gap: 1px; min-width: 0; transition: transform .15s ease; }
+    .rec-c .k { font-size: 12px; font-weight: 600; color: var(--muted); }
+    .rec-c .v { font-family: var(--num); font-weight: 800; font-size: 22px; line-height: 1.15; color: var(--ink); font-variant-numeric: tabular-nums; }
+    .rec-c .d { font-size: 11.5px; color: var(--muted); }
+    .rec-c.on { box-shadow: inset 0 0 0 2px var(--rc); }
+    .rec-c:active { transform: scale(.97); }
+    .rec-c.no { background: transparent; box-shadow: inset 0 0 0 1.5px var(--panel2); pointer-events: none; }
+    .rec-c.no .v { font-family: inherit; font-size: 14px; font-weight: 600; color: var(--muted); padding: 5px 0 3px; }
+    .rec-more { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--panel2); }
+    .rec-more > div { min-width: 0; }
+    .rec-more .k { font-size: 11.5px; color: var(--muted); }
+    .rec-more .v { font-family: var(--num); font-weight: 700; font-size: 16px; color: var(--ink); margin-top: 2px; }
+    .rec-more .v small { font-family: inherit; font-size: 11.5px; font-weight: 600; color: var(--muted); margin-left: 2px; }
+    .rec-more .d { font-size: 11px; color: var(--muted); margin-top: 1px; }
+    .rec-src { font-size: 13px; color: var(--ink); margin-top: 10px; line-height: 1.4; }
+    .rec-src:empty { display: none; }
+    .rec-note { font-size: 12.5px; color: var(--muted); line-height: 1.45; margin-top: 16px; }
     /* ===== Экран достижений ===== */
     .ach-head { cursor: pointer; }
     .ach-head:active { opacity: .6; }
@@ -867,7 +894,10 @@
 
       <section class="week-block">
         <div class="week-head">
-          <button id="mtBtn" onclick="openMountain()" aria-controls="mtView"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20l6.5-11 4 6.5 2.5-4L21 20z"/><path d="M9.5 9l1.8 3"/></svg>Гора</button>
+          <div class="wk-l">
+            <button id="mtBtn" onclick="openMountain()" aria-controls="mtView"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20l6.5-11 4 6.5 2.5-4L21 20z"/><path d="M9.5 9l1.8 3"/></svg>Гора</button>
+            <button id="recBtn" class="hidden" onclick="openRecords()" aria-controls="recScreen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5V9.5M10 2.5h4M18.5 6.5l1.3-1.3"/></svg>Рекорды</button>
+          </div>
           <button id="todayBtn" class="hidden" onclick="resetToToday()">К этой неделе ›</button>
         </div>
         <div id="days" class="days"></div>
@@ -911,6 +941,16 @@
       <svg id="mtMidS" class="mt-l mt-w" aria-hidden="true"></svg>
       <svg id="mtSvg" class="mt-l mt-w" role="img" aria-label="Гора: тропа от стартового веса к цели"></svg>
       <svg id="mtFgS" class="mt-l mt-w" aria-hidden="true"></svg>
+    </div>
+  </div>
+
+  <!-- Рекорды: лучшие результаты по каждому виду спорта, только свои -->
+  <div id="recScreen" class="screen" role="dialog" aria-label="Рекорды">
+    <div class="screen-inner">
+      <button class="back-btn" onclick="navBack()">‹ Назад</button>
+      <div class="screen-top"><h2>Рекорды</h2><span id="recWho"></span></div>
+      <div id="recList"></div>
+      <p class="rec-note">Время на дистанции считается по среднему темпу тренировки, которая была не короче этой дистанции: отрезков внутри тренировки бот не знает. Нажми на результат, чтобы увидеть, из какой он тренировки.</p>
     </div>
   </div>
 
@@ -3921,7 +3961,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     }
     // Главный экран под полноэкранными окнами (витрина, монета, гора, истории) не видно: его SVG-анимации
     // и шёлк стоят. Иначе телефон каждый кадр пересобирал картинку вместе со слоями монеты (Вадим, 24.10)
-    const COVER = { on: false, ids: ['achScreen', 'coinView', 'mtView', 'story'], sel: '#achScreen.open, #coinView.open, #mtView.open, #story.open' };
+    const COVER = { on: false, ids: ['achScreen', 'coinView', 'mtView', 'story', 'recScreen'], sel: '#achScreen.open, #coinView.open, #mtView.open, #story.open, #recScreen.open' };
     function coverCheck() {
       const on = !!document.querySelector(COVER.sel);
       if (on === COVER.on) return;
@@ -5966,6 +6006,57 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       });
     })();
 
+    // ===== Рекорды (Вадим, 02.11): по видам спорта, на дистанциях; считает сервер (getRecords), здесь только показ
+    const REC_MON = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+    const recDay = d => { const [y, m, dd] = String(d).split('-').map(Number); return `${dd} ${REC_MON[m - 1]}${y !== new Date().getFullYear() ? ' ' + y : ''}`; };
+    const recT = sec => { sec = Math.round(sec); const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60;
+      return h ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}` : `${m}:${String(s).padStart(2, '0')}`; };
+    const recKm = km => km >= 1 || !km ? stKm(km) + ' км' : Math.round(km * 1000) + ' м';
+    function renderRecBtn(u) { $('recBtn').classList.toggle('hidden', !(u && u.records && u.records.length)); }
+    function recCard(r, i) {
+      const m = stSport(r.sport);
+      const cells = (r.dist || []).map((x, j) => x.sec
+        ? `<button class="rec-c" data-i="${i}" data-j="${j}"><span class="k">${recKm(x.km)}</span><span class="v">${recT(x.sec)}</span><span class="d">${recDay(x.d)}</span></button>`
+        : `<div class="rec-c no"><span class="k">${recKm(x.km)}</span><span class="v">ещё нет</span></div>`).join('');
+      const more = [];
+      if (r.longKm) more.push(['Самая длинная', `${stKm(r.longKm.km)}<small>км</small>`, r.longKm.d]);
+      if (r.longMin) more.push(['Самая долгая', stMin(r.longMin.min).replace(/ (ч|мин)/g, '<small>$1</small>'), r.longMin.d]);
+      if (r.pace) more.push(r.pace.kmh ? ['Быстрее всего', `${fmt(r.pace.kmh)}<small>км/ч</small>`, r.pace.d] : ['Лучший темп', `${recT(r.pace.sec)}<small>/${r.pace.per}</small>`, r.pace.d]);
+      if (r.elev) more.push(['Набор вверх', `${r.elev.m}<small>м</small>`, r.elev.d]);
+      return `<section class="rec-card" style="--rc:${m.c}">
+        <div class="rec-head"><span class="ic" style="background:${m.c}">${stIcon(m.ic, 'ri')}</span><b>${esc(stCap(r.sport))}</b><small>${stWord(r.n, ...ST_W)}</small></div>
+        ${cells ? `<div class="rec-dist">${cells}</div>` : ''}
+        ${more.length ? `<div class="rec-more">${more.map(([k, v, d]) => `<div><div class="k">${k}</div><div class="v">${v}</div><div class="d">${recDay(d)}</div></div>`).join('')}</div>` : ''}
+        <p class="rec-src"></p></section>`;
+    }
+    function openRecords() {
+      const u = globalData[activeUserId];
+      if (!u || !u.records || !u.records.length) return;
+      safeHaptic('light');
+      $('recWho').textContent = u.name || '';
+      const list = $('recList');
+      list.innerHTML = u.records.map(recCard).join('');
+      list.onclick = e => {
+        const c = e.target.closest('.rec-c[data-j]'); if (!c) return;
+        const card = c.closest('.rec-card'), on = !c.classList.contains('on');
+        card.querySelectorAll('.rec-c.on').forEach(x => x.classList.remove('on'));
+        const src = card.querySelector('.rec-src');
+        if (!on) { src.textContent = ''; return; }
+        safeHaptic('light');
+        c.classList.add('on');
+        const r = u.records[+c.dataset.i], x = r.dist[+c.dataset.j], f = x.from, swim = /^плав/.test(r.sport);
+        const pace = swim ? `${recT(f.min * 6 / f.km)} /100 м` : /^вело/.test(r.sport) ? `${fmt(Math.round(f.km / f.min * 600) / 10)} км/ч` : `${recT(f.min * 60 / f.km)} /км`;
+        src.textContent = `Из тренировки ${recDay(x.d)}: ${recKm(f.km)} за ${stMin(f.min)}` + (f.km > x.km * 1.05 ? `. Средний ${/^вело/.test(r.sport) ? 'ход' : 'темп'} ${pace}, на ${recKm(x.km)} это ${recT(x.sec)}.` : '.');
+      };
+      $('recScreen').scrollTop = 0;
+      $('recScreen').classList.add('open');
+      navPush(closeRecords);
+    }
+    function closeRecords() {
+      $('recScreen').classList.remove('open');
+      navForget(closeRecords);
+    }
+
     function renderAchievements(u) {
       const row = $('achRow');
       const m = u.medals;
@@ -6070,6 +6161,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       renderStats(u);
       odoTo($('currWeight'), target.weight, intro ? start : null);
       renderAchievements(u);
+      renderRecBtn(u);
       renderStoryRing(u);
       $('trendWeight').textContent = fmt(calculateSMA(all)[ti]);
 
