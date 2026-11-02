@@ -1861,7 +1861,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           ctx.globalAlpha = k; text(ctx, W, grad(ctx, W, PT.isDark() ? bright : day));
           ctx.globalAlpha = 1;
         },
-        done: t => SP.left != null && t - SP.left > .75,
+        // заставка ушла — холст отдаёт память (полный экран; при обновлении сцена снова задаёт размер)
+        done: t => { const d = SP.left != null && t - SP.left > .75; if (d) setTimeout(() => { if (sp.classList.contains('gone') && !SP.s.alive) cv.width = cv.height = 0; }, 50); return d; },
         // сцену остановили раньше времени — заставку всё равно убираем, без тёмного экрана
         stopped: () => { if (SP.exitAt != null) sp.classList.add('leaving', 'gone'); }
       });
@@ -3153,6 +3154,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const LEAF = new Set(['path', 'circle', 'rect', 'polygon', 'polyline', 'ellipse', 'line', 'text', 'use', 'image']);
       const ANIM = new Set(['animate', 'animateTransform', 'animateMotion', 'set']);
       let kn = 0, sheet = null, box = null;
+      const KF = new Map();
       const addCss = t => { if (!sheet) { sheet = document.createElement('style'); document.head.appendChild(sheet); } sheet.appendChild(document.createTextNode(t)); };
       const nums = v => String(v).trim().split(/[\s,]+/).map(Number);
       const secs = v => { v = String(v || '0').trim(); return /ms$/.test(v) ? parseFloat(v) / 1000 : parseFloat(v) || 0; };
@@ -3188,7 +3190,6 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         return { prop, tr: nm === 'animateTransform', vals, t, spl, f, dur: secs(an.getAttribute('dur')), begin: secs(an.getAttribute('begin')), inf: an.getAttribute('repeatCount') === 'indefinite' };
       }
       function animCss(k, pre, post) {
-        const name = 'mly' + (kn++);
         let body = '';
         k.vals.forEach((v, i) => {
           const pc = (k.t[i] * 100).toFixed(3);
@@ -3196,7 +3197,10 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           const tf = k.spl && k.spl[i] && k.spl[i].length === 4 ? `animation-timing-function:cubic-bezier(${k.spl[i].join(',')});` : '';
           body += `${pc}%{${k.prop}:${val};${tf}}`;
         });
-        addCss(`@keyframes ${name}{${body}}`);
+        // одинаковые движения — одно правило: раньше каждая сборка слоёв добавляла сотни новых @keyframes,
+        // и за вечер листания витрины их набирались тысячи (память телефона, Вадим 02.11: «перезапускается»)
+        let name = KF.get(body);
+        if (!name) { name = 'mly' + (kn++); KF.set(body, name); addCss(`@keyframes ${name}{${body}}`); }
         return `${name} ${k.dur}s ${k.spl ? 'ease' : 'linear'} ${k.begin}s ${k.inf ? 'infinite' : '1'} both`;
       }
 
@@ -5667,7 +5671,9 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       $('coinBurst').classList.remove('go');
       if (!award) safeHaptic('light');
       // живые медали витрины под монетой стоят: их перерисовка отнимала кадры у вращения (Вадим, 24.10: «микролаги»)
-      if ($('achScreen').classList.contains('open')) liveTilesOff();
+      // и отдают память: монета сама берёт десятки мегабайт, вместе с витриной iPhone перезапускал приложение (Вадим, 02.11).
+      // Вернулся — видные медали снова собираются по одной, а до тех пор стоит та же картинка (первый кадр совпадает)
+      if ($('achScreen').classList.contains('open')) { liveTilesOff(); document.querySelectorAll('#achScreen .m-tile').forEach(tileFree); }
       const zm0 = $('coinStage').querySelector('.coin-zoom');
       zm0.style.transform = '';
       C.zoom = new DOMMatrix(getComputedStyle(zm0).transform).a || 1;
