@@ -6022,6 +6022,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       if (r.longKm) more.push(['Самая длинная', `${stKm(r.longKm.km)}<small>км</small>`, r.longKm.d]);
       if (r.longMin) more.push(['Самая долгая', stMin(r.longMin.min).replace(/ (ч|мин)/g, '<small>$1</small>'), r.longMin.d]);
       if (r.pace) more.push(r.pace.kmh ? ['Быстрее всего', `${fmt(r.pace.kmh)}<small>км/ч</small>`, r.pace.d] : ['Лучший темп', `${recT(r.pace.sec)}<small>/${r.pace.per}</small>`, r.pace.d]);
+      if (r.climb) more.push(['Быстрее вверх', `${fmt(r.climb.mpm)}<small>м/мин</small>`, r.climb.d]);
       if (r.elev) more.push(['Набор вверх', `${r.elev.m}<small>м</small>`, r.elev.d]);
       return `<section class="rec-card" style="--rc:${m.c}">
         <div class="rec-head"><span class="ic" style="background:${m.c}">${stIcon(m.ic, 'ri')}</span><b>${esc(stCap(r.sport))}</b><small>${stWord(r.n, ...ST_W)}</small></div>
