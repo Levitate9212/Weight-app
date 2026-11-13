@@ -3144,7 +3144,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         if (list.every(it => urls[it.key])) { const d = {}; list.forEach(it => { d[it.key] = urls[it.key]; }); return d; }
         const css = await fontCss();
         if (!css) return {};
-        const check = await fontReady(css).catch(() => null);
+        // одна проба шрифта на всё время: новая проба на каждый вызов читала холст десятки раз (замер 13.11: секунды при открытии витрины)
+        const check = await fontProbe(css).catch(() => null);
         if (!check) return {};
         const done = {};
         const jobs = [];
@@ -3473,13 +3474,14 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         });
       }
       // данные медали: из памяти, из хранилища или собрать (и сохранить)
-      async function data(t) {
+      async function data(t, noBuild) {
         const have = med.get(t);
         if (have && have.blob) return have;
-        return dataKey(keyOf(t));
+        return dataKey(keyOf(t), noBuild);
       }
-      async function dataKey({ svg, k, key }) {
+      async function dataKey({ svg, k, key }, noBuild) {
         let d = await fromStore(key);
+        if (!d && noBuild) return 'later';
         if (!d) { d = await make(svg, k); if (d) toStore(key, d); }
         return d;
       }
@@ -3672,7 +3674,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           if (t.classList.contains('dim') || t.querySelector('.mw.thick') || (t.$litAt && now - t.$litAt < 800)) { d.t0 = 0; continue; }
           if (!shown) {
             // первый показ — когда готовы все видимые медали: оживают разом, а не по одной
-            if (live.some(x => !x.$glNo && !(med.get(x) && med.get(x).tex))) continue;
+            if (live.some(x => !x.$glNo && !x.$glLater && !(med.get(x) && med.get(x).tex))) continue;
             shown = true; cv.style.opacity = '1';
           }
           if (!d.t0) d.t0 = now;
@@ -3699,7 +3701,10 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         const have = med.get(t);
         if ((have && have.tex) || !t.isConnected) return pump();
         busy = true;
-        data(t).then(d => {
+        // при открытой витрине медали не собираем, только достаём готовые: сборка давала рывки (Вадим, 13.11).
+        // Ещё не собранная остаётся картинкой; её соберёт фоновая сборка, когда витрину закроют
+        data(t, true).then(d => {
+          if (d === 'later') { busy = false; t.$glLater = true; return setTimeout(pump, 0); }
           if (!d) { busy = false; t.$glNo = true; return setTimeout(pump, 16); }
           med.set(t, d);
           if (!on || !gl) { busy = false; return; }
@@ -3722,7 +3727,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           if (i >= tiles.length) { if (window.afterMglWarm) afterMglWarm(); return; }
           const t = tiles[i++];
           if (!t.isConnected || t.$glNo || (med.get(t) && med.get(t).blob)) return next();
-          data(t).then(d => { if (d) med.set(t, d); else t.$glNo = true; warmT = setTimeout(() => idle(next), 120); }, () => { warmT = setTimeout(() => idle(next), 120); });
+          data(t).then(d => { if (d) { med.set(t, d); t.$glLater = false; } else t.$glNo = true; warmT = setTimeout(() => idle(next), 120); }, () => { warmT = setTimeout(() => idle(next), 120); });
         };
         // первой — гора (её открывают часто): сцена и запечённые картинки готовы до открытия (Вадим, 13.11)
         warmT = setTimeout(() => idle(() => { if (window.mtPrebuild) mtPrebuild(); warmT = setTimeout(() => idle(next), 400); }), 1500);
@@ -3745,7 +3750,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         live.forEach(t => { if (!keep.has(t)) { const d = med.get(t); if (d) d.t0 = 0; } });
         live = vis;
         q.length = 0;
-        vis.concat(near).forEach(t => { const d = med.get(t); if ((!d || !d.tex) && !t.$glNo) q.push(t); });
+        vis.concat(near).forEach(t => { const d = med.get(t); if ((!d || !d.tex) && !t.$glNo && !(t.$glLater && !(d && d.blob))) q.push(t); });
         if (raf) cancelAnimationFrame(raf);
         frame(performance.now());
         pump();
@@ -3780,6 +3785,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         med.forEach((d, t) => { if (!d.blob || !t.isConnected) med.delete(t); });
         live = [];
         if (cv) { cv.width = cv.height = 1; }
+        // что не успели собрать заранее — соберём в паузах после закрытия
+        if (sc && sc.querySelector('.m-tile') && [...sc.querySelectorAll('.m-tile')].some(t => t.$glLater)) warm(sc);
       }
       // ---------- сторона монеты на том же движке: свой холст 248×248 (как слои), своя текстура, те же таблицы движения
       // монета в хранилище: таблицы движения + PNG каждой части; открывается сразу живой, без сборки
