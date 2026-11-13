@@ -647,6 +647,8 @@
     #achScreen .m-tile .mw.thick > img { opacity: 1; }
     /* живая медаль: тень не фильтром (он перерисовывался бы каждый кадр), а у обёртки */
     .m-tile .mw > svg.live { position: absolute; left: 0; top: 0; filter: none; }
+    /* холст живых медалей (MGL): поверх плиток, но не ловит касания; при прокрутке гаснет */
+    #achScreen > canvas.mgl { position: absolute; left: 0; top: 0; z-index: 2; pointer-events: none; opacity: 0; transition: opacity .12s; will-change: opacity; }
     .m-tile .mw > .mly.tile { position: absolute; left: 0; top: 0; width: 248px; height: 248px; transform-origin: 0 0; pointer-events: none; }
     /* блик-полоса после переворота убрана (Вадим 24.10) */
     @keyframes achFlip { 0% { transform: perspective(520px) rotateY(0) scale(.96); } 45% { transform: perspective(520px) rotateY(90deg) scale(1.04); } 100% { transform: perspective(520px) rotateY(360deg); } }
@@ -3378,6 +3380,281 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       return { build, drop };
     })();
 
+    // =====================================================================
+    // ЖИВЫЕ МЕДАЛИ ВИТРИНЫ НА ОДНОМ WEBGL-ХОЛСТЕ (Вадим, 13.11: «новый движок, как в играх»).
+    // Раньше каждая живая медаль была десятком DOM-слоёв (холсты + CSS-анимации): 15 медалей на экране —
+    // ~150 слоёв, 250–500 МБ, и Telegram на iPhone перезапускал приложение. Теперь части медали (те же
+    // картинки, что у MedalLayers) лежат одной текстурой в видеочипе, а движение заранее снято с CSS-анимаций
+    // в таблицу кадров. Каждый кадр — один холст на весь экран, видеочип рисует все медали сам.
+    // Пока экран листают, холст прячется и видны обычные картинки (первый кадр совпадает): так медали
+    // не отстают от подписей при прокрутке. Встал — медали снова оживают с первого кадра.
+    // =====================================================================
+    const MGL = (function () {
+      const MAX_TEX = 24;                        // медалей в видеочипе одновременно (дальние выгружаются)
+      let cv = null, gl = null, pr = null, vb = null, sc = null, raf = 0, on = false, shown = false, idleT = 0, dead = false;
+      let W = 0, H = 0, R = 1, verts = new Float32Array(9 * 6 * 400), holdBox = null, busy = false, wantT = 0;
+      const med = new Map();                     // плитка → { tex, quads, anims, t0, at }
+      const q = [];
+      const VS = `attribute vec2 p;attribute vec2 uv;attribute float al;attribute vec4 cl;uniform vec2 sz;
+        varying vec2 vu;varying float va;varying vec4 vc;varying vec2 vp;
+        void main(){vu=uv;va=al;vc=cl;vp=p;gl_Position=vec4(p.x/sz.x*2.0-1.0,1.0-p.y/sz.y*2.0,0.0,1.0);}`;
+      const FS = `precision mediump float;uniform sampler2D tx;varying vec2 vu;varying float va;varying vec4 vc;varying vec2 vp;
+        void main(){float k=va;if(vc.z>0.0){float d=distance(vp,vc.xy);if(d>vc.z+0.5)discard;
+        k*=clamp(vc.z+0.5-d,0.0,1.0);if(vc.w>0.5)k*=clamp((vc.z-d)/(0.45*vc.z),0.0,1.0);}
+        gl_FragColor=texture2D(tx,vu)*k;}`;
+      const ok = () => !dead && !!window.WebGLRenderingContext;
+      function init() {
+        if (gl) return true;
+        if (!ok()) return false;
+        cv = document.createElement('canvas'); cv.className = 'mgl'; cv.setAttribute('aria-hidden', 'true');
+        gl = cv.getContext('webgl', { alpha: true, premultipliedAlpha: true, antialias: false, depth: false, stencil: false });
+        if (!gl) { dead = true; cv = null; return false; }
+        const sh = (t, s) => { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); return o; };
+        pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(pr);
+        if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) { dead = true; gl = null; cv = null; return false; }
+        gl.useProgram(pr);
+        vb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, vb);
+        const at = (n, size, off) => { const l = gl.getAttribLocation(pr, n); gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l, size, gl.FLOAT, false, 36, off * 4); };
+        at('p', 2, 0); at('uv', 2, 2); at('al', 1, 4); at('cl', 4, 5);
+        gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+        cv.addEventListener('webglcontextlost', e => { e.preventDefault(); dead = true; stop(); free(); });
+        return true;
+      }
+      // ---------- сборка медали: картинки частей → одна текстура, CSS-движение → таблица кадров
+      async function make(t) {
+        const mw = t.querySelector('.mw'), m = t.$m;
+        const w = mw.offsetWidth || 104, k = Math.min(2, Math.max(1.5, window.devicePixelRatio || 2)) * w / 248;
+        const ly = await MedalLayers.build(MedalB.medal(medalOpts(m), true), k).catch(() => null);
+        if (!ly) return null;
+        if (!holdBox) {
+          holdBox = document.createElement('div'); holdBox.setAttribute('aria-hidden', 'true');
+          holdBox.style.cssText = 'position:fixed;left:-10000px;top:0;width:248px;height:248px;visibility:hidden;pointer-events:none';
+          document.body.appendChild(holdBox);
+        }
+        holdBox.appendChild(ly);
+        try {
+          const cvs = [...ly.querySelectorAll('canvas')];
+          if (!cvs.length) return null;
+          const anims = [], amap = new Map(), nodes = new Map();
+          const node = el => {
+            if (nodes.has(el)) return nodes.get(el);
+            const s = el.style, n = { x: parseFloat(s.left) || 0, y: parseFloat(s.top) || 0, a: -1, clip: null };
+            if (el.$clip) n.clip = { r: (parseFloat(s.width) || 0) / 2, mask: /mask-image/.test(s.cssText) ? 1 : 0 };
+            const an = el.getAnimations ? el.getAnimations() : [];
+            if (an.length) {
+              const a = an[0]; a.pause();
+              const tm = a.effect.getTiming(), dur = +tm.duration || 1000, delay = +tm.delay || 0, inf = tm.iterations === Infinity;
+              const N = Math.max(2, Math.min(240, Math.round(dur / 1000 * 30)));
+              const S = new Float32Array(N * 7);
+              for (let i = 0; i < N; i++) {
+                a.currentTime = delay + dur * (inf ? i / N : i / (N - 1)) - (!inf && i === N - 1 ? 0.01 : 0);
+                const cs = getComputedStyle(el), M = new DOMMatrix(cs.transform === 'none' ? undefined : cs.transform);
+                S.set([M.a, M.b, M.c, M.d, M.e, M.f, +cs.opacity], i * 7);
+              }
+              n.a = anims.length; anims.push({ S, N, dur, delay, inf });
+            }
+            nodes.set(el, n); return n;
+          };
+          // упаковка картинок частей в одну текстуру полками
+          const P = 2, AW = Math.min(2048, Math.max(256, ...cvs.map(c => c.width + P)));
+          let x = 0, y = 0, rowH = 0;
+          const place = cvs.map(c => {
+            if (x + c.width + P > AW) { x = 0; y += rowH; rowH = 0; }
+            const r = { x, y }; x += c.width + P; rowH = Math.max(rowH, c.height + P); return r;
+          });
+          const AH = y + rowH;
+          if (AH > 2048) return null;
+          const atlas = document.createElement('canvas'); atlas.width = AW; atlas.height = AH;
+          const g = atlas.getContext('2d');
+          cvs.forEach((c, i) => g.drawImage(c, place[i].x, place[i].y));
+          const quads = cvs.map((c, i) => {
+            const chain = []; let e = c.parentElement;
+            while (e && e !== ly) { chain.unshift(node(e)); e = e.parentElement; }
+            const s = c.style;
+            return { chain, x: parseFloat(s.left) || 0, y: parseFloat(s.top) || 0, w: parseFloat(s.width) || 0, h: parseFloat(s.height) || 0,
+              u0: place[i].x / AW, v0: place[i].y / AH, u1: (place[i].x + c.width) / AW, v1: (place[i].y + c.height) / AH };
+          });
+          if (!gl) { atlas.width = atlas.height = 0; return null; }
+          const tex = upload(atlas);
+          // сжатая копия текстуры: медаль, выгруженную из видеочипа, вернём из неё, не собирая заново
+          const blob = await new Promise(r => atlas.toBlob(r));
+          atlas.width = atlas.height = 0;
+          return { tex, blob, quads, anims, t0: 0, at: 0, bytes: AW * AH * 4 };
+        } finally { MedalLayers.drop(ly); }
+      }
+      function upload(src) {
+        const tex = gl.createTexture();
+        gl.bindTexture(gl.TEXTURE_2D, tex);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src);
+        return tex;
+      }
+      async function restore(d) {
+        let src = null;
+        try { src = window.createImageBitmap ? await createImageBitmap(d.blob, { premultiplyAlpha: 'premultiply' }) : null; } catch (e) {}
+        if (!src) { src = new Image(); const u = URL.createObjectURL(d.blob); src.src = u; try { await src.decode(); } finally { URL.revokeObjectURL(u); } }
+        if (!gl) return false;
+        d.tex = upload(src);
+        if (src.close) src.close(); else src.src = '';
+        return true;
+      }
+      // ---------- кадр
+      const mul = (A, B) => [A[0] * B[0] + A[2] * B[1], A[1] * B[0] + A[3] * B[1], A[0] * B[2] + A[2] * B[3], A[1] * B[2] + A[3] * B[3],
+        A[0] * B[4] + A[2] * B[5] + A[4], A[1] * B[4] + A[3] * B[5] + A[5]];
+      const tr = (M, x, y) => [M[0], M[1], M[2], M[3], M[0] * x + M[2] * y + M[4], M[1] * x + M[3] * y + M[5]];
+      function sample(an, ms) {
+        let u, i, j, f;
+        const lt = ms - an.delay;
+        if (lt <= 0) { i = j = 0; f = 0; }
+        else if (an.inf) { u = (lt % an.dur) / an.dur * an.N; i = Math.floor(u) % an.N; j = (i + 1) % an.N; f = u - Math.floor(u); }
+        else { u = Math.min(1, lt / an.dur) * (an.N - 1); i = Math.min(an.N - 1, Math.floor(u)); j = Math.min(an.N - 1, i + 1); f = u - i; }
+        const S = an.S, a = i * 7, b = j * 7, o = [];
+        for (let k = 0; k < 7; k++) o.push(S[a + k] + (S[b + k] - S[a + k]) * f);
+        return o;
+      }
+      // плитки, которые сейчас рисуем: место на экране считается один раз, когда прокрутка встала
+      let live = [];
+      function layout() {
+        const r0 = sc.getBoundingClientRect();
+        W = sc.clientWidth; H = sc.clientHeight; R = Math.min(2, window.devicePixelRatio || 1);
+        if (cv.width !== Math.round(W * R) || cv.height !== Math.round(H * R)) { cv.width = Math.round(W * R); cv.height = Math.round(H * R); }
+        cv.style.width = W + 'px'; cv.style.height = H + 'px';
+        cv.style.transform = `translateY(${sc.scrollTop}px)`;
+        const vis = [], near = [];
+        sc.querySelectorAll('.m-tile:not(.locked)').forEach(t => {
+          if (!t.$m || t.$m.status !== 'earned') return;
+          const mw = t.querySelector('.mw'), r = mw.getBoundingClientRect();
+          const y = r.top - r0.top, x = r.left - r0.left;
+          // к пикселям экрана, как браузер ставит картинку: иначе при подмене края дрогнули бы на полпикселя
+          t.$gl = { x: Math.round(x * R) / R, y: Math.round(y * R) / R, s: mw.offsetWidth / 248 };
+          if (y + r.height > -20 && y < H + 20) vis.push(t);
+          else if (y + r.height > -H && y < 2 * H) near.push(t);
+        });
+        return { vis, near };
+      }
+      function frame(now) {
+        raf = 0;
+        if (!on || !shown || !gl) return;
+        let n = 0;
+        const parts = [];
+        for (const t of live) {
+          const d = med.get(t);
+          if (!d || !d.tex) continue;
+          // серая (ждёт нить) или переворачивается — пока обычная картинка
+          if (t.classList.contains('dim') || t.querySelector('.mw.thick') || (t.$litAt && now - t.$litAt < 800)) { d.t0 = 0; continue; }
+          if (!d.t0) d.t0 = now;
+          d.at = now;
+          const ms = now - d.t0, st = t.$gl, start = n;
+          const A = d.anims.map(an => sample(an, ms));
+          for (const qd of d.quads) {
+            let M = [st.s, 0, 0, st.s, st.x, st.y], al = 1, clip = null;
+            for (const nd of qd.chain) {
+              if (nd.clip) {
+                const r = nd.clip.r, cx = nd.x + r, cy = nd.y + r;
+                clip = [M[0] * cx + M[2] * cy + M[4], M[1] * cx + M[3] * cy + M[5], r * Math.sqrt(Math.abs(M[0] * M[3] - M[1] * M[2])), nd.clip.mask];
+              }
+              M = tr(M, nd.x, nd.y);
+              if (nd.a >= 0) { const s = A[nd.a]; M = mul(M, s); al *= s[6]; }
+            }
+            if (al <= 0.003) continue;
+            M = tr(M, qd.x, qd.y);
+            const P = (x, y) => [M[0] * x + M[2] * y + M[4], M[1] * x + M[3] * y + M[5]];
+            const p00 = P(0, 0), p10 = P(qd.w, 0), p01 = P(0, qd.h), p11 = P(qd.w, qd.h);
+            const c = clip || [0, 0, 0, 0];
+            const vx = [[p00, qd.u0, qd.v0], [p10, qd.u1, qd.v0], [p01, qd.u0, qd.v1], [p01, qd.u0, qd.v1], [p10, qd.u1, qd.v0], [p11, qd.u1, qd.v1]];
+            if ((n + 6) * 9 > verts.length) { const nv = new Float32Array(verts.length * 2); nv.set(verts); verts = nv; }
+            for (const [p, u, v] of vx) { verts.set([p[0], p[1], u, v, al, c[0], c[1], c[2], c[3]], n * 9); n++; }
+          }
+          if (n > start) parts.push([d.tex, start, n - start]);
+        }
+        gl.viewport(0, 0, cv.width, cv.height);
+        gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
+        if (n) {
+          gl.bindBuffer(gl.ARRAY_BUFFER, vb);
+          gl.bufferData(gl.ARRAY_BUFFER, verts.subarray(0, n * 9), gl.DYNAMIC_DRAW);
+          gl.uniform2f(gl.getUniformLocation(pr, 'sz'), W, H);
+          for (const [tex, s, c] of parts) { gl.bindTexture(gl.TEXTURE_2D, tex); gl.drawArrays(gl.TRIANGLES, s, c); }
+        }
+        raf = requestAnimationFrame(frame);
+      }
+      // ---------- очередь сборки: по одной медали, сначала видимые; не во время прокрутки
+      function pump() {
+        if (busy || !on || !shown) return;
+        const t = q.shift();
+        if (!t) return;
+        const have = med.get(t);
+        if ((have && (have.tex || have.building)) || !t.isConnected) return pump();
+        busy = true;
+        if (have && have.blob) {
+          restore(have).then(ok => { busy = false; if (ok) { if (!on) { gl.deleteTexture(have.tex); have.tex = null; } else evict(); } setTimeout(pump, 16); },
+            () => { busy = false; med.delete(t); setTimeout(pump, 16); });
+          return;
+        }
+        med.set(t, { building: true });
+        make(t).then(d => {
+          busy = false;
+          if (!d) { med.delete(t); t.$glNo = true; return setTimeout(pump, 30); }
+          if (!on || !gl) { if (gl) gl.deleteTexture(d.tex); med.delete(t); return; }
+          med.set(t, d); evict();
+          setTimeout(pump, 30);
+        }, () => { busy = false; med.delete(t); });
+      }
+      function evict() {
+        const have = [...med.entries()].filter(([, d]) => d.tex);
+        if (have.length <= MAX_TEX) return;
+        const vis = new Set(live);
+        have.filter(([t]) => !vis.has(t)).sort((a, b) => a[1].at - b[1].at).slice(0, have.length - MAX_TEX)
+          .forEach(([t, d]) => { gl.deleteTexture(d.tex); d.tex = null; if (!d.blob) med.delete(t); });
+      }
+      function resume() {
+        idleT = 0;
+        if (!on || !gl || !sc.classList.contains('open')) return;
+        const { vis, near } = layout();
+        live = vis;
+        med.forEach(d => { d.t0 = 0; });            // каждый раз с первого кадра — совпадает с картинкой
+        q.length = 0;
+        vis.concat(near).forEach(t => { const d = med.get(t); if ((!d || !d.tex) && !t.$glNo) q.push(t); });
+        shown = true; cv.style.opacity = '1';
+        if (!raf) raf = requestAnimationFrame(frame);
+        pump();
+      }
+      function hide() {
+        shown = false; cv.style.opacity = '0';
+        if (raf) { cancelAnimationFrame(raf); raf = 0; }
+      }
+      function onScroll() {
+        if (!on) return;
+        if (shown) hide();
+        clearTimeout(idleT); idleT = setTimeout(resume, 160);
+      }
+      // витрина открылась (или вернулись с монеты): через delay мс медали оживают
+      function start(screen, delay) {
+        if (!init()) return false;
+        sc = screen;
+        if (cv.parentNode !== sc) { sc.prepend(cv); sc.addEventListener('scroll', onScroll, { passive: true }); }
+        on = true; hide();
+        clearTimeout(idleT); idleT = setTimeout(resume, delay || 0);
+        return true;
+      }
+      // монета поверх или экран закрывается: стоим, текстуры держим
+      function stop() { on = false; clearTimeout(idleT); idleT = 0; q.length = 0; if (cv) hide(); }
+      // витрина закрыта: отдать видеопамять
+      function free() {
+        stop();
+        // текстуры отдаём; сжатые копии и таблицы движения (пара МБ на всю витрину) держим — открыть снова будет быстро
+        if (gl) med.forEach(d => { if (d.tex) gl.deleteTexture(d.tex); d.tex = null; });
+        med.forEach((d, t) => { if (!d.blob || !t.isConnected) med.delete(t); });
+        live = [];
+        if (cv) { cv.width = cv.height = 1; }
+      }
+      const stats = () => ({ textures: [...med.values()].filter(d => d.tex).length, blobs: Math.round([...med.values()].reduce((s, d) => s + (d.blob ? d.blob.size : 0), 0) / 1e3) + 'KB', mb: Math.round([...med.values()].reduce((s, d) => s + (d.tex ? d.bytes : 0), 0) / 1e6), live: live.length, shown });
+      return { start, stop, free, stats, ok: () => ok() };
+    })();
+
     // Экран достижений собирается заранее, в паузе после открытия главного экрана,
     // и переиспользуется, пока не сменились данные или человек — открывается мгновенно
     let achBuiltFor = null, achIdle = 0;
@@ -3470,7 +3747,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       if (!sv) { document.body.insertAdjacentHTML('beforeend', '<svg id="achShots" aria-hidden="true"></svg>'); sv = $('achShots'); }
       sv.setAttribute('viewBox', `0 0 ${W} ${H}`);
       // попала — медаль переворачивается в цвет
-      const hit = () => { coinThick(mw); t.classList.replace('dim', 'lit'); safeHaptic('soft'); if (t.$m) flipDone(t.$m); };
+      const hit = () => { t.$litAt = performance.now(); coinThick(mw); t.classList.replace('dim', 'lit'); safeHaptic('soft'); if (t.$m) flipDone(t.$m); };
       if (!slShot(aim, hit)) silkShot(sv, [0, 0, W, H], aim, 1, hit);
     }
     // Живые медали витрины (Вадим, 24.10): двигаются только полученные медали, которые сейчас видно,
@@ -3484,13 +3761,17 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     const LIVE_T = { near: null, vis: null, q: [], busy: 0 };
     const liveOf = t => t.querySelector('.mw > .mly, .mw > svg.live');
     const livePause = (el, on) => { if (!el) return; if (el.tagName === 'DIV') el.classList.toggle('paused', on); else on ? el.pauseAnimations() : el.unpauseAnimations(); };
-    // 13.11: живые медали в витрине съедали 200–400 МБ и росли при листании — Telegram на iPhone
-    // перезапускал приложение. В витрине медали неподвижные (тот же первый кадр), живая — открытая монета
+    // 13.11: живые медали DOM-слоями съедали 200–400 МБ и росли при листании — Telegram на iPhone
+    // перезапускал приложение. Теперь витрина живёт на одном WebGL-холсте (MGL); DOM-слои — только запасной путь
+    // для телефона без WebGL, и то выключены (TILE_LIVE): лучше неподвижная витрина, чем перезапуск
     const TILE_LIVE = false;
     function liveTiles(sc) {
       liveTilesOff();
       LIVE_T.t0 = performance.now();
-      if (!TILE_LIVE || calm() || !('IntersectionObserver' in window)) return;
+      if (calm()) return;
+      // витрина только открылась — нить бьёт по медалям, ждём; вернулись с монеты — сразу
+      if (MGL.start(sc, sc.classList.contains('enter') ? 1500 : 120)) return;
+      if (!TILE_LIVE || !('IntersectionObserver' in window)) return;
       // живые слои — только у медалей на экране и рядом; ушла далеко — слои убираем (память телефона)
       LIVE_T.near = new IntersectionObserver(es => es.forEach(e => {
         const t = e.target;
@@ -3532,6 +3813,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     // витрина закрыта (на главный экран): живые медали и большая монета отдают память
     function achFree() {
       if ($('achScreen').classList.contains('open') || C.open) return;
+      MGL.free();
       document.querySelectorAll('#achScreen .m-tile').forEach(tileFree);
       LY_CACHE.forEach(v => v.p.then(ly => ly.forEach(MedalLayers.drop))); LY_CACHE.clear();
       coinLiveDrop();
@@ -3541,6 +3823,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     }
     // монета открыта поверх витрины — живые медали витрины стоят (и остаются на месте)
     function liveTilesOff() {
+      MGL.stop();
       [LIVE_T.near, LIVE_T.vis].forEach(o => o && o.disconnect()); LIVE_T.near = LIVE_T.vis = null;
       LIVE_T.q = []; clearTimeout(LIVE_T.busy); LIVE_T.busy = 0;
       document.querySelectorAll('#achScreen .m-tile').forEach(t => { clearTimeout(t.$lv); t.$vis = t.$near = false; livePause(liveOf(t), true); });
