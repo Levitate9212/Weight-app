@@ -3091,8 +3091,10 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         el.insertBefore(st, el.firstChild);
         const s = new XMLSerializer().serializeToString(el);
         const img = new Image();
-        img.onload = () => res(img); img.onerror = rej;
-        img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(s);
+        // через blob, а не data: — data-картинки с встроенным шрифтом оседали в памяти при каждой сборке (Вадим, 13.11)
+        const u = URL.createObjectURL(new Blob([s], { type: 'image/svg+xml' }));
+        img.onload = () => { URL.revokeObjectURL(u); res(img); }; img.onerror = e => { URL.revokeObjectURL(u); rej(e); };
+        img.src = u;
       });
       // Проверка, что шрифт внутри картинки уже подхватился: строка цифр шрифтом медалей
       // заметно уже, чем запасным моноширинным
@@ -3482,10 +3484,13 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     const LIVE_T = { near: null, vis: null, q: [], busy: 0 };
     const liveOf = t => t.querySelector('.mw > .mly, .mw > svg.live');
     const livePause = (el, on) => { if (!el) return; if (el.tagName === 'DIV') el.classList.toggle('paused', on); else on ? el.pauseAnimations() : el.unpauseAnimations(); };
+    // 13.11: живые медали в витрине съедали 200–400 МБ и росли при листании — Telegram на iPhone
+    // перезапускал приложение. В витрине медали неподвижные (тот же первый кадр), живая — открытая монета
+    const TILE_LIVE = false;
     function liveTiles(sc) {
       liveTilesOff();
       LIVE_T.t0 = performance.now();
-      if (calm() || !('IntersectionObserver' in window)) return;
+      if (!TILE_LIVE || calm() || !('IntersectionObserver' in window)) return;
       // живые слои — только у медалей на экране и рядом; ушла далеко — слои убираем (память телефона)
       LIVE_T.near = new IntersectionObserver(es => es.forEach(e => {
         const t = e.target;
