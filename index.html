@@ -3424,11 +3424,54 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         return true;
       }
       // ---------- сборка медали: картинки частей → одна текстура, CSS-движение → таблица кадров
-      async function make(t) {
+      // Готовая медаль (сжатая текстура + таблица движения) хранится в памяти телефона (Cache Storage):
+      // собирается один раз заранее, в паузах на главном экране, а не пока смотришь витрину (Вадим, 13.11: «прогружаются — подтормаживает»)
+      const STORE_V = 'wt-mgl/1';
+      let storeP = null;
+      const store = () => storeP || (storeP = (async () => { try { return window.caches ? await caches.open('wt-mgl') : null; } catch (e) { return null; } })());
+      const b64 = a => { const u = new Uint8Array(a.buffer, a.byteOffset, a.byteLength); let s = ''; for (let i = 0; i < u.length; i += 8192) s += String.fromCharCode.apply(null, u.subarray(i, i + 8192)); return btoa(s); };
+      const unb64 = s => { const b = atob(s), u = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return new Float32Array(u.buffer); };
+      function keyOf(t) {
         const mw = t.querySelector('.mw'), m = t.$m;
         // та же чёткость, что у картинки на экране: иначе при подмене медаль заметно «мылится» (iPhone — 3×)
         const w = mw.offsetWidth || 104, k = Math.min(3, Math.max(1.5, window.devicePixelRatio || 2)) * w / 248;
-        const ly = await MedalLayers.build(MedalB.medal(medalOpts(m), true), k).catch(() => null);
+        const svg = MedalB.medal(medalOpts(m), true);
+        // ключ — сама медаль и её данные (в SVG каждый раз новые номера градиентов) + чёткость
+        return { svg, k, key: `${STORE_V}/${MedalRaster.hash(medalKey(m) + JSON.stringify(medalOpts(m)) + '|' + k.toFixed(4))}` };
+      }
+      async function fromStore(key) {
+        const st = await store();
+        if (!st) return null;
+        try {
+          const [rj, rp] = await Promise.all([st.match(key + '.json'), st.match(key + '.png')]);
+          if (!rj || !rp) return null;
+          const j = await rj.json(), blob = await rp.blob();
+          const nodes = j.nodes.map(n => ({ x: n.x, y: n.y, a: n.a, clip: n.clip }));
+          return { blob, quads: j.quads.map(q => Object.assign({}, q, { chain: q.chain.map(i => nodes[i]) })),
+            anims: j.anims.map(a => ({ N: a.N, dur: a.dur, delay: a.delay, inf: a.inf, S: unb64(a.S) })), t0: 0, at: 0, bytes: j.aw * j.ah * 4 };
+        } catch (e) { return null; }
+      }
+      function toStore(key, d) {
+        store().then(st => {
+          if (!st) return;
+          const nodes = [], idx = new Map();
+          const quads = d.quads.map(q => Object.assign({}, q, { chain: q.chain.map(n => { if (!idx.has(n)) { idx.set(n, nodes.length); nodes.push(n); } return idx.get(n); }) }));
+          const j = { aw: d.aw, ah: d.ah, nodes, quads, anims: d.anims.map(a => ({ N: a.N, dur: a.dur, delay: a.delay, inf: a.inf, S: b64(a.S) })) };
+          st.put(key + '.json', new Response(JSON.stringify(j), { headers: { 'Content-Type': 'application/json' } })).catch(() => {});
+          st.put(key + '.png', new Response(d.blob, { headers: { 'Content-Type': 'image/png' } })).catch(() => {});
+        });
+      }
+      // данные медали: из памяти, из хранилища или собрать (и сохранить)
+      async function data(t) {
+        const have = med.get(t);
+        if (have && have.blob) return have;
+        const { svg, k, key } = keyOf(t);
+        let d = await fromStore(key);
+        if (!d) { d = await make(svg, k); if (d) toStore(key, d); }
+        return d;
+      }
+      async function make(svgStr, k) {
+        const ly = await MedalLayers.build(svgStr, k).catch(() => null);
         if (!ly) return null;
         if (!holdBox) {
           holdBox = document.createElement('div'); holdBox.setAttribute('aria-hidden', 'true');
@@ -3448,7 +3491,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
             if (an.length) {
               const a = an[0]; a.pause();
               const tm = a.effect.getTiming(), dur = +tm.duration || 1000, delay = +tm.delay || 0, inf = tm.iterations === Infinity;
-              const N = Math.max(2, Math.min(240, Math.round(dur / 1000 * 30)));
+              const N = Math.max(2, Math.min(180, Math.round(dur / 1000 * 30)));
               const S = new Float32Array(N * 7);
               for (let i = 0; i < N; i++) {
                 a.currentTime = delay + dur * (inf ? i / N : i / (N - 1)) - (!inf && i === N - 1 ? 0.01 : 0);
@@ -3478,12 +3521,11 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
             return { chain, x: parseFloat(s.left) || 0, y: parseFloat(s.top) || 0, w: parseFloat(s.width) || 0, h: parseFloat(s.height) || 0,
               u0: place[i].x / AW, v0: place[i].y / AH, u1: (place[i].x + c.width) / AW, v1: (place[i].y + c.height) / AH };
           });
-          if (!gl) { atlas.width = atlas.height = 0; return null; }
-          const tex = upload(atlas);
-          // сжатая копия текстуры: медаль, выгруженную из видеочипа, вернём из неё, не собирая заново
+          // в видеочип её кладёт уже pump (из сжатой копии): сборка и показ разведены во времени
           const blob = await new Promise(r => atlas.toBlob(r));
           atlas.width = atlas.height = 0;
-          return { tex, blob, quads, anims, t0: 0, at: 0, bytes: AW * AH * 4 };
+          if (!blob) return null;
+          return { tex: null, blob, quads, anims, t0: 0, at: 0, aw: AW, ah: AH, bytes: AW * AH * 4 };
         } finally { MedalLayers.drop(ly); }
       }
       function upload(src) {
@@ -3554,7 +3596,11 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           if (!d || !d.tex) continue;
           // серая (ждёт нить) или переворачивается — пока обычная картинка
           if (t.classList.contains('dim') || t.querySelector('.mw.thick') || (t.$litAt && now - t.$litAt < 800)) { d.t0 = 0; continue; }
-          if (!shown) { shown = true; cv.style.opacity = '1'; }
+          if (!shown) {
+            // первый показ — когда готовы все видимые медали: оживают разом, а не по одной
+            if (live.some(x => !x.$glNo && !(med.get(x) && med.get(x).tex))) continue;
+            shown = true; cv.style.opacity = '1';
+          }
           if (!d.t0) d.t0 = now;
           d.at = now;
           const ms = now - d.t0, st = t.$gl, start = n;
@@ -3596,21 +3642,31 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         const t = q.shift();
         if (!t) return;
         const have = med.get(t);
-        if ((have && (have.tex || have.building)) || !t.isConnected) return pump();
+        if ((have && have.tex) || !t.isConnected) return pump();
         busy = true;
-        if (have && have.blob) {
-          restore(have).then(ok => { busy = false; if (ok) { if (!on) { gl.deleteTexture(have.tex); have.tex = null; } else evict(); } setTimeout(pump, 16); },
-            () => { busy = false; med.delete(t); setTimeout(pump, 16); });
-          return;
-        }
-        med.set(t, { building: true });
-        make(t).then(d => {
-          busy = false;
-          if (!d) { med.delete(t); t.$glNo = true; return setTimeout(pump, 30); }
-          if (!on || !gl) { if (gl) gl.deleteTexture(d.tex); med.delete(t); return; }
-          med.set(t, d); evict();
-          setTimeout(pump, 30);
-        }, () => { busy = false; med.delete(t); });
+        data(t).then(d => {
+          if (!d) { busy = false; t.$glNo = true; return setTimeout(pump, 16); }
+          med.set(t, d);
+          if (!on || !gl) { busy = false; return; }
+          return restore(d).then(ok => { busy = false; if (ok) { if (!on) { gl.deleteTexture(d.tex); d.tex = null; } else evict(); } setTimeout(pump, 0); });
+        }).catch(() => { busy = false; setTimeout(pump, 16); });
+      }
+      // заранее, когда витрина закрыта: в паузах собрать то, чего нет в хранилище (один раз на медаль)
+      let warmT = 0;
+      function warm(screen) {
+        if (!ok() || calm()) return;
+        clearTimeout(warmT);
+        const tiles = [...screen.querySelectorAll('.m-tile:not(.locked)')].filter(t => t.$m && t.$m.status === 'earned');
+        let i = 0;
+        const idle = f => window.requestIdleCallback ? requestIdleCallback(f, { timeout: 4000 }) : setTimeout(f, 200);
+        const next = () => {
+          // витрину открыли — дальше собирает она сама (по видимым)
+          if (on || i >= tiles.length) return;
+          const t = tiles[i++];
+          if (!t.isConnected || t.$glNo || (med.get(t) && med.get(t).blob)) return next();
+          data(t).then(d => { if (d) med.set(t, d); else t.$glNo = true; warmT = setTimeout(() => idle(next), 120); }, () => { warmT = setTimeout(() => idle(next), 120); });
+        };
+        warmT = setTimeout(() => idle(next), 1500);
       }
       function evict() {
         const have = [...med.entries()].filter(([, d]) => d.tex);
@@ -3667,7 +3723,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         if (cv) { cv.width = cv.height = 1; }
       }
       const stats = () => ({ textures: [...med.values()].filter(d => d.tex).length, blobs: Math.round([...med.values()].reduce((s, d) => s + (d.blob ? d.blob.size : 0), 0) / 1e3) + 'KB', mb: Math.round([...med.values()].reduce((s, d) => s + (d.tex ? d.bytes : 0), 0) / 1e6), live: live.length, shown });
-      return { start, stop, free, stats, ok: () => ok() };
+      return { start, stop, free, warm, stats, ok: () => ok() };
     })();
 
     // Экран достижений собирается заранее, в паузе после открытия главного экрана,
@@ -3693,7 +3749,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const go = job => {
         const step = dl => {
           if (ACHB.job !== job) return;
-          do { if (job.next()) { ACHB.job = null; return; } } while (dl && dl.timeRemaining() > 6);
+          do { if (job.next()) { ACHB.job = null; MGL.warm($('achScreen')); return; } } while (dl && dl.timeRemaining() > 6);
           achIdle = window.requestIdleCallback ? requestIdleCallback(step, { timeout: 1500 }) : setTimeout(step, 30);
         };
         achIdle = window.requestIdleCallback ? requestIdleCallback(step, { timeout: 1500 }) : setTimeout(step, 30);
