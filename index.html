@@ -206,7 +206,6 @@
     .st-say { font-family: Montserrat, var(--text); font-weight: 600; font-size: 15px; line-height: 1.4; text-transform: uppercase; letter-spacing: .02em; max-width: 30ch; margin-top: 6px; }
     .st-say.g { font-size: 17px; background-image: linear-gradient(90deg, var(--pt-a), var(--pt-b) 70%); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
     .st-slide .st-tiles, .st-slide .st-plan, .st-wos { width: 100%; text-align: left; }
-    .st-wos { background: var(--panel); border-radius: 20px; padding: 14px 16px; }
     .st-slide .st-close { width: 100%; margin-top: 10px; }
     .st-slide > .st-chart:not(.st-beads) { position: relative; width: 100%; margin-top: 10px; }
     .st-slide .st-chips { justify-content: center; margin-top: 4px; }
@@ -298,18 +297,35 @@
     @keyframes stShim { to { background-position: -200% 0; } }
     .st-week7 { display: flex; justify-content: space-between; }
     .st-week7 i.pl::after { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--volt); }
-    .st-wo + .st-wo { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--panel2); }
-    .st-wo-h { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
-    .st-wo-h i { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; flex: none; }
-    .st-wo-h i svg.col { width: 36px; height: 36px; } .st-wo-h i svg:not(.col) { width: 26px; height: 26px; color: var(--muted); }
-    .st-wo-h b { display: block; font-size: 17px; } .st-wo-h span { color: var(--muted); font-size: 13px; }
-    .st-wo-m { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
-    .st-wo-m div { background: var(--panel2); border-radius: 12px; padding: 8px 10px; font-size: 11.5px; color: var(--muted); line-height: 1.25; }
-    .st-wo-m b { display: block; font-family: var(--num); font-size: 19px; color: var(--ink); font-weight: 800; }
-    .st-wo-m div.no b { color: var(--muted); opacity: .6; }
-    .st-wo-r { margin-top: 10px; } .st-wo-r summary { cursor: pointer; font-weight: 700; font-size: 14px; color: var(--volt); list-style: none; }
-    .st-wo-r summary::-webkit-details-marker { display: none; } .st-wo-r summary::after { content: " ›"; } .st-wo-r[open] summary::after { content: " ⌄"; }
-    .st-wo-r p { margin-top: 8px; font-size: 14.5px; line-height: 1.45; white-space: pre-line; }
+    /* карточка тренировки (13.11, макет «Карточки тренировок»): цвет вида, одна крупная цифра, справа две ключевые,
+       остальное мелкой строкой, пустое не показываем. Шёлк — статичный SVG, без анимации */
+    .wc { position: relative; overflow: hidden; border-radius: 22px; color: #121315; padding: 14px 16px 12px; isolation: isolate;
+      background: linear-gradient(135deg, var(--c1) 0%, var(--c) 62%, var(--c2) 100%); box-shadow: 0 1px 0 rgba(255,255,255,.06) inset; }
+    :root.light .wc { box-shadow: 0 6px 18px -10px rgba(60,45,20,.35); }
+    .wc + .wc { margin-top: 12px; }
+    .st-box > .st-k + .wc { margin-top: 10px; }
+    .wc .silk { position: absolute; right: -10px; top: 0; width: 70%; height: 100%; z-index: -1; pointer-events: none; }
+    .wc .silk path { fill: none; stroke: #fff; stroke-linecap: round; }
+    .wc-h { display: flex; align-items: center; gap: 8px; }
+    .wc-h svg { width: 26px; height: 26px; flex: none; }
+    .wc-h b { font-size: 16px; font-weight: 700; }
+    .wc-h span { margin-left: auto; font-size: 13px; font-weight: 600; opacity: .62; white-space: nowrap; }
+    .wc-m { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px 12px; margin-top: 8px; }
+    .wc-hero { font-family: var(--num); font-weight: 800; font-size: clamp(44px, 14.6vw, 58px); line-height: .86; letter-spacing: -.01em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .wc-hero small { font-size: 22px; font-weight: 700; margin-left: 3px; opacity: .7; letter-spacing: .01em; }
+    .wc-kv { margin-left: auto; display: flex; gap: clamp(10px, 3.5vw, 16px); padding-bottom: 2px; }
+    .wc-kv span { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; opacity: .6; }
+    .wc-kv b { display: block; font-family: var(--num); font-weight: 700; font-size: clamp(21px, 6.6vw, 26px); line-height: 1; margin-top: 3px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .wc-kv b small { font-size: 14px; font-weight: 600; opacity: .7; margin-left: 2px; }
+    .wc-more { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 12px; font-size: 13px; font-weight: 600; }
+    .wc-more span { opacity: .72; } .wc-more b { font-family: var(--num); font-size: 16px; font-weight: 700; margin-right: 2px; }
+    .wc-co { margin-top: 12px; border-radius: 14px; background: rgba(18,19,21,.10); }
+    .wc-co summary { list-style: none; display: flex; align-items: center; gap: 8px; padding: 10px 12px; font-size: 14px; font-weight: 700; cursor: pointer; }
+    .wc-co summary::-webkit-details-marker { display: none; }
+    .wc-co summary svg { width: 18px; height: 18px; flex: none; }
+    .wc-co summary::after { content: "›"; margin-left: auto; font-size: 20px; line-height: 1; opacity: .6; transition: transform .2s; }
+    .wc-co[open] summary::after { transform: rotate(90deg); }
+    .wc-co p { padding: 0 12px 12px; font-size: 14.5px; line-height: 1.45; white-space: pre-line; }
     .st-week7 > div { display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); width: 13%; }
     .st-week7 i { width: 32px; height: 32px; border-radius: 10px; background: var(--panel2); display: grid; place-items: center; color: #121315; }
     .st-week7 i svg { width: 19px; height: 19px; }
@@ -4108,26 +4124,53 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       tiles.push(`<div class="st-tile tot${tiles.length % 2 ? '' : ' wide'}"><p class="st-k">Всего</p><div class="v">${km ? `${stKm(km)}<small>км</small>` : workouts}</div><div class="l">${km ? stWord(workouts, 'тренировка', 'тренировки', 'тренировок') : plural(workouts, 'тренировка', 'тренировки', 'тренировок')}</div></div>`);
       return `<div class="st-tiles">${tiles.join('')}</div>`;
     }
-    // карточка одной тренировки (с октября): вид, когда, все показатели со скрина и разбор тренера
-    const ST_WO_M = {
-      km: ['км', v => stKm(v)], min: ['время', v => v >= 60 ? `${Math.floor(v / 60)}:${String(Math.round(v % 60)).padStart(2, '0')}` : `${Math.round(v)} мин`],
-      pace: ['темп /км', v => v], pace100: ['темп /100 м', v => v], speed: ['км/ч', v => fmt(v)], hr: ['пульс ср.', v => v], kcal: ['ккал', v => v],
-      elev: ['набор, м', v => v], cadence: ['каденс', v => v], swim: ['метров', v => Math.round(v * 1000).toLocaleString('ru-RU')]
-    };
-    // какие цифры у какого вида и в каком порядке (решение Вадима 05.10); нет цифры — «—»
-    const ST_WO_SETS = [[/^(бег|ходьб|прогул)/, ['km', 'min', 'pace', 'hr', 'kcal', 'cadence', 'elev']], [/лестниц/, ['km', 'min', 'hr', 'elev', 'kcal']],
-      [/^лыж/, ['km', 'min', 'pace', 'hr', 'kcal', 'elev']],
-      [/^вело/, ['km', 'min', 'speed', 'hr', 'kcal', 'elev']], [/^плав/, ['swim', 'min', 'kcal']], [/./, ['min', 'hr', 'kcal']]];
-    const ST_WO_ANY = ['km', 'min', 'pace', 'speed', 'hr', 'kcal'];
+    // карточка одной тренировки (с октября; вид — 13.11 по макету «Карточки тренировок»):
+    // в цвете вида, крупно главная цифра (км, метры, у игр и зала — время), справа две ключевые, остальное мелкой строкой.
+    // Чего нет — не показываем. Темп ходьбы, бега, лыж и плавания досчитываем из дистанции и времени, если его не записали
+    const wcMix = (hex, to, k) => { const n = parseInt(hex.slice(1), 16), t = to === 'w' ? 255 : 0;
+      return '#' + [16, 8, 0].map(sh => Math.round(((n >> sh) & 255) * (1 - k) + t * k).toString(16).padStart(2, '0')).join(''); };
+    const WC_SILK = '<svg class="silk" viewBox="0 0 200 140" preserveAspectRatio="none" aria-hidden="true"><path d="M10 150 C60 90 110 120 210 20" stroke-width="1.2" opacity=".28"/><path d="M30 150 C80 96 130 118 210 40" stroke-width=".8" opacity=".2"/><path d="M60 150 C100 110 150 120 210 62" stroke-width="1.6" opacity=".14"/></svg>';
+    const WC_COACH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>';
+    const wcMmss = s => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
+    const wcTime = m => m >= 60 ? [`${Math.floor(m / 60)}:${String(Math.round(m % 60)).padStart(2, '0')}`, 'ч'] : [String(Math.round(m)), 'мин'];
+    const wcKm = v => fmt(+(+v).toFixed(v < 10 ? 2 : 1));
     function stWoCard(w) {
-      const known = w.sport && w.sport !== 'тренировка', m = known ? stSport(w.sport) : null, d = new Date(w.at);
+      const sp = String(w.sport || '').toLowerCase(), known = sp && sp !== 'тренировка';
+      const m = known ? stSport(sp) : { c: '#B9C2CC', ic: 'q' }, d = new Date(w.at);
       const when = isNaN(d) ? '' : `${ST_DAYS[(d.getDay() + 6) % 7].toLowerCase()}, ${d.getDate()} ${ST_GEN[d.getMonth()].slice(0, 3)} · ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-      const set = known ? ST_WO_SETS.find(([re]) => re.test(w.sport))[1] : ST_WO_ANY.filter(k => w[k] != null && w[k] !== '');
-      const val = k => w[k === 'swim' ? 'km' : k], has = k => val(k) != null && val(k) !== '';
-      const met = set.map(k => `<div${has(k) ? '' : ' class="no"'}><b>${has(k) ? esc(String(ST_WO_M[k][1](val(k)))) : '—'}</b>${ST_WO_M[k][0]}</div>`).join('');
-      return `<div class="st-wo"><div class="st-wo-h"><i style="background:${m ? m.c : 'var(--panel2)'}">${stIcon(m ? m.ic : 'q', '')}</i><div><b>${known ? esc(stCap(w.sport)) : 'Вид не указан'}</b><span>${when}</span></div></div>
-        ${met ? `<div class="st-wo-m">${met}</div>` : ''}
-        ${w.review ? `<details class="st-wo-r"><summary>Разбор тренера</summary><p>${esc(w.review)}</p></details>` : ''}</div>`;
+      const has = k => w[k] != null && w[k] !== '' && w[k] !== 0;
+      const swim = /^плав/.test(sp), bike = /^вело/.test(sp), stairs = /лестниц/.test(sp), dist = /^(бег|ходьб|прогул|лыж)/.test(sp);
+      let pace = has('pace') ? String(w.pace) : '', p100 = has('pace100') ? String(w.pace100) : '';
+      if (!pace && dist && has('km') && has('min')) pace = wcMmss(w.min * 60 / w.km);
+      if (!p100 && swim && has('km') && has('min')) p100 = wcMmss(w.min * 60 / (w.km * 10));
+      const T = has('min') ? wcTime(w.min) : null;
+      let hero = null, kv = [];
+      const used = {};
+      const use = (k, l, v, u) => { used[k] = 1; if (v != null && v !== '') kv.push([l, v, u]); };
+      if (swim && has('km')) hero = [Math.round(w.km * 1000).toLocaleString('ru-RU'), 'м'];
+      else if ((dist || bike || stairs || !known) && has('km')) hero = [wcKm(w.km), 'км'];
+      if (hero) {
+        if (T) use('min', 'Время', T[0], T[1]);
+        if (swim) use('pace100', 'Темп', p100, '/100 м');
+        else if (bike) use('speed', 'Скорость', has('speed') ? fmt(w.speed) : '', 'км/ч');
+        else if (stairs) use('elev', 'Набор', has('elev') ? w.elev : '', 'м');
+        else use('pace', 'Темп', pace, '/км');
+      } else {
+        // игры, зал и всё без дистанции: главная цифра — время, справа пульс и ккал
+        if (T) { hero = T; used.min = 1; }
+        use('hr', 'Пульс ср.', has('hr') ? w.hr : '', '');
+        use('kcal', 'Ккал', has('kcal') ? w.kcal : '', '');
+      }
+      kv = kv.slice(0, 2);
+      const MORE = [['hr', 'пульс ср.'], ['kcal', 'ккал'], ['cadence', 'каденс'], ['elev', 'м набор'], ['speed', 'км/ч']];
+      const more = MORE.filter(([k]) => !used[k] && has(k) && !(k === 'speed' && !bike)).map(([k, l]) => `<span><b>${esc(fmt(w[k]))}</b> ${l}</span>`).join('');
+      const name = known ? esc(stCap(sp)) : 'Вид не указан';
+      return `<article class="wc" style="--c:${m.c};--c1:${wcMix(m.c, 'w', .32)};--c2:${wcMix(m.c, 'b', .08)}">${WC_SILK}
+        <div class="wc-h">${stIcon(m.ic, '')}<b>${name}</b><span>${when}</span></div>
+        ${hero || kv.length ? `<div class="wc-m">${hero ? `<div class="wc-hero">${esc(hero[0])}<small>${hero[1]}</small></div>` : ''}
+          ${kv.length ? `<div class="wc-kv">${kv.map(([l, v, u]) => `<div><span>${l}</span><b>${esc(String(v))}${u ? `<small>${u}</small>` : ''}</b></div>`).join('')}</div>` : ''}</div>` : ''}
+        ${more ? `<div class="wc-more">${more}</div>` : ''}
+        ${w.review ? `<details class="wc-co"><summary>${WC_COACH}Разбор тренера</summary><p>${esc(w.review)}</p></details>` : ''}</article>`;
     }
     const stChange = (c, cls) => `<div class="st-big ${cls(c)}">${stKg(c)}<small>кг</small></div>`;
     // карточки: [{ id, tab, html() }]; id нужен, чтобы после ответа сервера остаться на той же
@@ -4450,7 +4493,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       // держишь палец — пауза; короткий тап — дальше (слева — назад)
       const press = (node, tap) => {
         let t0 = 0, x = 0, y = 0, ht = 0, down = false;
-        node.addEventListener('pointerdown', e => { if (e.target.closest('button, a, .st-wos, .st-segs')) return; down = true; t0 = performance.now(); x = e.clientX; y = e.clientY; clearTimeout(ht); ht = setTimeout(() => { if (down) ST.hold = true; }, 220); });
+        node.addEventListener('pointerdown', e => { if (e.target.closest('button, a, .st-wos, .st-segs, .wc')) return; down = true; t0 = performance.now(); x = e.clientX; y = e.clientY; clearTimeout(ht); ht = setTimeout(() => { if (down) ST.hold = true; }, 220); });
         const up = (e, ok) => {
           if (!down) return; down = false; clearTimeout(ht);
           const held = ST.hold; ST.hold = false;
