@@ -648,7 +648,7 @@
     /* живая медаль: тень не фильтром (он перерисовывался бы каждый кадр), а у обёртки */
     .m-tile .mw > svg.live { position: absolute; left: 0; top: 0; filter: none; }
     /* холст живых медалей (MGL): поверх плиток, но не ловит касания; при прокрутке гаснет */
-    #achScreen > canvas.mgl { position: absolute; left: 0; top: 0; z-index: 2; pointer-events: none; opacity: 0; transition: opacity .12s; will-change: opacity; }
+    #achScreen > canvas.mgl { position: absolute; left: 0; top: 0; z-index: 2; pointer-events: none; opacity: 0; }
     .m-tile .mw > .mly.tile { position: absolute; left: 0; top: 0; width: 248px; height: 248px; transform-origin: 0 0; pointer-events: none; }
     /* блик-полоса после переворота убрана (Вадим 24.10) */
     @keyframes achFlip { 0% { transform: perspective(520px) rotateY(0) scale(.96); } 45% { transform: perspective(520px) rotateY(90deg) scale(1.04); } 100% { transform: perspective(520px) rotateY(360deg); } }
@@ -3386,11 +3386,13 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     // ~150 слоёв, 250–500 МБ, и Telegram на iPhone перезапускал приложение. Теперь части медали (те же
     // картинки, что у MedalLayers) лежат одной текстурой в видеочипе, а движение заранее снято с CSS-анимаций
     // в таблицу кадров. Каждый кадр — один холст на весь экран, видеочип рисует все медали сам.
-    // Пока экран листают, холст прячется и видны обычные картинки (первый кадр совпадает): так медали
-    // не отстают от подписей при прокрутке. Встал — медали снова оживают с первого кадра.
+    // Холст лежит внутри прокручиваемого экрана и листается вместе с ним (браузер двигает его сам, без отставания
+    // от подписей), а рисует медали в координатах страницы — во время прокрутки они продолжают жить.
+    // Холст выше экрана на полэкрана сверху и снизу; встала прокрутка — сдвигаем его под экран (в том же кадре
+    // перерисовываем). Медали, что не целиком на холсте, — обычные картинки (первый кадр совпадает), поэтому подмен не видно (Вадим, 13.11).
     // =====================================================================
     const MGL = (function () {
-      const MAX_TEX = 24;                        // медалей в видеочипе одновременно (дальние выгружаются)
+      const MAX_TEX = 22;                        // медалей в видеочипе одновременно (дальние выгружаются)
       let cv = null, gl = null, pr = null, vb = null, sc = null, raf = 0, on = false, shown = false, idleT = 0, dead = false;
       let W = 0, H = 0, R = 1, verts = new Float32Array(9 * 6 * 400), holdBox = null, busy = false, wantT = 0;
       const med = new Map();                     // плитка → { tex, quads, anims, t0, at }
@@ -3424,7 +3426,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       // ---------- сборка медали: картинки частей → одна текстура, CSS-движение → таблица кадров
       async function make(t) {
         const mw = t.querySelector('.mw'), m = t.$m;
-        const w = mw.offsetWidth || 104, k = Math.min(2, Math.max(1.5, window.devicePixelRatio || 2)) * w / 248;
+        // та же чёткость, что у картинки на экране: иначе при подмене медаль заметно «мылится» (iPhone — 3×)
+        const w = mw.offsetWidth || 104, k = Math.min(3, Math.max(1.5, window.devicePixelRatio || 2)) * w / 248;
         const ly = await MedalLayers.build(MedalB.medal(medalOpts(m), true), k).catch(() => null);
         if (!ly) return null;
         if (!holdBox) {
@@ -3518,27 +3521,32 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       }
       // плитки, которые сейчас рисуем: место на экране считается один раз, когда прокрутка встала
       let live = [];
+      let RT = 0, RH = 0;                        // холст: верх в координатах страницы и высота
       function layout() {
-        const r0 = sc.getBoundingClientRect();
-        W = sc.clientWidth; H = sc.clientHeight; R = Math.min(2, window.devicePixelRatio || 1);
-        if (cv.width !== Math.round(W * R) || cv.height !== Math.round(H * R)) { cv.width = Math.round(W * R); cv.height = Math.round(H * R); }
-        cv.style.width = W + 'px'; cv.style.height = H + 'px';
-        cv.style.transform = `translateY(${sc.scrollTop}px)`;
+        const r0 = sc.getBoundingClientRect(), top = sc.scrollTop;
+        W = sc.clientWidth; H = sc.clientHeight; R = Math.min(3, window.devicePixelRatio || 1);
+        // холст не больше 4096 точек в высоту: больше видеочип телефона молча уменьшает, и медали «плывут»
+        RH = Math.round(Math.min(H * 2, Math.floor(4096 / R)));
+        RT = Math.round(Math.max(0, top - (RH - H) / 2) * R) / R;
+        if (cv.width !== Math.round(W * R) || cv.height !== Math.round(RH * R)) { cv.width = Math.round(W * R); cv.height = Math.round(RH * R); }
+        cv.style.width = W + 'px'; cv.style.height = RH + 'px';
+        cv.style.transform = `translateY(${RT}px)`;
         const vis = [], near = [];
         sc.querySelectorAll('.m-tile:not(.locked)').forEach(t => {
           if (!t.$m || t.$m.status !== 'earned') return;
           const mw = t.querySelector('.mw'), r = mw.getBoundingClientRect();
-          const y = r.top - r0.top, x = r.left - r0.left;
+          const y = r.top - r0.top + top - RT, x = r.left - r0.left, w = mw.offsetWidth;
           // к пикселям экрана, как браузер ставит картинку: иначе при подмене края дрогнули бы на полпикселя
-          t.$gl = { x: Math.round(x * R) / R, y: Math.round(y * R) / R, s: mw.offsetWidth / 248 };
-          if (y + r.height > -20 && y < H + 20) vis.push(t);
-          else if (y + r.height > -H && y < 2 * H) near.push(t);
+          t.$gl = { x: Math.round(x * R) / R, y: Math.round(y * R) / R, s: w / 248 };
+          // рисуем только медали целиком на холсте (с запасом на тень)
+          if (y > 4 && y + w < RH - 4) vis.push(t);
+          else if (y + w > -H && y < RH + H) near.push(t);
         });
         return { vis, near };
       }
       function frame(now) {
         raf = 0;
-        if (!on || !shown || !gl) return;
+        if (!on || !gl) return;
         let n = 0;
         const parts = [];
         for (const t of live) {
@@ -3546,6 +3554,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           if (!d || !d.tex) continue;
           // серая (ждёт нить) или переворачивается — пока обычная картинка
           if (t.classList.contains('dim') || t.querySelector('.mw.thick') || (t.$litAt && now - t.$litAt < 800)) { d.t0 = 0; continue; }
+          if (!shown) { shown = true; cv.style.opacity = '1'; }
           if (!d.t0) d.t0 = now;
           d.at = now;
           const ms = now - d.t0, st = t.$gl, start = n;
@@ -3571,19 +3580,19 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           }
           if (n > start) parts.push([d.tex, start, n - start]);
         }
-        gl.viewport(0, 0, cv.width, cv.height);
+        gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+        gl.uniform2f(gl.getUniformLocation(pr, 'sz'), W, RH);
         gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
         if (n) {
           gl.bindBuffer(gl.ARRAY_BUFFER, vb);
           gl.bufferData(gl.ARRAY_BUFFER, verts.subarray(0, n * 9), gl.DYNAMIC_DRAW);
-          gl.uniform2f(gl.getUniformLocation(pr, 'sz'), W, H);
           for (const [tex, s, c] of parts) { gl.bindTexture(gl.TEXTURE_2D, tex); gl.drawArrays(gl.TRIANGLES, s, c); }
         }
         raf = requestAnimationFrame(frame);
       }
       // ---------- очередь сборки: по одной медали, сначала видимые; не во время прокрутки
       function pump() {
-        if (busy || !on || !shown) return;
+        if (busy || !on || scrolling) return;
         const t = q.shift();
         if (!t) return;
         const have = med.get(t);
@@ -3610,33 +3619,39 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         have.filter(([t]) => !vis.has(t)).sort((a, b) => a[1].at - b[1].at).slice(0, have.length - MAX_TEX)
           .forEach(([t, d]) => { gl.deleteTexture(d.tex); d.tex = null; if (!d.blob) med.delete(t); });
       }
+      let scrolling = false;
+      // прокрутка встала: холст под экран, в том же кадре перерисовать. Медали, что остались на холсте, живут дальше
+      // без перерыва; новые на холсте начинают с первого кадра (как картинка); ушедшие с холста — снова картинка
       function resume() {
-        idleT = 0;
+        idleT = 0; scrolling = false;
         if (!on || !gl || !sc.classList.contains('open')) return;
         const { vis, near } = layout();
+        const keep = new Set(vis);
+        live.forEach(t => { if (!keep.has(t)) { const d = med.get(t); if (d) d.t0 = 0; } });
         live = vis;
-        med.forEach(d => { d.t0 = 0; });            // каждый раз с первого кадра — совпадает с картинкой
         q.length = 0;
         vis.concat(near).forEach(t => { const d = med.get(t); if ((!d || !d.tex) && !t.$glNo) q.push(t); });
-        shown = true; cv.style.opacity = '1';
-        if (!raf) raf = requestAnimationFrame(frame);
+        if (raf) cancelAnimationFrame(raf);
+        frame(performance.now());
         pump();
       }
       function hide() {
         shown = false; cv.style.opacity = '0';
         if (raf) { cancelAnimationFrame(raf); raf = 0; }
       }
+      // листают — холст едет вместе с экраном сам; новые медали не собираем, чтобы не отнимать кадры
       function onScroll() {
         if (!on) return;
-        if (shown) hide();
-        clearTimeout(idleT); idleT = setTimeout(resume, 160);
+        scrolling = true;
+        clearTimeout(idleT); idleT = setTimeout(resume, 140);
       }
       // витрина открылась (или вернулись с монеты): через delay мс медали оживают
       function start(screen, delay) {
         if (!init()) return false;
         sc = screen;
         if (cv.parentNode !== sc) { sc.prepend(cv); sc.addEventListener('scroll', onScroll, { passive: true }); }
-        on = true; hide();
+        on = true; hide(); live = [];
+        med.forEach(d => { d.t0 = 0; });
         clearTimeout(idleT); idleT = setTimeout(resume, delay || 0);
         return true;
       }
