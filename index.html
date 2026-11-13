@@ -4467,7 +4467,10 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         SILK.list.add(g);
       });
       const sv = root.ownerSVGElement || root;
-      if (sv.querySelectorAll) sv.querySelectorAll('linearGradient[data-gw]').forEach(gr => SILK.grads.add(gr));
+      if (sv.querySelectorAll) sv.querySelectorAll('linearGradient[data-gw]').forEach(gr => gr.__gl || SILK.grads.add(gr));
+      // главный график, путь к цели, графики историй — на движок (SGL), когда пучок уже разложен
+      const HS = '.ms-svg, #ticks svg, .st-chart svg, #storyRing .ring-silk, #ptr svg';
+      (sv.matches && sv.matches(HS) ? [sv] : sv.querySelectorAll ? [...sv.querySelectorAll(HS)] : []).forEach(h => SGL.adopt(h));
       if (!SILK.raf) SILK.raf = requestAnimationFrame(silkTick);
     }
     // тонкий шёлк без свечения (нить пути к цели, кольца, тропа): n прядей, a — размах пучка, loop — замкнутое кольцо.
@@ -4503,6 +4506,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const d = $('dashboard');
       if (d) d.querySelectorAll('svg').forEach(sv => { if (!sv.ownerSVGElement) on ? sv.pauseAnimations() : sv.unpauseAnimations(); });
       if (!on && (SILK.list.size || SILK.grads.size) && !SILK.raf) SILK.raf = requestAnimationFrame(silkTick);
+      if (!on) SGL.kick();
     }
     document.addEventListener('DOMContentLoaded', () => {
       const mo = new MutationObserver(coverCheck);
@@ -4586,9 +4590,10 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         g.querySelectorAll('.sl').forEach(p => {
           const cs = getComputedStyle(p);
           let col = rgba(cs.stroke);
+          const grad = !col && /url\(/.test(cs.stroke);
           if (!col) col = rgba(getComputedStyle(document.documentElement).getPropertyValue('--volt').trim().replace(/^#(..)(..)(..)$/, (m, r, gg, b) => `rgb(${parseInt(r, 16)},${parseInt(gg, 16)},${parseInt(b, 16)})`)) || [.74, .92, .36, 1];
           col[3] *= parseFloat(cs.opacity) * parseFloat(cs.strokeOpacity || 1) * ga;
-          out.push({ col, w: parseFloat(cs.strokeWidth) || 1 });
+          out.push({ col: grad ? [1, 1, 1, col[3]] : col, w: parseFloat(cs.strokeWidth) || 1, grad });
         });
         return out;
       }
@@ -4607,13 +4612,15 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         const usz = g.getUniformLocation(pr, 'sz');
         let V = new Float32Array(8 * 6 * 2000), n = 0, lost = false;
         cv.addEventListener('webglcontextlost', e => { e.preventDefault(); lost = true; });
-        const X = [], Y = [];
+        const X = [], Y = [], CS = new Float32Array(3 * 2000);
         // одна полилиния (xs, ys в точках холста) толщиной w точек, цвет col (не умноженный на прозрачность)
-        function line(xs, ys, m, w, col) {
+        // cs — свой цвет у каждой точки (перелив по градиенту): r, g, b по очереди
+        function line(xs, ys, m, w, col, cs) {
           if (m < 2) return;
           let hw = w / 2, a = col[3];
           if (hw < .5) { a *= hw * 2; hw = .5; }                // тоньше точки — бледнее, а не рвётся
-          const r = col[0] * a, gg = col[1] * a, b = col[2] * a, o = hw + 1;
+          let r = col[0] * a, gg = col[1] * a, b = col[2] * a;
+          const o = hw + 1;
           if ((n + (m - 1) * 6) * 8 > V.length) { const nv = new Float32Array(Math.max(V.length * 2, (n + m * 6) * 8)); nv.set(V); V = nv; }
           let pnx = 0, pny = 0;
           for (let i = 0; i < m; i++) {
@@ -4624,6 +4631,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
               const ax = xs[i - 1], ay = ys[i - 1], bx = xs[i], by = ys[i];
               const q = [[ax + pnx * o, ay + pny * o, -o], [ax - pnx * o, ay - pny * o, o], [bx + nx * o, by + ny * o, -o],
                 [bx + nx * o, by + ny * o, -o], [ax - pnx * o, ay - pny * o, o], [bx - nx * o, by - ny * o, o]];
+              if (cs) { r = cs[i * 3] * a; gg = cs[i * 3 + 1] * a; b = cs[i * 3 + 2] * a; }
               for (const [x, y, e] of q) { V[n * 8] = x; V[n * 8 + 1] = y; V[n * 8 + 2] = r; V[n * 8 + 3] = gg; V[n * 8 + 4] = b; V[n * 8 + 5] = a; V[n * 8 + 6] = e; V[n * 8 + 7] = hw; n++; }
             }
             pnx = nx; pny = ny;
@@ -4634,7 +4642,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           frame(groups, M, now) {
             if (lost) return false;
             n = 0;
-            const k = M[0];
+            const k = M[0], ky = M[3] == null ? k : M[3];
             for (const it of groups) {
               const gp = it.g;
               if (!gp.__c || !gp.__ph) continue;
@@ -4642,13 +4650,15 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
               const u = gp.__u != null ? gp.__u : PT.reduce ? 1 : (x => x <= 0 ? 0 : x >= 1 ? 1 : 1 - Math.pow(1 - x, 3))((t - .1) / 1.2);
               const m = Math.max(2, Math.ceil(u * (cn - 1)) + 1);
               if (it.plain) {                                   // простая линия без волн (пройденная тропа)
-                for (let i = 0; i < cn; i++) { X[i] = gp.__c[i][0] * k + M[1]; Y[i] = gp.__c[i][1] * k + M[2]; }
+                for (let i = 0; i < cn; i++) { X[i] = gp.__c[i][0] * k + M[1]; Y[i] = gp.__c[i][1] * ky + M[2]; }
                 line(X, Y, cn, it.st[0].w * k, it.st[0].col);
                 continue;
               }
+              const A = it.A != null ? it.A : gp.__a, gr = it.grad;
+              const shift = gr && gr.gw && !PT.reduce ? (now % 4000) / 2000 * gr.gw : 0;
               it.st.forEach((st, j) => {
-                silkStrand(gp, j, t, u, m, gp.__a, (x, y, i) => { X[i] = x * k + M[1]; Y[i] = y * k + M[2]; });
-                line(X, Y, m, st.w * k, st.col);
+                silkStrand(gp, j, t, u, m, A, (x, y, i) => { X[i] = x * k + M[1]; Y[i] = y * ky + M[2]; if (gr && st.grad) gradAt(gr, x - shift, CS, i * 3); });
+                line(X, Y, m, it.px ? st.w * it.px : st.w * (k + ky) / 2, st.col, gr && st.grad ? CS : null);
               });
             }
             g.viewport(0, 0, g.drawingBufferWidth, g.drawingBufferHeight);
@@ -4660,7 +4670,92 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           drop() { try { const x = g.getExtension('WEBGL_lose_context'); if (x) x.loseContext(); } catch (e) {} cv.width = cv.height = 1; }
         };
       }
-      return { ok: () => ok(), styles, view };
+      // цвет градиента-перелива в точке x (как SVG: от 0 до gw, дальше отражением)
+      function gradAt(gr, x, out, o) {
+        let u = x / gr.gw; u = ((u % 2) + 2) % 2; if (u > 1) u = 2 - u;
+        const S = gr.stops;
+        let i = 0; while (i < S.length - 2 && u > S[i + 1][0]) i++;
+        const [o0, c0] = S[i], [o1, c1] = S[i + 1], f = o1 > o0 ? Math.max(0, Math.min(1, (u - o0) / (o1 - o0))) : 0;
+        out[o] = c0[0] + (c1[0] - c0[0]) * f; out[o + 1] = c0[1] + (c1[1] - c0[1]) * f; out[o + 2] = c0[2] + (c1[2] - c0[2]) * f;
+      }
+      // ---------- шёлк на экранах: каждый SVG с шёлком (главный график, путь к цели, графики историй) получает
+      // свой холст движка ровно поверх себя; холст прокручивается вместе с ним. Нити SVG прячутся.
+      const HOSTS = new Set();
+      let hraf = 0, hlast = 0;
+      const io = window.IntersectionObserver ? new IntersectionObserver(es => es.forEach(e => { if (e.target.__glh) { e.target.__glh.vis = e.isIntersecting; if (e.isIntersecting) kick(); } }), { rootMargin: '80px' }) : null;
+      function place(h) {
+        const sv = h.sv, par = sv.parentNode, R = Math.min(3, window.devicePixelRatio || 1), PAD = 14;
+        const sr = sv.getBoundingClientRect(), pr = par.getBoundingClientRect();
+        if (!sr.width || !sr.height) return false;
+        const W = sr.width + PAD * 2, H = sr.height + PAD * 2;
+        const cw = Math.round(W * R), ch = Math.round(H * R);
+        if (h.cv.width !== cw || h.cv.height !== ch) { h.cv.width = cw; h.cv.height = ch; }
+        h.cv.style.cssText = `position:absolute;pointer-events:none;left:${(sr.left - pr.left - par.clientLeft + par.scrollLeft - PAD).toFixed(2)}px;top:${(sr.top - pr.top - par.clientTop + par.scrollTop - PAD).toFixed(2)}px;width:${W}px;height:${H}px`;
+        const M = sv.getScreenCTM();
+        if (!M) return false;
+        // точка svg (x, y) → точка холста
+        h.M = [M.a * R, (M.e - sr.left + PAD) * R, (M.f - sr.top + PAD) * R, M.d * R];
+        h.items.forEach(it => { if (it.g.dataset.px) { it.A = +it.g.dataset.px / (Math.abs(M.d) || 1); it.px = R; } });
+        h.at = performance.now();
+        return true;
+      }
+      function adopt(sv) {
+        if (!ok() || sv.__glh || !sv.isConnected) return;
+        const groups = [...sv.querySelectorAll('.silk')].filter(g => g.__ph && g.__c);
+        if (!groups.length) return;
+        // холстов движка на экранах не больше 8 (у iPhone свой предел): лишний — самый давний из невидимых
+        if (HOSTS.size >= 8) { const old = [...HOSTS].find(x => !x.vis) || [...HOSTS][0]; release(old); }
+        const par = sv.parentNode;
+        if (getComputedStyle(par).position === 'static') par.style.position = 'relative';
+        const cv = document.createElement('canvas'); cv.className = 'sgl'; cv.setAttribute('aria-hidden', 'true');
+        const v = view(cv);
+        if (!v) return;
+        let grad = null;
+        const gr = sv.querySelector('linearGradient[data-gw]') || sv.querySelector('linearGradient');
+        if (gr) {
+          const stops = [...gr.querySelectorAll('stop')].map(st => [parseFloat(st.getAttribute('offset')) || 0, (rgba(getComputedStyle(st).stopColor) || [1, 1, 1, 1]).slice(0, 3)]);
+          if (stops.length > 1) grad = { gw: +gr.dataset.gw || +gr.getAttribute('x2') || 300, stops, el: gr };
+        }
+        const h = { sv, cv, v, vis: true, items: groups.map(g => ({ g, st: styles(g), grad })) };
+        sv.__glh = h;
+        sv.after(cv);
+        if (!place(h)) { v.drop(); cv.remove(); sv.__glh = null; return; }
+        groups.forEach(g => { g.__gl = true; g.style.visibility = 'hidden'; });
+        if (grad) { SILK.grads.delete(grad.el); grad.el.__gl = true; }
+        HOSTS.add(h);
+        if (io) io.observe(sv);
+        kick();
+      }
+      function release(h) {
+        HOSTS.delete(h); if (io) io.unobserve(h.sv);
+        h.v.drop(); h.cv.remove(); h.sv.__glh = null;
+        h.items.forEach(it => { it.g.__gl = false; it.g.style.visibility = ''; });
+      }
+      function kick() { if (!hraf && HOSTS.size) hraf = requestAnimationFrame(htick); }
+      function htick(now) {
+        hraf = 0;
+        const top = COVER.on && document.querySelector(COVER.sel);
+        let busy = false, fast = false;
+        HOSTS.forEach(h => {
+          if (!h.sv.isConnected) return release(h);
+          if (!h.vis || (top && !top.contains(h.sv))) return;
+          busy = true;
+          if (h.items.some(it => it.g.__u != null || now - it.g.__t0 < 1600)) fast = true;
+        });
+        // как SVG-шёлк: легшие нити — ~30 раз в секунду, бегущие — каждый кадр
+        if (busy && (fast || now - hlast >= 28)) {
+          hlast = now;
+          HOSTS.forEach(h => {
+            if (!h.vis || (top && !top.contains(h.sv))) return;
+            // размер или место могли поменяться (поворот, перестройка) — раз в секунду сверяемся
+            if (now - h.at > 1000 && !place(h)) return;
+            if (!h.v.frame(h.items, h.M, now)) release(h);
+          });
+        }
+        // всё скрыто окном — кадры не заказываем; окно закроется — coverCheck запустит снова
+        if (busy) hraf = requestAnimationFrame(htick);
+      }
+      return { ok: () => ok(), styles, view, adopt, kick };
     })();
     function stChart(w, bare) {
       if (w.ws.length < 2) return w.ws.length ? `<div class="st-chart"><svg viewBox="0 0 300 120"><circle cx="150" cy="60" r="6" fill="var(--volt)"/><text x="150" y="92" text-anchor="middle">${fmt(w.ws[0].w)} кг</text></svg></div>` : '';
