@@ -693,6 +693,8 @@
     .coin .face .mly { position: absolute; left: -4px; top: -4px; width: 248px; height: 248px; pointer-events: none; }
     /* под живыми слоями неподвижная сторона не нужна вовсе (display, а не visibility: надписи SVG иначе пересчитываются на каждом кадре) */
     .coin .face.ly > img, .coin .face.ly > svg:not(.live), .coin .face.ly > canvas.still { display: none; }
+    .coin .face canvas.mgf { position: absolute; left: -4px; top: -4px; width: 248px; height: 248px; display: block; pointer-events: none; }
+    .coin .face.ly > canvas.mgf { display: block; }
     .coin .face canvas.still { position: absolute; left: -4px; top: -4px; width: 248px; height: 248px; display: block; }
     .mly.paused, .mly.paused * { animation-play-state: paused !important; }
     .coin .face img { position: absolute; left: -4px; top: -4px; width: 248px; height: 248px; display: block; }
@@ -3394,7 +3396,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     const MGL = (function () {
       const MAX_TEX = 22;                        // медалей в видеочипе одновременно (дальние выгружаются)
       let cv = null, gl = null, pr = null, vb = null, sc = null, raf = 0, on = false, shown = false, idleT = 0, dead = false;
-      let W = 0, H = 0, R = 1, verts = new Float32Array(9 * 6 * 400), holdBox = null, busy = false, wantT = 0;
+      let W = 0, H = 0, R = 1, holdBox = null, busy = false, wantT = 0;
+      const B = { v: new Float32Array(9 * 6 * 400), n: 0 };
       const med = new Map();                     // плитка → { tex, quads, anims, t0, at }
       const q = [];
       const VS = `attribute vec2 p;attribute vec2 uv;attribute float al;attribute vec4 cl;uniform vec2 sz;
@@ -3405,21 +3408,28 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         k*=clamp(vc.z+0.5-d,0.0,1.0);if(vc.w>0.5)k*=clamp((vc.z-d)/(0.45*vc.z),0.0,1.0);}
         gl_FragColor=texture2D(tx,vu)*k;}`;
       const ok = () => !dead && !!window.WebGLRenderingContext;
+      const GLOPT = { alpha: true, premultipliedAlpha: true, antialias: false, depth: false, stencil: false };
+      // один и тот же рисовальщик для витрины и для монеты: шейдеры, буфер, смешивание
+      function setup(g) {
+        const sh = (t, s) => { const o = g.createShader(t); g.shaderSource(o, s); g.compileShader(o); return o; };
+        const pr = g.createProgram(); g.attachShader(pr, sh(g.VERTEX_SHADER, VS)); g.attachShader(pr, sh(g.FRAGMENT_SHADER, FS)); g.linkProgram(pr);
+        if (!g.getProgramParameter(pr, g.LINK_STATUS)) return null;
+        g.useProgram(pr);
+        const vb = g.createBuffer(); g.bindBuffer(g.ARRAY_BUFFER, vb);
+        const at = (n, size, off) => { const l = g.getAttribLocation(pr, n); g.enableVertexAttribArray(l); g.vertexAttribPointer(l, size, g.FLOAT, false, 36, off * 4); };
+        at('p', 2, 0); at('uv', 2, 2); at('al', 1, 4); at('cl', 4, 5);
+        g.enable(g.BLEND); g.blendFunc(g.ONE, g.ONE_MINUS_SRC_ALPHA);
+        g.pixelStorei(g.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+        return { pr, vb, sz: g.getUniformLocation(pr, 'sz') };
+      }
       function init() {
         if (gl) return true;
         if (!ok()) return false;
         cv = document.createElement('canvas'); cv.className = 'mgl'; cv.setAttribute('aria-hidden', 'true');
-        gl = cv.getContext('webgl', { alpha: true, premultipliedAlpha: true, antialias: false, depth: false, stencil: false });
-        if (!gl) { dead = true; cv = null; return false; }
-        const sh = (t, s) => { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); return o; };
-        pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(pr);
-        if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) { dead = true; gl = null; cv = null; return false; }
-        gl.useProgram(pr);
-        vb = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, vb);
-        const at = (n, size, off) => { const l = gl.getAttribLocation(pr, n); gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l, size, gl.FLOAT, false, 36, off * 4); };
-        at('p', 2, 0); at('uv', 2, 2); at('al', 1, 4); at('cl', 4, 5);
-        gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-        gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
+        gl = cv.getContext('webgl', GLOPT);
+        const P = gl && setup(gl);
+        if (!P) { dead = true; gl = null; cv = null; return false; }
+        pr = P.pr; vb = P.vb;
         cv.addEventListener('webglcontextlost', e => { e.preventDefault(); dead = true; stop(); free(); });
         return true;
       }
@@ -3465,12 +3475,14 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       async function data(t) {
         const have = med.get(t);
         if (have && have.blob) return have;
-        const { svg, k, key } = keyOf(t);
+        return dataKey(keyOf(t));
+      }
+      async function dataKey({ svg, k, key }) {
         let d = await fromStore(key);
         if (!d) { d = await make(svg, k); if (d) toStore(key, d); }
         return d;
       }
-      async function make(svgStr, k) {
+      async function make(svgStr, k, direct) {
         const ly = await MedalLayers.build(svgStr, k).catch(() => null);
         if (!ly) return null;
         if (!holdBox) {
@@ -3502,25 +3514,41 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
             }
             nodes.set(el, n); return n;
           };
-          // упаковка картинок частей в одну текстуру полками
-          const P = 2, AW = Math.min(2048, Math.max(256, ...cvs.map(c => c.width + P)));
-          let x = 0, y = 0, rowH = 0;
-          const place = cvs.map(c => {
-            if (x + c.width + P > AW) { x = 0; y += rowH; rowH = 0; }
-            const r = { x, y }; x += c.width + P; rowH = Math.max(rowH, c.height + P); return r;
-          });
-          const AH = y + rowH;
-          if (AH > 2048) return null;
-          const atlas = document.createElement('canvas'); atlas.width = AW; atlas.height = AH;
-          const g = atlas.getContext('2d');
-          cvs.forEach((c, i) => g.drawImage(c, place[i].x, place[i].y));
           const quads = cvs.map((c, i) => {
             const chain = []; let e = c.parentElement;
             while (e && e !== ly) { chain.unshift(node(e)); e = e.parentElement; }
             const s = c.style;
-            return { chain, x: parseFloat(s.left) || 0, y: parseFloat(s.top) || 0, w: parseFloat(s.width) || 0, h: parseFloat(s.height) || 0,
-              u0: place[i].x / AW, v0: place[i].y / AH, u1: (place[i].x + c.width) / AW, v1: (place[i].y + c.height) / AH };
+            return { chain, x: parseFloat(s.left) || 0, y: parseFloat(s.top) || 0, w: parseFloat(s.width) || 0, h: parseFloat(s.height) || 0, u0: 0, v0: 0, u1: 1, v1: 1, t: i };
           });
+          // монета: каждая часть сразу своей текстурой в её холст — без общей картинки и без PNG
+          // (общая картинка 4096×2048 и её сжатие держали в памяти лишние ~100 МБ)
+          if (direct) return { texs: cvs.map(c => upload(c, direct)), quads, anims };
+          // упаковка картинок частей в одну текстуру полками
+          // (высокие первыми; ширину берём ту, при которой текстура меньше всего — у монеты нити шириной до 2600 точек)
+          const P = 2, LIM = texLim(), wMax = Math.max(...cvs.map(c => c.width + P));
+          if (wMax > LIM) return null;
+          const order = cvs.map((c, i) => i).sort((i, j) => cvs[j].height - cvs[i].height);
+          const pack = AW => {
+            let x = 0, y = 0, rowH = 0; const pl = [];
+            for (const i of order) {
+              const c = cvs[i];
+              if (x + c.width + P > AW) { x = 0; y += rowH; rowH = 0; }
+              pl[i] = { x, y }; x += c.width + P; rowH = Math.max(rowH, c.height + P);
+            }
+            return { AW, AH: y + rowH, pl };
+          };
+          let best = null;
+          for (let w = 256; w <= LIM; w *= 2) {
+            if (w < wMax) continue;
+            const r = pack(w);
+            if (r.AH <= LIM && (!best || r.AW * r.AH < best.AW * best.AH)) best = r;
+          }
+          if (!best) return null;
+          const { AW, AH, pl: place } = best;
+          quads.forEach((qd, i) => { const c = cvs[i]; qd.u0 = place[i].x / AW; qd.v0 = place[i].y / AH; qd.u1 = (place[i].x + c.width) / AW; qd.v1 = (place[i].y + c.height) / AH; delete qd.t; });
+          const atlas = document.createElement('canvas'); atlas.width = AW; atlas.height = AH;
+          const g = atlas.getContext('2d');
+          cvs.forEach((c, i) => g.drawImage(c, place[i].x, place[i].y));
           // в видеочип её кладёт уже pump (из сжатой копии): сборка и показ разведены во времени
           const blob = await new Promise(r => atlas.toBlob(r));
           atlas.width = atlas.height = 0;
@@ -3528,7 +3556,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           return { tex: null, blob, quads, anims, t0: 0, at: 0, aw: AW, ah: AH, bytes: AW * AH * 4 };
         } finally { MedalLayers.drop(ly); }
       }
-      function upload(src) {
+      function upload(src, g) {
+        const gl = g || this_gl();
         const tex = gl.createTexture();
         gl.bindTexture(gl.TEXTURE_2D, tex);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -3538,11 +3567,23 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src);
         return tex;
       }
-      async function restore(d) {
+      const this_gl = () => gl;
+      // самая большая текстура, которую берёт видеочип (на iPhone — 4096 и больше); больше 4096 не берём ради памяти
+      let LIMV = 0;
+      function texLim() {
+        if (LIMV) return LIMV;
+        try { const g = document.createElement('canvas').getContext('webgl'); LIMV = Math.min(4096, g ? g.getParameter(g.MAX_TEXTURE_SIZE) : 2048); const x = g && g.getExtension('WEBGL_lose_context'); if (x) x.loseContext(); } catch (e) { LIMV = 2048; }
+        return LIMV;
+      }
+      async function decode(blob) {
         let src = null;
-        try { src = window.createImageBitmap ? await createImageBitmap(d.blob, { premultiplyAlpha: 'premultiply' }) : null; } catch (e) {}
-        if (!src) { src = new Image(); const u = URL.createObjectURL(d.blob); src.src = u; try { await src.decode(); } finally { URL.revokeObjectURL(u); } }
-        if (!gl) return false;
+        try { src = window.createImageBitmap ? await createImageBitmap(blob, { premultiplyAlpha: 'premultiply' }) : null; } catch (e) {}
+        if (!src) { src = new Image(); const u = URL.createObjectURL(blob); src.src = u; try { await src.decode(); } finally { URL.revokeObjectURL(u); } }
+        return src;
+      }
+      async function restore(d) {
+        const src = await decode(d.blob);
+        if (!gl) { if (src.close) src.close(); return false; }
         d.tex = upload(src);
         if (src.close) src.close(); else src.src = '';
         return true;
@@ -3586,6 +3627,32 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         });
         return { vis, near };
       }
+      // вершины одной медали в момент ms: M0 — где она и какого размера; B = { v: Float32Array, n }
+      function emit(d, ms, M0, B) {
+        const A = d.anims.map(an => sample(an, ms));
+        let n = B.n;
+        for (const qd of d.quads) {
+          let M = M0, al = 1, clip = null;
+          for (const nd of qd.chain) {
+            if (nd.clip) {
+              const r = nd.clip.r, cx = nd.x + r, cy = nd.y + r;
+              clip = [M[0] * cx + M[2] * cy + M[4], M[1] * cx + M[3] * cy + M[5], r * Math.sqrt(Math.abs(M[0] * M[3] - M[1] * M[2])), nd.clip.mask];
+            }
+            M = tr(M, nd.x, nd.y);
+            if (nd.a >= 0) { const s = A[nd.a]; M = mul(M, s); al *= s[6]; }
+          }
+          if (al <= 0.003) continue;
+          M = tr(M, qd.x, qd.y);
+          const P = (x, y) => [M[0] * x + M[2] * y + M[4], M[1] * x + M[3] * y + M[5]];
+          const p00 = P(0, 0), p10 = P(qd.w, 0), p01 = P(0, qd.h), p11 = P(qd.w, qd.h);
+          const c = clip || [0, 0, 0, 0];
+          const vx = [[p00, qd.u0, qd.v0], [p10, qd.u1, qd.v0], [p01, qd.u0, qd.v1], [p01, qd.u0, qd.v1], [p10, qd.u1, qd.v0], [p11, qd.u1, qd.v1]];
+          if ((n + 6) * 9 > B.v.length) { const nv = new Float32Array(B.v.length * 2); nv.set(B.v); B.v = nv; }
+          for (const [p, u, v] of vx) { B.v.set([p[0], p[1], u, v, al, c[0], c[1], c[2], c[3]], n * 9); n++; }
+          if (B.rec) B.rec.push(qd.t);
+        }
+        B.n = n;
+      }
       function frame(now) {
         raf = 0;
         if (!on || !gl) return;
@@ -3604,26 +3671,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           if (!d.t0) d.t0 = now;
           d.at = now;
           const ms = now - d.t0, st = t.$gl, start = n;
-          const A = d.anims.map(an => sample(an, ms));
-          for (const qd of d.quads) {
-            let M = [st.s, 0, 0, st.s, st.x, st.y], al = 1, clip = null;
-            for (const nd of qd.chain) {
-              if (nd.clip) {
-                const r = nd.clip.r, cx = nd.x + r, cy = nd.y + r;
-                clip = [M[0] * cx + M[2] * cy + M[4], M[1] * cx + M[3] * cy + M[5], r * Math.sqrt(Math.abs(M[0] * M[3] - M[1] * M[2])), nd.clip.mask];
-              }
-              M = tr(M, nd.x, nd.y);
-              if (nd.a >= 0) { const s = A[nd.a]; M = mul(M, s); al *= s[6]; }
-            }
-            if (al <= 0.003) continue;
-            M = tr(M, qd.x, qd.y);
-            const P = (x, y) => [M[0] * x + M[2] * y + M[4], M[1] * x + M[3] * y + M[5]];
-            const p00 = P(0, 0), p10 = P(qd.w, 0), p01 = P(0, qd.h), p11 = P(qd.w, qd.h);
-            const c = clip || [0, 0, 0, 0];
-            const vx = [[p00, qd.u0, qd.v0], [p10, qd.u1, qd.v0], [p01, qd.u0, qd.v1], [p01, qd.u0, qd.v1], [p10, qd.u1, qd.v0], [p11, qd.u1, qd.v1]];
-            if ((n + 6) * 9 > verts.length) { const nv = new Float32Array(verts.length * 2); nv.set(verts); verts = nv; }
-            for (const [p, u, v] of vx) { verts.set([p[0], p[1], u, v, al, c[0], c[1], c[2], c[3]], n * 9); n++; }
-          }
+          B.n = n; emit(d, ms, [st.s, 0, 0, st.s, st.x, st.y], B); n = B.n;
           if (n > start) parts.push([d.tex, start, n - start]);
         }
         gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
@@ -3631,7 +3679,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
         if (n) {
           gl.bindBuffer(gl.ARRAY_BUFFER, vb);
-          gl.bufferData(gl.ARRAY_BUFFER, verts.subarray(0, n * 9), gl.DYNAMIC_DRAW);
+          gl.bufferData(gl.ARRAY_BUFFER, B.v.subarray(0, n * 9), gl.DYNAMIC_DRAW);
           for (const [tex, s, c] of parts) { gl.bindTexture(gl.TEXTURE_2D, tex); gl.drawArrays(gl.TRIANGLES, s, c); }
         }
         raf = requestAnimationFrame(frame);
@@ -3722,8 +3770,53 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         live = [];
         if (cv) { cv.width = cv.height = 1; }
       }
+      // ---------- сторона монеты на том же движке: свой холст 248×248 (как слои), своя текстура, те же таблицы движения
+      function face(svg, k, after) {
+        if (!ok()) return null;
+        const c = document.createElement('canvas'); c.className = 'mgf'; c.setAttribute('aria-hidden', 'true');
+        const px = Math.round(248 * k); c.width = c.height = px;
+        const g = c.getContext('webgl', GLOPT), P = g && setup(g);
+        if (!P) { c.width = c.height = 0; return null; }
+        let d = null, t0 = 0, held = 0, playing = false, rf = 0, gone = false;
+        const FB = { v: new Float32Array(9 * 6 * 24), n: 0, rec: [] };
+        function draw(ms) {
+          if (gone || !d) return;
+          FB.n = 0; FB.rec.length = 0; emit(d, ms, [1, 0, 0, 1, 0, 0], FB);
+          g.viewport(0, 0, px, px); g.uniform2f(P.sz, 248, 248);
+          g.clearColor(0, 0, 0, 0); g.clear(g.COLOR_BUFFER_BIT);
+          if (!FB.n) return;
+          g.bufferData(g.ARRAY_BUFFER, FB.v.subarray(0, FB.n * 9), g.DYNAMIC_DRAW);
+          FB.rec.forEach((t, i) => { g.bindTexture(g.TEXTURE_2D, d.texs[t]); g.drawArrays(g.TRIANGLES, i * 6, 6); });
+        }
+        const tick = now => { rf = 0; if (!playing || gone) return; draw(now - t0); rf = requestAnimationFrame(tick); };
+        const f = {
+          canvas: c,
+          // сборка частей прямо в текстуры этого холста; картинки частей сразу отдаются
+          ready: Promise.resolve(after).then(() => gone ? null : make(svg, k, g)).then(dd => {
+            if (!dd) return false;
+            if (gone) { dd.texs.forEach(t => g.deleteTexture(t)); return false; }
+            d = dd; return true;
+          }).catch(() => false),
+          still() { t0 = performance.now(); held = 0; draw(0); },
+          // пауза держит текущий кадр, продолжение — с него же
+          play(v) {
+            if (gone || v === playing) return;
+            playing = v;
+            if (v) { t0 = performance.now() - held; if (!rf) rf = requestAnimationFrame(tick); }
+            else { held = performance.now() - t0; if (rf) { cancelAnimationFrame(rf); rf = 0; } }
+          },
+          drop() {
+            if (gone) return; gone = true; playing = false;
+            if (rf) cancelAnimationFrame(rf);
+            try { if (d) d.texs.forEach(t => g.deleteTexture(t)); const x = g.getExtension('WEBGL_lose_context'); if (x) x.loseContext(); } catch (e) {}
+            c.remove(); c.width = c.height = 0; d = null;
+          }
+        };
+        c.addEventListener('webglcontextlost', e => { e.preventDefault(); f.drop(); });
+        return f;
+      }
       const stats = () => ({ textures: [...med.values()].filter(d => d.tex).length, blobs: Math.round([...med.values()].reduce((s, d) => s + (d.blob ? d.blob.size : 0), 0) / 1e3) + 'KB', mb: Math.round([...med.values()].reduce((s, d) => s + (d.tex ? d.bytes : 0), 0) / 1e6), live: live.length, shown });
-      return { start, stop, free, warm, stats, ok: () => ok() };
+      return { start, stop, free, warm, face, stats, ok: () => ok() };
     })();
 
     // Экран достижений собирается заранее, в паузе после открытия главного экрана,
@@ -6043,7 +6136,42 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       while (LY_CACHE.size > 1) { const [k0, v0] = LY_CACHE.entries().next().value; LY_CACHE.delete(k0); v0.p.then(ly => ly.forEach(MedalLayers.drop)); }
       return v;
     }
+    // Монета на общем движке (Вадим, 13.11: «приложение должно чисто на одном движке»): каждая сторона — один холст WebGL
+    // (части медали — текстуры видеочипа, движение — те же таблицы кадров, что у витрины).
+    // Не вышло (нет WebGL, ошибка) — прежние слои
     function coinLivePrep() {
+      if (calm() || C.liveSv || C.liveLy || C.liveGl || !C.front || !C.m) return;
+      if (coinLiveGl()) return;
+      coinLivePrepLy();
+    }
+    function coinLiveGl() {
+      if (!MGL.ok()) return false;
+      const m = C.m, build = C.build;
+      const k = Math.min(3, Math.max(2, window.devicePixelRatio || 2)) * 300 / 248;
+      const svgs = [MedalB.medal(medalOpts(m), true), coinBack(m, true)];
+      // по очереди: лицо первым — его видно сразу, и две сборки не держат память одновременно
+      const f0 = MGL.face(svgs[0], k), fs = [f0, f0 && MGL.face(svgs[1], k, f0.ready)];
+      if (fs.some(f => !f)) { fs.forEach(f => f && f.drop()); return false; }
+      C.liveGl = fs;
+      Promise.all(fs.map(f => f.ready)).then(async ok => {
+        if (C.build !== build || C.liveGl !== fs) { fs.forEach(f => f.drop()); return; }
+        if (ok.some(x => !x)) { fs.forEach(f => f.drop()); C.liveGl = null; coinLivePrepLy(); return; }
+        // ложатся, когда монета долетела
+        while (C.build === build && C.mode === 'tween') await new Promise(r => setTimeout(r, 60));
+        if (C.build !== build || C.liveGl !== fs) return;
+        [C.front, C.backFace].forEach((f, i) => {
+          const pic = f.querySelector(':scope > img, :scope > svg:not(.live), :scope > canvas.still');
+          if (pic) pic.after(fs[i].canvas); else f.prepend(fs[i].canvas);
+          fs[i].still();
+        });
+        await new Promise(r => requestAnimationFrame(() => r()));
+        if (C.build !== build || C.liveGl !== fs) return;
+        [C.front, C.backFace].forEach(f => f.classList.add('ly'));
+        if (C.liveOn) fs.forEach(f => f.play(true));
+      });
+      return true;
+    }
+    function coinLivePrepLy() {
       if (calm() || C.liveSv || C.liveLy || !C.front || !C.m) return;
       const build = C.build, v = coinLayers(C.m);
       C.liveLy = [];
@@ -6085,6 +6213,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       C.liveOn = on; C.liveSide = null;
       if (!on && C.liveSv) C.liveSv.forEach(sv => sv.pauseAnimations());
       if (C.liveLy) C.liveLy.forEach(l => l.classList.toggle('paused', !on));
+      if (C.liveGl) C.liveGl.forEach(f => f.play(on));
     }
     // каждый кадр (только живой SVG): двигается сторона, что к тебе (у ребра — обе); вторая стоит
     function coinLiveSide() {
@@ -6094,15 +6223,16 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       C.liveSide = side;
       // слои не ставим на паузу по сторонам: переключение паузы на каждом полуобороте давало рывок (Вадим, 24.10),
       // а двигать готовые картинки видеочипу почти ничего не стоит
-      if (C.liveLy) return;
+      if (C.liveLy || C.liveGl) return;
       if (C.liveSv) C.liveSv.forEach((sv, i) => side === 2 || side === i ? sv.unpauseAnimations() : sv.pauseAnimations());
     }
     function coinLiveDrop() {
       if (C.liveSv) C.liveSv.forEach(sv => sv.remove());
       // слои остаются в кэше; снятые со страницы, при следующем показе они начнут с первого кадра
       if (C.liveLy) C.liveLy.forEach(l => { l.remove(); l.classList.remove('paused'); });
+      if (C.liveGl) C.liveGl.forEach(f => f.drop());
       [C.front, C.backFace].forEach(f => f && f.classList.remove('ly'));
-      C.liveSv = C.liveLy = null; C.liveOn = false;
+      C.liveSv = C.liveLy = C.liveGl = null; C.liveOn = false;
     }
     function openCoin(m, award) {
       const view = $('coinView'), zm = $('coinStage').querySelector('.coin-zoom');
