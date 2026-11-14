@@ -598,28 +598,39 @@
     #sheet dd.need { color: var(--ink); font-weight: 700; }
     /* ===== Рекорды: свои лучшие результаты по видам спорта, без сравнения с другими ===== */
     #recList { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
-    .rec-card { background: var(--panel); border-radius: 20px; padding: 14px; }
-    .rec-head { display: flex; align-items: center; gap: 10px; }
-    .rec-head .ic { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; flex-shrink: 0; }
-    .rec-head .ic svg { width: 30px; height: 30px; }
-    .rec-head b { font-size: 17px; font-weight: 700; }
-    .rec-head small { margin-left: auto; color: var(--muted); font-size: 12.5px; white-space: nowrap; }
+    /* карточка вида спорта — в цвете вида, как карточки тренировок и истории (Вадим, 14.11: «цветную штуку») */
+    .rec-card { position: relative; overflow: hidden; isolation: isolate; border-radius: 22px; padding: 14px 14px 12px; color: #121315;
+      background: linear-gradient(135deg, var(--c1) 0%, var(--c) 62%, var(--c2) 100%); box-shadow: 0 1px 0 rgba(255,255,255,.06) inset; }
+    :root.light .rec-card { box-shadow: 0 6px 18px -10px rgba(60,45,20,.35); }
+    .rec-card .silk { position: absolute; right: -10px; top: 0; width: 70%; height: 100%; z-index: -1; pointer-events: none; }
+    .rec-card .silk path { fill: none; stroke: #fff; stroke-linecap: round; }
+    .rec-head { display: flex; align-items: center; gap: 8px; }
+    .rec-head svg { width: 28px; height: 28px; flex: none; }
+    .rec-head b { font-size: 17px; font-weight: 700; white-space: nowrap; }
+    .rec-head small { margin-left: auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 13px; font-weight: 600; opacity: .62; white-space: nowrap; }
+    .rec-head .nw { flex: none; padding: 3px 9px 3px 7px; border-radius: 99px; background: #121315; color: #FFD54A; font-size: 12px; font-weight: 700; white-space: nowrap; }
     .rec-dist { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; margin-top: 12px; }
-    .rec-c { text-align: left; background: var(--panel2); border-radius: 14px; padding: 9px 10px 8px; display: flex; flex-direction: column; gap: 1px; min-width: 0; transition: transform .15s ease; }
-    .rec-c .k { font-size: 12px; font-weight: 600; color: var(--muted); }
-    .rec-c .v { font-family: var(--num); font-weight: 800; font-size: 22px; line-height: 1.15; color: var(--ink); font-variant-numeric: tabular-nums; }
-    .rec-c .d { font-size: 11.5px; color: var(--muted); }
-    .rec-c.on { box-shadow: inset 0 0 0 2px var(--rc); }
+    .rec-c { position: relative; text-align: left; color: inherit; background: rgba(255,255,255,.34); border-radius: 14px; padding: 9px 10px 8px; display: flex; flex-direction: column; gap: 1px; min-width: 0; transition: transform .15s ease; }
+    .rec-c .k { font-size: 12px; font-weight: 700; opacity: .62; }
+    .rec-c .v { font-family: var(--num); font-weight: 800; font-size: 22px; line-height: 1.15; font-variant-numeric: tabular-nums; }
+    .rec-c .d { font-size: 11.5px; font-weight: 600; opacity: .62; }
+    .rec-c.on { box-shadow: inset 0 0 0 2px #121315; }
     .rec-c:active { transform: scale(.97); }
-    .rec-c.no { background: transparent; box-shadow: inset 0 0 0 1.5px var(--panel2); pointer-events: none; }
-    .rec-c.no .v { font-family: inherit; font-size: 14px; font-weight: 600; color: var(--muted); padding: 5px 0 3px; }
-    .rec-more { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--panel2); }
-    .rec-more > div { min-width: 0; }
-    .rec-more .k { font-size: 11.5px; color: var(--muted); }
-    .rec-more .v { font-family: var(--num); font-weight: 700; font-size: 16px; color: var(--ink); margin-top: 2px; }
-    .rec-more .v small { font-family: inherit; font-size: 11.5px; font-weight: 600; color: var(--muted); margin-left: 2px; }
-    .rec-more .d { font-size: 11px; color: var(--muted); margin-top: 1px; }
-    .rec-src { font-size: 13px; color: var(--ink); margin-top: 10px; line-height: 1.4; }
+    .rec-c.no { background: transparent; box-shadow: inset 0 0 0 1.5px rgba(18,19,21,.2); pointer-events: none; }
+    .rec-c.no .v { font-family: inherit; font-size: 14px; font-weight: 600; opacity: .55; padding: 5px 0 3px; }
+    /* свежий рекорд (за последние 7 дней) — звёздочка в углу */
+    .rec-c.new { background: rgba(255,255,255,.6); }
+    .rec-star { position: absolute; top: 6px; right: 6px; width: 20px; height: 20px; border-radius: 50%; background: #121315; display: grid; place-items: center; }
+    .rec-star svg { width: 13px; height: 13px; fill: #FFD54A; }
+    .rec-more { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; padding-top: 11px; border-top: 1px solid rgba(18,19,21,.16); }
+    .rec-more > div { position: relative; min-width: 0; }
+    .rec-more .k { font-size: 11.5px; font-weight: 600; opacity: .62; }
+    .rec-more .v { font-family: var(--num); font-weight: 700; font-size: 16px; margin-top: 2px; }
+    .rec-more .v small { font-family: inherit; font-size: 11.5px; font-weight: 600; opacity: .62; margin-left: 2px; }
+    .rec-more .d { font-size: 11px; font-weight: 600; opacity: .62; margin-top: 1px; }
+    .rec-more .rec-star { position: static; display: inline-grid; width: 16px; height: 16px; vertical-align: -3px; margin-left: 4px; }
+    .rec-more .rec-star svg { width: 10px; height: 10px; }
+    .rec-src { font-size: 13px; font-weight: 600; margin-top: 10px; line-height: 1.4; }
     .rec-src:empty { display: none; }
     .rec-note { font-size: 12.5px; color: var(--muted); line-height: 1.45; margin-top: 16px; }
     /* ===== Экран достижений ===== */
@@ -4469,7 +4480,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const sv = root.ownerSVGElement || root;
       if (sv.querySelectorAll) sv.querySelectorAll('linearGradient[data-gw]').forEach(gr => gr.__gl || SILK.grads.add(gr));
       // главный график, путь к цели, графики историй — на движок (SGL), когда пучок уже разложен
-      const HS = '.ms-svg, #ticks svg, .st-chart svg, #storyRing .ring-silk, #ptr svg';
+      const HS = '.ms-svg, #ticks svg, .st-chart svg'; // кружок обновления и кольцо историй вращаются/прячутся сами — они остаются SVG
       (sv.matches && sv.matches(HS) ? [sv] : sv.querySelectorAll ? [...sv.querySelectorAll(HS)] : []).forEach(h => SGL.adopt(h));
       if (!SILK.raf) SILK.raf = requestAnimationFrame(silkTick);
     }
@@ -4684,19 +4695,23 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       let hraf = 0, hlast = 0;
       const io = window.IntersectionObserver ? new IntersectionObserver(es => es.forEach(e => { if (e.target.__glh) { e.target.__glh.vis = e.isIntersecting; if (e.isIntersecting) kick(); } }), { rootMargin: '80px' }) : null;
       function place(h) {
-        const sv = h.sv, par = sv.parentNode, R = Math.min(3, window.devicePixelRatio || 1), PAD = 14;
+        const sv = h.sv, par = sv.parentNode, R = Math.min(3, window.devicePixelRatio || 1), PAD = 40;
         const sr = sv.getBoundingClientRect(), pr = par.getBoundingClientRect();
-        if (!sr.width || !sr.height) return false;
-        const W = sr.width + PAD * 2, H = sr.height + PAD * 2;
+        if (!sr.width || !sr.height || !par.offsetWidth) return false;
+        // предки могут быть сдвинуты и растянуты анимацией (листание историй): всё меряем в собственных
+        // единицах родителя, тогда холст стоит ровно на svg в любой момент анимации и не прыгает после неё
+        const s = pr.width / par.offsetWidth || 1;
+        const W = sr.width / s + PAD * 2, H = sr.height / s + PAD * 2;
         const cw = Math.round(W * R), ch = Math.round(H * R);
         if (h.cv.width !== cw || h.cv.height !== ch) { h.cv.width = cw; h.cv.height = ch; }
-        h.cv.style.cssText = `position:absolute;pointer-events:none;left:${(sr.left - pr.left - par.clientLeft + par.scrollLeft - PAD).toFixed(2)}px;top:${(sr.top - pr.top - par.clientTop + par.scrollTop - PAD).toFixed(2)}px;width:${W}px;height:${H}px`;
+        const css = `position:absolute;pointer-events:none;left:${((sr.left - pr.left) / s - par.clientLeft + par.scrollLeft - PAD).toFixed(1)}px;top:${((sr.top - pr.top) / s - par.clientTop + par.scrollTop - PAD).toFixed(1)}px;width:${W.toFixed(1)}px;height:${H.toFixed(1)}px`;
+        if (css !== h.css) h.cv.style.cssText = h.css = css;
         const M = sv.getScreenCTM();
         if (!M) return false;
         // точка svg (x, y) → точка холста
-        h.M = [M.a * R, (M.e - sr.left + PAD) * R, (M.f - sr.top + PAD) * R, M.d * R];
-        h.items.forEach(it => { if (it.g.dataset.px) { it.A = +it.g.dataset.px / (Math.abs(M.d) || 1); it.px = R; } });
-        h.at = performance.now();
+        const a = M.a / s, d = M.d / s;
+        h.M = [a * R, ((M.e - sr.left) / s + PAD) * R, ((M.f - sr.top) / s + PAD) * R, d * R];
+        h.items.forEach(it => { if (it.g.dataset.px) { it.A = +it.g.dataset.px / (Math.abs(d) || 1); it.px = R; } });
         return true;
       }
       function adopt(sv) {
@@ -4747,8 +4762,9 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           hlast = now;
           HOSTS.forEach(h => {
             if (!h.vis || (top && !top.contains(h.sv))) return;
-            // размер или место могли поменяться (поворот, перестройка) — раз в секунду сверяемся
-            if (now - h.at > 1000 && !place(h)) return;
+            // место svg могло сдвинуться (подгрузились текст и цифры, перестройка, поворот) — сверяемся каждый кадр,
+            // иначе нити догоняли свой график рывком (Вадим, 14.11: в историях графики скачут)
+            if (!place(h)) return;
             if (!h.v.frame(h.items, h.M, now)) release(h);
           });
         }
@@ -6878,21 +6894,28 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       return h ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}` : `${m}:${String(s).padStart(2, '0')}`; };
     const recKm = km => km >= 1 || !km ? stKm(km) + ' км' : Math.round(km * 1000) + ' м';
     function renderRecBtn(u) { $('recBtn').classList.toggle('hidden', !(u && u.records && u.records.length)); }
+    // свежий рекорд — поставлен за последние 7 дней (Вадим, 14.11: «если рекорд обновлён — звёздочку»)
+    const REC_STAR = '<i class="rec-star" aria-label="новый рекорд"><svg viewBox="0 0 24 24"><path d="M12 2.6l2.9 6 6.5.8-4.8 4.5 1.2 6.5L12 17.2l-5.8 3.2 1.2-6.5L2.6 9.4l6.5-.8z"/></svg></i>';
+    const recNew = d => { const [y, m, dd] = String(d).split('-').map(Number); if (!y || !m || !dd) return false;
+      const days = (Date.now() - new Date(y, m - 1, dd).getTime()) / 864e5; return days > -1 && days < 7; };
     function recCard(r, i) {
       const m = stSport(r.sport);
-      const cells = (r.dist || []).map((x, j) => x.sec
-        ? `<button class="rec-c" data-i="${i}" data-j="${j}"><span class="k">${recKm(x.km)}</span><span class="v">${recT(x.sec)}</span><span class="d">${recDay(x.d)}</span></button>`
-        : `<div class="rec-c no"><span class="k">${recKm(x.km)}</span><span class="v">ещё нет</span></div>`).join('');
+      let fresh = 0;
+      const cells = (r.dist || []).map((x, j) => { const nw = x.sec && recNew(x.d); fresh += nw ? 1 : 0;
+        return x.sec
+        ? `<button class="rec-c${nw ? ' new' : ''}" data-i="${i}" data-j="${j}">${nw ? REC_STAR : ''}<span class="k">${recKm(x.km)}</span><span class="v">${recT(x.sec)}</span><span class="d">${recDay(x.d)}</span></button>`
+        : `<div class="rec-c no"><span class="k">${recKm(x.km)}</span><span class="v">ещё нет</span></div>`; }).join('');
       const more = [];
       if (r.longKm) more.push(['Самая длинная', `${stKm(r.longKm.km)}<small>км</small>`, r.longKm.d]);
       if (r.longMin) more.push(['Самая долгая', stMin(r.longMin.min).replace(/ (ч|мин)/g, '<small>$1</small>'), r.longMin.d]);
       if (r.pace) more.push(r.pace.kmh ? ['Быстрее всего', `${fmt(r.pace.kmh)}<small>км/ч</small>`, r.pace.d] : ['Лучший темп', `${recT(r.pace.sec)}<small>/${r.pace.per}</small>`, r.pace.d]);
       if (r.climb) more.push(['Быстрее вверх', `${fmt(r.climb.mpm)}<small>м/мин</small>`, r.climb.d]);
       if (r.elev) more.push(['Набор вверх', `${r.elev.m}<small>м</small>`, r.elev.d]);
-      return `<section class="rec-card" style="--rc:${m.c}">
-        <div class="rec-head"><span class="ic" style="background:${m.c}">${stIcon(m.ic, 'ri')}</span><b>${esc(stCap(r.sport))}</b><small>${stWord(r.n, ...ST_W)}</small></div>
+      more.forEach(x => { if (recNew(x[2])) fresh++; });
+      return `<section class="rec-card" style="--c:${m.c};--c1:${wcMix(m.c, 'w', .32)};--c2:${wcMix(m.c, 'b', .08)}">${WC_SILK}
+        <div class="rec-head">${stIcon(m.ic, '')}<b>${esc(stCap(r.sport))}</b>${fresh ? `<span class="nw">★ ${fresh === 1 ? 'новый' : fresh + ' новых'}</span>` : ''}<small>${stWord(r.n, ...ST_W)}</small></div>
         ${cells ? `<div class="rec-dist">${cells}</div>` : ''}
-        ${more.length ? `<div class="rec-more">${more.map(([k, v, d]) => `<div><div class="k">${k}</div><div class="v">${v}</div><div class="d">${recDay(d)}</div></div>`).join('')}</div>` : ''}
+        ${more.length ? `<div class="rec-more">${more.map(([k, v, d]) => `<div><div class="k">${k}</div><div class="v">${v}${recNew(d) ? REC_STAR : ''}</div><div class="d">${recDay(d)}</div></div>`).join('')}</div>` : ''}
         <p class="rec-src"></p></section>`;
     }
     function openRecords() {
