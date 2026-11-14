@@ -193,7 +193,7 @@
     .st-segs b { display: block; width: 100%; height: 3px; border-radius: 2px; background: var(--rule); transition: background .25s; }
     .st-segs i.on b { background: var(--volt); }
     .st-pn { display: flex; align-items: center; justify-content: center; gap: 22px; flex: none; padding-top: 4px; font-size: 13px; font-weight: 600; color: var(--muted); }
-    .st-pn button { width: 44px; height: 36px; border-radius: 14px; background: var(--panel); color: var(--ink); font-size: 24px; line-height: 1; }
+    .st-pn button { width: 44px; height: 36px; border-radius: 14px; background: var(--panel); color: var(--ink); display: grid; place-items: center; }
     .st-pn button:disabled { opacity: .3; }
     .st-beads .bd { z-index: 1; }
     .st-slide { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 14px; padding: 12px 0 18px; }
@@ -4444,7 +4444,10 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
                weighIns: mw.length, medals: cat.filter(md => md.status === 'earned' && md.date && inR(stDay(new Date(md.date).getTime()), mFirst, mLast)).length, best, path, good };
     }
     const stKg = c => c == null ? '—' : (c > 0 ? '+' : c < 0 ? '−' : '') + fmt(Math.abs(c).toFixed(1));
-    const stKm = v => fmt(+(+v).toFixed(1));
+    // расстояние точно, до метра (Вадим, 14.11: «1,3» вместо 1250 м — нельзя округлять); нули в конце не пишем
+    const stKm = v => fmt(+(+v).toFixed(3));
+    // плавание — в метрах, остальное — в км до метра
+    const stDist = (sport, km) => /^плав/i.test(String(sport || '')) ? [Math.round(km * 1000).toLocaleString('ru-RU'), 'м'] : [stKm(km), 'км'];
     const stHm = min => `${Math.floor(min / 60)}ч ${String(min % 60).padStart(2, '0')}м`;
     const stRange = (a, b) => a.getMonth() === b.getMonth() ? `${a.getDate()}–${b.getDate()} ${ST_GEN[b.getMonth()]}` : `${a.getDate()} ${ST_GEN[a.getMonth()]} – ${b.getDate()} ${ST_GEN[b.getMonth()]}`;
     const ST_DAYS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
@@ -4913,7 +4916,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     const WC_COACH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>';
     const wcMmss = s => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
     const wcTime = m => m >= 60 ? [`${Math.floor(m / 60)}:${String(Math.round(m % 60)).padStart(2, '0')}`, 'ч'] : [String(Math.round(m)), 'мин'];
-    const wcKm = v => fmt(+(+v).toFixed(v < 10 ? 2 : 1));
+    const wcKm = v => stKm(v);
     function stWoCard(w) {
       const sp = String(w.sport || '').toLowerCase(), known = sp && sp !== 'тренировка';
       const m = known ? stSport(sp) : { c: '#B9C2CC', ic: 'q' }, d = new Date(w.at);
@@ -5096,7 +5099,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       (u && u.records || []).forEach(r => {
         const m = stSport(r.sport);
         (r.dist || []).forEach(x => { if (x.sec && in7(x.d)) out.push({ m, sport: r.sport, k: recKm(x.km), v: recT(x.sec), d: x.d }); });
-        if (r.longKm && in7(r.longKm.d)) out.push({ m, sport: r.sport, k: 'Самая длинная', v: `${stKm(r.longKm.km)}<small> км</small>`, d: r.longKm.d });
+        if (r.longKm && in7(r.longKm.d)) out.push({ m, sport: r.sport, k: 'Самая длинная', v: `${stDist(r.sport, r.longKm.km)[0]}<small> ${stDist(r.sport, r.longKm.km)[1]}</small>`, d: r.longKm.d });
         if (r.pace && in7(r.pace.d)) out.push({ m, sport: r.sport, k: r.pace.kmh ? 'Быстрее всего' : 'Лучший темп', v: r.pace.kmh ? `${fmt(r.pace.kmh)}<small> км/ч</small>` : `${recT(r.pace.sec)}<small> /${r.pace.per}</small>`, d: r.pace.d });
         if (r.climb && in7(r.climb.d)) out.push({ m, sport: r.sport, k: 'Быстрее вверх', v: `${fmt(r.climb.mpm)}<small> м/мин</small>`, d: r.climb.d });
         if (r.elev && in7(r.elev.d)) out.push({ m, sport: r.sport, k: 'Набор вверх', v: `${r.elev.m}<small> м</small>`, d: r.elev.d });
@@ -5222,7 +5225,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       ST.si = Math.max(0, Math.min(n - 1, ST.si));
       pg.innerHTML = `<div class="st-deck"><div class="st-segs">${ST.sl.map((_, k) => `<i class="${k <= ST.si ? 'on' : ''}" onclick="stSlideTo(${k})"><b></b></i>`).join('')}</div>
         <div class="st-slide${anim ? ' ' + (anim === 'in-l' ? 'in-l' : 'in-r') : ''}">${ST.sl[ST.si]}</div>
-        <div class="st-pn"><button onclick="stSlide(-1)" ${ST.si ? '' : 'disabled'} aria-label="Назад">‹</button><span>${ST.si + 1} / ${n}</span><button onclick="stSlide(1)" ${ST.si < n - 1 ? '' : 'disabled'} aria-label="Дальше">›</button></div></div>`;
+        <div class="st-pn"><button onclick="stSlide(-1)" ${ST.si ? '' : 'disabled'} aria-label="Назад"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button><span>${ST.si + 1} / ${n}</span><button onclick="stSlide(1)" ${ST.si < n - 1 ? '' : 'disabled'} aria-label="Дальше"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button></div></div>`;
       pg.scrollTop = 0;
       silkStart(pg);
     }
@@ -6991,7 +6994,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         ? `<button class="rec-c${nw ? ' new' : ''}" data-i="${i}" data-j="${j}">${nw ? REC_STAR : ''}<span class="k">${recKm(x.km)}</span><span class="v">${recT(x.sec)}</span><span class="d">${recDay(x.d)}</span></button>`
         : `<div class="rec-c no"><span class="k">${recKm(x.km)}</span><span class="v">ещё нет</span></div>`; }).join('');
       const more = [];
-      if (r.longKm) more.push(['Самая длинная', `${stKm(r.longKm.km)}<small>км</small>`, r.longKm.d]);
+      if (r.longKm) more.push(['Самая длинная', `${stDist(r.sport, r.longKm.km)[0]}<small>${stDist(r.sport, r.longKm.km)[1]}</small>`, r.longKm.d]);
       if (r.longMin) more.push(['Самая долгая', stMin(r.longMin.min).replace(/ (ч|мин)/g, '<small>$1</small>'), r.longMin.d]);
       if (r.pace) more.push(r.pace.kmh ? ['Быстрее всего', `${fmt(r.pace.kmh)}<small>км/ч</small>`, r.pace.d] : ['Лучший темп', `${recT(r.pace.sec)}<small>/${r.pace.per}</small>`, r.pace.d]);
       if (r.climb) more.push(['Быстрее вверх', `${fmt(r.climb.mpm)}<small>м/мин</small>`, r.climb.d]);
