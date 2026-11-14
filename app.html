@@ -304,8 +304,8 @@
     :root.light .wc { box-shadow: 0 6px 18px -10px rgba(60,45,20,.35); }
     .wc + .wc { margin-top: 12px; }
     .st-box > .st-k + .wc { margin-top: 10px; }
-    .wc .silk { position: absolute; right: -10px; top: 0; width: 70%; height: 100%; z-index: -1; pointer-events: none; }
-    .wc .silk path { fill: none; stroke: #fff; stroke-linecap: round; }
+    .wc .wc-silk { position: absolute; right: -10px; top: 0; width: 70%; height: 100%; z-index: -1; pointer-events: none; }
+    .wc .wc-silk path { fill: none; stroke: #fff; stroke-linecap: round; }
     .wc-h { display: flex; align-items: center; gap: 8px; }
     .wc-h svg { width: 26px; height: 26px; flex: none; }
     .wc-h b { font-size: 16px; font-weight: 700; }
@@ -602,8 +602,8 @@
     .rec-card { position: relative; overflow: hidden; isolation: isolate; border-radius: 22px; padding: 14px 14px 12px; color: #121315;
       background: linear-gradient(135deg, var(--c1) 0%, var(--c) 62%, var(--c2) 100%); box-shadow: 0 1px 0 rgba(255,255,255,.06) inset; }
     :root.light .rec-card { box-shadow: 0 6px 18px -10px rgba(60,45,20,.35); }
-    .rec-card .silk { position: absolute; right: -10px; top: 0; width: 70%; height: 100%; z-index: -1; pointer-events: none; }
-    .rec-card .silk path { fill: none; stroke: #fff; stroke-linecap: round; }
+    .rec-card .wc-silk { position: absolute; right: -10px; top: 0; width: 70%; height: 100%; z-index: -1; pointer-events: none; }
+    .rec-card .wc-silk path { fill: none; stroke: #fff; stroke-linecap: round; }
     .rec-head { display: flex; align-items: center; gap: 8px; }
     .rec-head svg { width: 28px; height: 28px; flex: none; }
     .rec-head b { font-size: 17px; font-weight: 700; white-space: nowrap; }
@@ -630,6 +630,52 @@
     .rec-more .d { font-size: 11px; font-weight: 600; opacity: .62; margin-top: 1px; }
     .rec-more .rec-star { position: static; display: inline-grid; width: 16px; height: 16px; vertical-align: -3px; margin-left: 4px; }
     .rec-more .rec-star svg { width: 10px; height: 10px; }
+    /* рекорды недели в историях — плитки в цвете вида */
+    .st-recs { width: 100%; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; text-align: left; margin-top: 6px; }
+    .st-rec { position: relative; border-radius: 18px; padding: 11px 12px 10px; color: #121315; display: flex; flex-direction: column; gap: 1px;
+      background: linear-gradient(135deg, var(--c1) 0%, var(--c) 62%, var(--c2) 100%); }
+    .st-rec .h { display: flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 700; padding-right: 22px; }
+    .st-rec .h svg { width: 20px; height: 20px; flex: none; }
+    .st-rec .k { font-size: 12px; font-weight: 600; opacity: .62; margin-top: 4px; }
+    .st-rec b { font-family: var(--num); font-weight: 800; font-size: 26px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+    .st-rec b small { font-size: 13px; font-weight: 700; opacity: .7; }
+    .st-rec .d { font-size: 11.5px; font-weight: 600; opacity: .62; }
+    .st-bwi { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 7px; vertical-align: -6px; margin-right: 7px; }
+    .st-bwi svg { width: 20px; height: 20px; }
+    /* сцена нового рекорда: вспышка в цвете вида, лучи, звезда, конфетти. Двигаются только transform и opacity */
+    #recFlash { position: fixed; inset: 0; z-index: 35; display: grid; place-items: center; padding: 24px; overflow: hidden;
+      background: rgba(10, 12, 16, .95); opacity: 0; pointer-events: none; transition: opacity .25s ease; }
+    #recFlash.open { opacity: 1; pointer-events: auto; }
+    #recFlash .rf-glow { position: absolute; left: 50%; top: 42%; width: 150vmin; height: 150vmin; margin: -75vmin 0 0 -75vmin; border-radius: 50%;
+      background: radial-gradient(closest-side, color-mix(in srgb, var(--rc) 38%, transparent), transparent); transform: scale(.4); opacity: 0; }
+    #recFlash .rf-rays { position: absolute; left: 50%; top: 42%; width: 120vmin; height: 120vmin; margin: -60vmin 0 0 -60vmin; border-radius: 50%; opacity: 0;
+      background: repeating-conic-gradient(from 0deg, rgba(255, 255, 255, .13) 0 6deg, transparent 6deg 24deg);
+      -webkit-mask: radial-gradient(closest-side, #000 20%, transparent); mask: radial-gradient(closest-side, #000 20%, transparent); }
+    #recFlash.open .rf-glow { animation: rfGlow .7s cubic-bezier(.2, .9, .3, 1) forwards; }
+    #recFlash.open .rf-rays { animation: rfRaysIn .6s .1s ease forwards, rfSpin 24s linear infinite; }
+    #recFlash .rf-in { position: relative; text-align: center; color: #fff; display: flex; flex-direction: column; align-items: center; }
+    #recFlash .rf-star { width: 92px; height: 92px; transform: scale(0) rotate(-40deg); }
+    #recFlash .rf-star svg { width: 100%; height: 100%; fill: #FFD54A; filter: drop-shadow(0 6px 24px rgba(255, 213, 74, .55)); }
+    #recFlash.open .rf-star { animation: rfStar .7s .1s cubic-bezier(.2, 1.5, .4, 1) forwards; }
+    #recFlash .rf-t > * { opacity: 0; transform: translateY(14px); }
+    #recFlash.open .rf-t > * { animation: stIn .5s cubic-bezier(.3, .8, .3, 1) forwards; }
+    #recFlash.open .rf-t > :nth-child(2) { animation-delay: .32s; } #recFlash.open .rf-t > :nth-child(3) { animation-delay: .4s; }
+    #recFlash.open .rf-t > :nth-child(4) { animation-delay: .48s; } #recFlash.open .rf-t > :nth-child(1) { animation-delay: .25s; }
+    #recFlash .rf-t { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 14px; }
+    #recFlash .rf-k { font-size: 12px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: #FFD54A; }
+    #recFlash .rf-s { display: flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 700; }
+    #recFlash .rf-s i { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 9px; background: var(--rc); }
+    #recFlash .rf-s svg { width: 24px; height: 24px; }
+    #recFlash .rf-v { font-family: var(--num); font-weight: 800; font-size: clamp(72px, 24vw, 110px); line-height: .9; font-variant-numeric: tabular-nums;
+      background-image: linear-gradient(90deg, #fff, var(--rc)); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent; }
+    #recFlash .rf-d { font-size: 14px; font-weight: 600; opacity: .72; max-width: 30ch; line-height: 1.4; }
+    #recFlash .rf-x { position: absolute; left: 0; right: 0; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); text-align: center; font-size: 13px; font-weight: 600; color: rgba(255, 255, 255, .5); }
+    @keyframes rfGlow { to { transform: scale(1); opacity: 1; } }
+    @keyframes rfRaysIn { to { opacity: 1; } }
+    @keyframes rfSpin { to { transform: rotate(360deg); } }
+    @keyframes rfStar { to { transform: scale(1) rotate(0); } }
+    #recFlash:not(.open) * { animation: none !important; }
+    @media (prefers-reduced-motion: reduce) { #recFlash * { animation: none !important; opacity: 1 !important; transform: none !important; } }
     .rec-src { font-size: 13px; font-weight: 600; margin-top: 10px; line-height: 1.4; }
     .rec-src:empty { display: none; }
     .rec-note { font-size: 12.5px; color: var(--muted); line-height: 1.45; margin-top: 16px; }
@@ -874,6 +920,7 @@
 
   <div id="ptr" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg></div>
   <div id="toast" role="status"></div>
+  <div id="recFlash" role="dialog" aria-label="Новый рекорд" onclick="closeRecFlash()"></div>
   <div id="confetti" aria-hidden="true"></div>
   <div id="story" role="dialog" aria-label="Итоги" aria-hidden="true">
     <div class="st-head"><span class="t" id="stTitle"></span><button class="st-x" onclick="closeStory()" aria-label="Закрыть">×</button></div>
@@ -4862,7 +4909,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     // Чего нет — не показываем. Темп ходьбы, бега, лыж и плавания досчитываем из дистанции и времени, если его не записали
     const wcMix = (hex, to, k) => { const n = parseInt(hex.slice(1), 16), t = to === 'w' ? 255 : 0;
       return '#' + [16, 8, 0].map(sh => Math.round(((n >> sh) & 255) * (1 - k) + t * k).toString(16).padStart(2, '0')).join(''); };
-    const WC_SILK = '<svg class="silk" viewBox="0 0 200 140" preserveAspectRatio="none" aria-hidden="true"><path d="M10 150 C60 90 110 120 210 20" stroke-width="1.2" opacity=".28"/><path d="M30 150 C80 96 130 118 210 40" stroke-width=".8" opacity=".2"/><path d="M60 150 C100 110 150 120 210 62" stroke-width="1.6" opacity=".14"/></svg>';
+    const WC_SILK = '<svg class="wc-silk" viewBox="0 0 200 140" preserveAspectRatio="none" aria-hidden="true"><path d="M10 150 C60 90 110 120 210 20" stroke-width="1.2" opacity=".28"/><path d="M30 150 C80 96 130 118 210 40" stroke-width=".8" opacity=".2"/><path d="M60 150 C100 110 150 120 210 62" stroke-width="1.6" opacity=".14"/></svg>';
     const WC_COACH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>';
     const wcMmss = s => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
     const wcTime = m => m >= 60 ? [`${Math.floor(m / 60)}:${String(Math.round(m % 60)).padStart(2, '0')}`, 'ч'] : [String(Math.round(m)), 'мин'];
@@ -4961,6 +5008,10 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
               <div class="st-unit">${wait ? 'считаю тренировки' : `${stWord(s.workouts, ...ST_W)}${mins ? ' · ' + stMin(mins) : ''}`}</div>
               ${failed ? '' : stTiles(s && s.distance, s ? s.workouts : 0, wait)}${say(p && p.workouts)}`);
           if (s && s.list && s.list.length) S.push(`<p class="st-k">Тренировки недели</p><div class="st-wos">${s.list.map(stWoCard).join('')}</div>`);
+          const recs = stWeekRecs(u, w);
+          if (recs.length) S.push(`<p class="st-k">${recs.length > 1 ? 'Рекорды недели' : 'Рекорд недели'}</p><div class="st-huge">${recs.length}<small> ★</small></div>
+            <div class="st-unit">${recs.length > 1 ? `${plural(recs.length, 'новый', 'новых', 'новых')} ${plural(recs.length, 'рекорд', 'рекорда', 'рекордов')}` : 'новый личный рекорд'}</div>
+            <div class="st-recs">${recs.map(stRecTile).join('')}</div>`);
           S.push(`<p class="st-k">Неделя по дням</p>${stBeads(w, s)}${say(p && p.days)}`);
           if (sl) {
             const top = Math.max(600, ...s.days.map(d => d.sleepMin || 0)), bd = new Date(sl.best.date + 'T12:00:00');
@@ -5039,6 +5090,28 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       }
       return V;
     }
+    // рекорды, поставленные на этой неделе (и до сих пор лучшие) — из того же u.records, что экран «Рекорды»
+    function stWeekRecs(u, w) {
+      const lo = stKey(w.from), hi = stKey(w.to), in7 = d => d && d >= lo && d <= hi, out = [];
+      (u && u.records || []).forEach(r => {
+        const m = stSport(r.sport);
+        (r.dist || []).forEach(x => { if (x.sec && in7(x.d)) out.push({ m, sport: r.sport, k: recKm(x.km), v: recT(x.sec), d: x.d }); });
+        if (r.longKm && in7(r.longKm.d)) out.push({ m, sport: r.sport, k: 'Самая длинная', v: `${stKm(r.longKm.km)}<small> км</small>`, d: r.longKm.d });
+        if (r.pace && in7(r.pace.d)) out.push({ m, sport: r.sport, k: r.pace.kmh ? 'Быстрее всего' : 'Лучший темп', v: r.pace.kmh ? `${fmt(r.pace.kmh)}<small> км/ч</small>` : `${recT(r.pace.sec)}<small> /${r.pace.per}</small>`, d: r.pace.d });
+        if (r.climb && in7(r.climb.d)) out.push({ m, sport: r.sport, k: 'Быстрее вверх', v: `${fmt(r.climb.mpm)}<small> м/мин</small>`, d: r.climb.d });
+        if (r.elev && in7(r.elev.d)) out.push({ m, sport: r.sport, k: 'Набор вверх', v: `${r.elev.m}<small> м</small>`, d: r.elev.d });
+      });
+      return out.slice(0, 6);
+    }
+    const stRecTile = x => `<div class="st-rec" style="--c:${x.m.c};--c1:${wcMix(x.m.c, 'w', .32)};--c2:${wcMix(x.m.c, 'b', .08)}">${REC_STAR}
+      <span class="h">${stIcon(x.m.ic, '')}${esc(stCap(x.sport))}</span><span class="k">${x.k}</span><b>${x.v}</b><span class="d">${recDay(x.d)}</span></div>`;
+    // лучшая тренировка недели — на обложку, когда замеров не было
+    function stBestWo(s) {
+      const L = (s && s.list || []).filter(x => x.km > 0 || x.min > 0);
+      if (!L.length) return null;
+      const byKm = L.filter(x => x.km > 0);
+      return (byKm.length ? byKm : L).reduce((a, x) => (byKm.length ? x.km > a.km : x.min > a.min) ? x : a);
+    }
     // дни недели — бусины на шёлковой нити: высота — вес, день с тренировкой — цветная бусина со значком
     function stBeads(w, s) {
       const days = [...Array(7)].map((_, d) => {
@@ -5061,11 +5134,23 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       // график — тот же живой, что в карточке недели: рисуется, бегут цвета, по линии пробегает искра, точка дышит
       const spark = stChart(w, true);
       const a = w.ws.length ? w.ws[0].w : null, z = w.ws.length ? w.ws[w.ws.length - 1].w : null;
+      // замеров не было — вместо пустого «Без замеров» лучшая тренировка недели (Вадим, 14.11)
+      const bw = w.change == null && !w.ws.length ? stBestWo(s) : null;
+      let top;
+      if (bw) {
+        const sp = String(bw.sport || '').toLowerCase(), m = sp && sp !== 'тренировка' ? stSport(sp) : null, d = new Date(bw.at);
+        const T = bw.min > 0 ? wcTime(bw.min) : null, swim = /^плав/.test(sp);
+        const big = bw.km > 0 ? (swim ? [Math.round(bw.km * 1000).toLocaleString('ru-RU'), 'м'] : [wcKm(bw.km), 'км']) : T;
+        const when = isNaN(d) ? '' : `${ST_DAYS[(d.getDay() + 6) % 7].toLowerCase()}, ${d.getDate()} ${ST_GEN[d.getMonth()].slice(0, 3)}`;
+        top = `<p class="st-k">Лучшая тренировка недели</p>
+        <div class="huge">${esc(big[0])}<small style="font-size:.3em;margin-left:6px">${big[1]}</small></div>
+        <div class="unit">${m ? `<span class="st-bwi" style="background:${m.c}">${stIcon(m.ic, '')}</span>` : ''}${esc(m ? stCap(sp) : 'Тренировка')}${bw.km > 0 && T ? ' · ' + T.join(' ') : ''}${when ? ' · ' + when : ''}</div>`;
+      } else top = `<p class="st-k">Вес за неделю</p>
+        <div class="huge${w.change == null ? ' sm' : ''}">${w.change == null ? 'Без замеров' : stKg(w.change)}</div>
+        ${a != null ? `<div class="unit">КГ · ${fmt(a)} → ${fmt(z)}</div>` : ''}`;
       return `<div class="bar"><b id="stPosterBar"></b></div>
         <div class="st-head"><span class="t">Неделя ${w.i + 1} · ${stRange(w.from, w.to)}</span><button class="st-x" onclick="closeStory()" aria-label="Закрыть">×</button></div>
-        <p class="st-k">Вес за неделю</p>
-        <div class="huge${w.change == null ? ' sm' : ''}">${w.change == null ? 'Без замеров' : stKg(w.change)}</div>
-        ${a != null ? `<div class="unit">КГ · ${fmt(a)} → ${fmt(z)}</div>` : ''}
+        ${top}
         ${spark}
         <div class="stats"><div><b>${w.ws.length}/7</b><span>замеров</span></div><div><b>${s ? s.workouts : dots}</b><span>${s ? plural(s.workouts, ...ST_W) : ST_W[2]}</span></div>${s && s.distance.km ? `<div><b>${stKm(s.distance.km)}</b><span>км</span></div>` : ''}</div>
         <div class="say">${s && s.phrases ? esc(s.phrases.cover) : ''}</div>
@@ -6937,12 +7022,34 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         const pace = swim ? `${recT(f.min * 6 / f.km)} /100 м` : /^вело/.test(r.sport) ? `${fmt(Math.round(f.km / f.min * 600) / 10)} км/ч` : `${recT(f.min * 60 / f.km)} /км`;
         src.textContent = x.split ? `Лучшие ${recKm(x.km)} подряд по отрезкам с часов. Тренировка ${recDay(x.d)}: ${recKm(f.km)} за ${stMin(f.min)}.`
           : `Из тренировки ${recDay(x.d)}: ${recKm(f.km)} за ${stMin(f.min)}` + (f.km > x.km * 1.05 ? `. Средний ${/^вело/.test(r.sport) ? 'ход' : 'темп'} ${pace}, на ${recKm(x.km)} это ${recT(x.sec)}.` : '.');
+        if (c.classList.contains('new')) openRecFlash(r, x, src.textContent);
       };
       $('recScreen').scrollTop = 0;
       $('recScreen').classList.add('open');
       navPush(closeRecords);
     }
+    // сцена свежего рекорда: нажал на плитку со звёздочкой (Вадим, 14.11)
+    function openRecFlash(r, x, from) {
+      const m = stSport(r.sport), el = $('recFlash');
+      el.style.setProperty('--rc', m.c);
+      el.innerHTML = `<div class="rf-glow"></div><div class="rf-rays"></div><div class="rf-in">
+        <div class="rf-star"><svg viewBox="0 0 24 24"><path d="M12 2.6l2.9 6 6.5.8-4.8 4.5 1.2 6.5L12 17.2l-5.8 3.2 1.2-6.5L2.6 9.4l6.5-.8z"/></svg></div>
+        <div class="rf-t"><span class="rf-k">Новый рекорд</span><span class="rf-s"><i>${stIcon(m.ic, '')}</i>${esc(stCap(r.sport))} · ${recKm(x.km)}</span>
+        <span class="rf-v">${recT(x.sec)}</span><span class="rf-d">${esc(from)}</span></div></div><div class="rf-x">Нажми, чтобы закрыть</div>`;
+      void el.offsetWidth;
+      el.classList.add('open');
+      safeHaptic('success');
+      confetti(['#FFD54A', '#FFFFFF', m.c, wcMix(m.c, 'w', .4), '#FFE08A']);
+      navPush(closeRecFlash);
+    }
+    function closeRecFlash() {
+      const el = $('recFlash');
+      if (!el.classList.contains('open')) return;
+      el.classList.remove('open'); $('confetti').innerHTML = '';
+      navForget(closeRecFlash);
+    }
     function closeRecords() {
+      closeRecFlash();
       $('recScreen').classList.remove('open');
       navForget(closeRecords);
     }
