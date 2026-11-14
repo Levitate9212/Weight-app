@@ -1,0 +1,26 @@
+name: Версия приложения
+# После каждого изменения app.html записывает его версию в version.json.
+# Пускач index.html читает version.json при каждом открытии и открывает свежее приложение,
+# поэтому ссылку в BotFather менять больше не нужно.
+on:
+  push:
+    branches: [main]
+    paths: [app.html]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Записать version.json
+        run: |
+          v=$(sha256sum app.html | cut -c1-12)
+          printf '{"v":"%s"}\n' "$v" > version.json
+          if git diff --quiet -- version.json 2>/dev/null && git ls-files --error-unmatch version.json >/dev/null 2>&1; then echo "без изменений"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898699+github-actions[bot]@users.noreply.github.com"
+          git add version.json
+          git commit -m "version.json: $v"
+          git push
