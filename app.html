@@ -5098,7 +5098,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const lo = stKey(w.from), hi = stKey(w.to), in7 = d => d && d >= lo && d <= hi, out = [];
       (u && u.records || []).forEach(r => {
         const m = stSport(r.sport);
-        (r.dist || []).forEach(x => { if (x.sec && in7(x.d)) out.push({ m, sport: r.sport, k: recKm(x.km), v: recT(x.sec), d: x.d }); });
+        (r.dist || []).forEach(x => { if (x.sec && in7(x.d)) out.push({ m, sport: r.sport, k: recKm(x.km, r.sport), v: recT(x.sec), d: x.d }); });
         if (r.longKm && in7(r.longKm.d)) out.push({ m, sport: r.sport, k: 'Самая длинная', v: `${stDist(r.sport, r.longKm.km)[0]}<small> ${stDist(r.sport, r.longKm.km)[1]}</small>`, d: r.longKm.d });
         if (r.pace && in7(r.pace.d)) out.push({ m, sport: r.sport, k: r.pace.kmh ? 'Быстрее всего' : 'Лучший темп', v: r.pace.kmh ? `${fmt(r.pace.kmh)}<small> км/ч</small>` : `${recT(r.pace.sec)}<small> /${r.pace.per}</small>`, d: r.pace.d });
         if (r.climb && in7(r.climb.d)) out.push({ m, sport: r.sport, k: 'Быстрее вверх', v: `${fmt(r.climb.mpm)}<small> м/мин</small>`, d: r.climb.d });
@@ -6980,7 +6980,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     const recDay = d => { const [y, m, dd] = String(d).split('-').map(Number); return `${dd} ${REC_MON[m - 1]}${y !== new Date().getFullYear() ? ' ' + y : ''}`; };
     const recT = sec => { sec = Math.round(sec); const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60;
       return h ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}` : `${m}:${String(s).padStart(2, '0')}`; };
-    const recKm = km => km >= 1 || !km ? stKm(km) + ' км' : Math.round(km * 1000) + ' м';
+    // плавание — всегда в метрах (500, 1 000, 1 500, 2 000 м), остальное — км (меньше 1 км — метры)
+    const recKm = (km, sport) => /^плав/i.test(String(sport || '')) || (km && km < 1) ? Math.round(km * 1000).toLocaleString('ru-RU') + ' м' : stKm(km) + ' км';
     function renderRecBtn(u) { $('recBtn').classList.toggle('hidden', !(u && u.records && u.records.length)); }
     // свежий рекорд — поставлен за последние 7 дней (Вадим, 14.11: «если рекорд обновлён — звёздочку»)
     const REC_STAR = '<i class="rec-star" aria-label="новый рекорд"><svg viewBox="0 0 24 24"><path d="M12 2.6l2.9 6 6.5.8-4.8 4.5 1.2 6.5L12 17.2l-5.8 3.2 1.2-6.5L2.6 9.4l6.5-.8z"/></svg></i>';
@@ -6989,10 +6990,13 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     function recCard(r, i) {
       const m = stSport(r.sport);
       let fresh = 0;
+      // плавание: дистанция появляется, когда её проплыли (Вадим, 14.11), пустых «ещё нет» не показываем
+      const swim = /^плав/i.test(r.sport);
       const cells = (r.dist || []).map((x, j) => { const nw = x.sec && recNew(x.d); fresh += nw ? 1 : 0;
+        if (!x.sec && swim) return '';
         return x.sec
-        ? `<button class="rec-c${nw ? ' new' : ''}" data-i="${i}" data-j="${j}">${nw ? REC_STAR : ''}<span class="k">${recKm(x.km)}</span><span class="v">${recT(x.sec)}</span><span class="d">${recDay(x.d)}</span></button>`
-        : `<div class="rec-c no"><span class="k">${recKm(x.km)}</span><span class="v">ещё нет</span></div>`; }).join('');
+        ? `<button class="rec-c${nw ? ' new' : ''}" data-i="${i}" data-j="${j}">${nw ? REC_STAR : ''}<span class="k">${recKm(x.km, r.sport)}</span><span class="v">${recT(x.sec)}</span><span class="d">${recDay(x.d)}</span></button>`
+        : `<div class="rec-c no"><span class="k">${recKm(x.km, r.sport)}</span><span class="v">ещё нет</span></div>`; }).join('');
       const more = [];
       if (r.longKm) more.push(['Самая длинная', `${stDist(r.sport, r.longKm.km)[0]}<small>${stDist(r.sport, r.longKm.km)[1]}</small>`, r.longKm.d]);
       if (r.longMin) more.push(['Самая долгая', stMin(r.longMin.min).replace(/ (ч|мин)/g, '<small>$1</small>'), r.longMin.d]);
@@ -7023,8 +7027,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         c.classList.add('on');
         const r = u.records[+c.dataset.i], x = r.dist[+c.dataset.j], f = x.from, swim = /^плав/.test(r.sport);
         const pace = swim ? `${recT(f.min * 6 / f.km)} /100 м` : /^вело/.test(r.sport) ? `${fmt(Math.round(f.km / f.min * 600) / 10)} км/ч` : `${recT(f.min * 60 / f.km)} /км`;
-        src.textContent = x.split ? `Лучшие ${recKm(x.km)} подряд по отрезкам с часов. Тренировка ${recDay(x.d)}: ${recKm(f.km)} за ${stMin(f.min)}.`
-          : `Из тренировки ${recDay(x.d)}: ${recKm(f.km)} за ${stMin(f.min)}` + (f.km > x.km * 1.05 ? `. Средний ${/^вело/.test(r.sport) ? 'ход' : 'темп'} ${pace}, на ${recKm(x.km)} это ${recT(x.sec)}.` : '.');
+        src.textContent = x.split ? `Лучшие ${recKm(x.km, r.sport)} подряд по отрезкам с часов. Тренировка ${recDay(x.d)}: ${recKm(f.km, r.sport)} за ${stMin(f.min)}.`
+          : `Из тренировки ${recDay(x.d)}: ${recKm(f.km, r.sport)} за ${stMin(f.min)}` + (f.km > x.km * 1.05 ? `. Средний ${/^вело/.test(r.sport) ? 'ход' : 'темп'} ${pace}, на ${recKm(x.km, r.sport)} это ${recT(x.sec)}.` : '.');
         if (c.classList.contains('new')) openRecFlash(r, x, src.textContent);
       };
       $('recScreen').scrollTop = 0;
@@ -7037,7 +7041,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       el.style.setProperty('--rc', m.c);
       el.innerHTML = `<div class="rf-glow"></div><div class="rf-rays"></div><div class="rf-in">
         <div class="rf-star"><svg viewBox="0 0 24 24"><path d="M12 2.6l2.9 6 6.5.8-4.8 4.5 1.2 6.5L12 17.2l-5.8 3.2 1.2-6.5L2.6 9.4l6.5-.8z"/></svg></div>
-        <div class="rf-t"><span class="rf-k">Новый рекорд</span><span class="rf-s"><i>${stIcon(m.ic, '')}</i>${esc(stCap(r.sport))} · ${recKm(x.km)}</span>
+        <div class="rf-t"><span class="rf-k">Новый рекорд</span><span class="rf-s"><i>${stIcon(m.ic, '')}</i>${esc(stCap(r.sport))} · ${recKm(x.km, r.sport)}</span>
         <span class="rf-v">${recT(x.sec)}</span><span class="rf-d">${esc(from)}</span></div></div><div class="rf-x">Нажми, чтобы закрыть</div>`;
       void el.offsetWidth;
       el.classList.add('open');
