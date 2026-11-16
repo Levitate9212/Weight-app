@@ -4868,11 +4868,12 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     })();
     // график веса в сторис — голубая плашка с одной белой линией (Вадим, 16.11: вариант Б, «только не чёрную»).
     // Неделя: подписи у каждой точки, дни с тренировкой — кружок в цвете спорта. Месяц: подписаны первая и последняя точки
-    // у каждого графика своя плашка (Вадим, 16.11: «плашки везде разным цветом»); линия — яркая, в контраст плашке
-    // (не чёрная и не белая — Вадим, 16.11); подписи — тёмный тон плашки, чтобы читались
-    const ST_PLATE = { cover: ['#6FB7FF', '#FF3D7F'], days: ['#B48CFF', '#FF6A00'], week: ['#FF9A3D', '#1F5BFF'], month: ['#4DE3B5', '#8B3DFF'] };
+    // плашки графиков — набор «Лайм» (Вадим, 16.11, вариант 3): фирменный лайм на тёмной плашке и тёмно-зелёный на светлой;
+    // соседние графики чередуются, чтобы плашки были разные. [фон от, фон до, линия, подписи]
+    const ST_DARK = ['#22303E', '#16212C', '#BDEB5B', '#E9EEF3'], ST_LIGHT = ['#E8F6D0', '#CBEA9A', '#4F8A10', '#2F5208'];
+    const ST_PLATE = { cover: ST_DARK, days: ST_LIGHT, week: ST_LIGHT, month: ST_DARK };
     function stChart(w, bare, s, col) {
-      const ws = w.ws, [c0, ln] = col || ST_PLATE.cover, ink = wcMix(c0, 'b', .62);
+      const ws = w.ws, [g0, g1, ln, ink] = col || ST_PLATE.cover;
       if (!ws.length) return '';
       const n = w.days, week = n <= 7, H = bare ? 112 : 132, top = 30, bot = week && !bare ? 14 : 12;
       const lo = Math.min(...ws.map(e => e.w)), hi = Math.max(...ws.map(e => e.w)), pad = Math.max(.2, (hi - lo) * .12);
@@ -4888,7 +4889,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           ${lab(i) ? `<text class="wd" style="${dl}" x="${x.toFixed(1)}" y="${(y - 12).toFixed(1)}" text-anchor="${anchor}">${fmt(ws[i].w)}</text>` : ''}`;
       }).join('');
       const days = week && !bare ? `<div class="wk-days">${ST_DAYS.map(d => `<span>${d.toLowerCase()}</span>`).join('')}</div>` : '';
-      return `<div class="st-chart wk${bare ? ' bare' : ''}"><div class="wk-plate cp" style="--c:${c0};--ink:${ink};--ln:${ln}">${WC_SILK}<svg viewBox="0 0 300 ${H}">
+      return `<div class="st-chart wk${bare ? ' bare' : ''}"><div class="wk-plate cp" style="background:linear-gradient(135deg,${g0},${g1});--ink:${ink};--ln:${ln}">${WC_SILK}<svg viewBox="0 0 300 ${H}">
         ${pts.length > 1 ? `<path class="wl-ln" pathLength="1" d="${smoothD(pts)}"/>` : ''}${dots}</svg>${days}</div></div>`;
     }
     // виды спорта: свой цвет и значок; новый вид получает цвет из запасных и секундомер
