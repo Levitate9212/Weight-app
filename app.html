@@ -4871,7 +4871,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     // плашки графиков — набор «Лайм» (Вадим, 16.11, вариант 3): фирменный лайм на тёмной плашке и тёмно-зелёный на светлой;
     // соседние графики чередуются, чтобы плашки были разные. [фон от, фон до, линия, подписи]
     const ST_DARK = ['#22303E', '#16212C', '#BDEB5B', '#E9EEF3'], ST_LIGHT = ['#E8F6D0', '#CBEA9A', '#4F8A10', '#2F5208'];
-    const ST_PLATE = { cover: ST_DARK, days: ST_LIGHT, week: ST_LIGHT, month: ST_DARK };
+    // тёмная плашка не понравилась (Вадим, 16.11) — все графики на светлой
+    const ST_PLATE = { cover: ST_LIGHT, days: ST_LIGHT, week: ST_LIGHT, month: ST_LIGHT };
     function stChart(w, bare, s, col) {
       const ws = w.ws, [g0, g1, ln, ink] = col || ST_PLATE.cover;
       if (!ws.length) return '';
