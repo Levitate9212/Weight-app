@@ -246,6 +246,9 @@
     .st-chart.wk svg { height: auto; }
     .wk-plate { border-radius: 20px; padding: 6px 10px 8px; }
     .wk-plate svg { display: block; width: 100%; overflow: visible; }
+    .wk-ar { position: relative; }
+    .wk-wo { position: absolute; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; box-shadow: 0 0 0 2px #fff; display: grid; place-items: center; }
+    .wk-wo svg { width: 18px !important; height: 18px; position: static; }
     .wk-plate .wl-ln { fill: none; stroke: var(--ln); stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
     .st-chart.wk .wk-plate text { font-family: var(--num); font-weight: 700; font-size: 15px; fill: var(--ink); }
     .wk-days { display: grid; grid-template-columns: repeat(7, 1fr); margin: -2px 2px 0; font-size: 11px; font-weight: 600; color: var(--ink); opacity: .75; text-align: center; }
@@ -4872,7 +4875,9 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     // соседние графики чередуются, чтобы плашки были разные. [фон от, фон до, линия, подписи]
     const ST_DARK = ['#22303E', '#16212C', '#BDEB5B', '#E9EEF3'], ST_LIGHT = ['#E8F6D0', '#CBEA9A', '#4F8A10', '#2F5208'];
     // тёмная плашка не понравилась (Вадим, 16.11) — все графики на светлой
-    const ST_PLATE = { cover: ST_LIGHT, days: ST_LIGHT, week: ST_LIGHT, month: ST_LIGHT };
+    // на каждой странице своя светлая плашка и своя линия (Вадим, 16.11)
+    const ST_PLATE = { cover: ST_LIGHT, days: ['#FFF0D6', '#FFD9A0', '#FF5A1F', '#7A3A10'],
+      week: ['#E2F8EE', '#B8EED6', '#00A87E', '#0B5A45'], month: ['#EFE8FF', '#D9CCFF', '#7A3DFF', '#3D1F80'] };
     function stChart(w, bare, s, col) {
       const ws = w.ws, [g0, g1, ln, ink] = col || ST_PLATE.cover;
       if (!ws.length) return '';
@@ -4881,17 +4886,22 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const X = e => ws.length < 2 && week ? 150 : 22 + (e.d - w.from) / DAY_MS / Math.max(1, n - 1) * 256;
       const Y = v => top + (hi + pad - v) / (hi - lo + 2 * pad) * (H - top - bot);
       const pts = ws.map(e => [X(e), Y(e.w)]);
-      const woOf = e => { const k = Math.round((e.d - w.from) / DAY_MS), d = s && s.days && s.days[k], wo = d && d.workouts && d.workouts[0]; return wo ? (wo.sport ? stSport(wo.sport).c : 'var(--volt)') : null; };
-      const lab = (i, e) => week || i === 0 || i === ws.length - 1;
+      // тренировки — только на «Неделе по дням»: значок вида спорта в его цвете прямо на линии (как было на бусинах)
+      const full = week && !bare;
+      const woOf = e => { if (!full) return null; const k = Math.round((e.d - w.from) / DAY_MS), d = s && s.days && s.days[k], wo = d && d.workouts && d.workouts[0]; return wo ? (wo.sport ? stSport(wo.sport) : { c: 'var(--volt)', ic: null }) : null; };
+      const lab = i => week || i === 0 || i === ws.length - 1;
+      const dl = i => `animation-delay:${(.35 + i / Math.max(1, pts.length - 1) * .9).toFixed(2)}s`;
+      const wos = ws.map(woOf);
       const dots = pts.map(([x, y], i) => {
-        const c = week ? woOf(ws[i]) : null, dl = `animation-delay:${(.35 + i / Math.max(1, pts.length - 1) * .9).toFixed(2)}s`;
         const anchor = !week && i === 0 ? 'start' : !week && i === pts.length - 1 ? 'end' : 'middle';
-        return `${week || i === pts.length - 1 ? `<circle class="wd" style="${dl}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${c ? 6.5 : 4.5}" fill="${c || ln}" stroke="#fff" stroke-width="2"/>` : ''}
-          ${lab(i) ? `<text class="wd" style="${dl}" x="${x.toFixed(1)}" y="${(y - 12).toFixed(1)}" text-anchor="${anchor}">${fmt(ws[i].w)}</text>` : ''}`;
+        // на обложке и в карточке — маленькие точки без обводки (Вадим, 16.11: «круглешки большие зачем»)
+        const dot = wos[i] ? '' : week || i === pts.length - 1 ? `<circle class="wd" style="${dl(i)}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${full ? 4.5 : 3}" fill="${ln}"${full ? ' stroke="#fff" stroke-width="2"' : ''}/>` : '';
+        return `${dot}${lab(i) ? `<text class="wd" style="${dl(i)}" x="${x.toFixed(1)}" y="${(y - (wos[i] ? 20 : 11)).toFixed(1)}" text-anchor="${anchor}">${fmt(ws[i].w)}</text>` : ''}`;
       }).join('');
-      const days = week && !bare ? `<div class="wk-days">${ST_DAYS.map(d => `<span>${d.toLowerCase()}</span>`).join('')}</div>` : '';
-      return `<div class="st-chart wk${bare ? ' bare' : ''}"><div class="wk-plate cp" style="background:linear-gradient(135deg,${g0},${g1});--ink:${ink};--ln:${ln}">${WC_SILK}<svg viewBox="0 0 300 ${H}">
-        ${pts.length > 1 ? `<path class="wl-ln" pathLength="1" d="${smoothD(pts)}"/>` : ''}${dots}</svg>${days}</div></div>`;
+      const badges = pts.map(([x, y], i) => wos[i] ? `<i class="wk-wo wd" style="${dl(i)};left:${(x / 3).toFixed(2)}%;top:${(y / H * 100).toFixed(2)}%;background:${wos[i].c}">${wos[i].ic ? stIcon(wos[i].ic, '') : ''}</i>` : '').join('');
+      const days = full ? `<div class="wk-days">${ST_DAYS.map(d => `<span>${d.toLowerCase()}</span>`).join('')}</div>` : '';
+      return `<div class="st-chart wk${bare ? ' bare' : ''}"><div class="wk-plate cp" style="background:linear-gradient(135deg,${g0},${g1});--ink:${ink};--ln:${ln}">${WC_SILK}<div class="wk-ar"><svg viewBox="0 0 300 ${H}">
+        ${pts.length > 1 ? `<path class="wl-ln" pathLength="1" d="${smoothD(pts)}"/>` : ''}${dots}</svg>${badges}</div>${days}</div></div>`;
     }
     // виды спорта: свой цвет и значок; новый вид получает цвет из запасных и секундомер
     // значки видов спорта — цветные, в одном стиле с мячом: тёмный контур, яркая заливка
