@@ -464,6 +464,10 @@
     #mtBtn, #recBtn { display: flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 600; color: var(--muted); padding: 2px 8px 2px 6px; border-radius: 8px; transition: color .2s ease, background .2s ease; }
     #mtBtn svg, #recBtn svg { width: 15px; height: 15px; }
     #mtBtn:active, #recBtn:active { color: var(--volt); background: var(--volt-dim); }
+    /* «Гора» и «Рекорды» — маленькие цветные таблетки */
+    #mtBtn.cp, #recBtn.cp { color: #121315; padding: 4px 10px 4px 8px; border-radius: 10px; }
+    #mtBtn.cp:active, #recBtn.cp:active { color: #121315; background: linear-gradient(135deg, var(--c1), var(--c)); opacity: .75; }
+    .wk-l { gap: 6px; }
 
     /* Восхождение: гора на весь экран поверх приложения */
     #mtView { position: fixed; inset: 0; z-index: 44; background: #121621; color: var(--ink); display: flex; flex-direction: column;
@@ -560,6 +564,22 @@
     .st .v small { font-size: 16px; color: var(--muted); font-weight: 600; }
     .st svg { width: 22px; height: 22px; color: var(--volt); flex-shrink: 0; }
     .st:active { opacity: .7; }
+    /* цветные плашки, как в сторис и «Рекордах» (Вадим, 16.11): градиент своего цвета + неподвижные шёлковые пряди */
+    .cp { --c1: color-mix(in srgb, var(--c) 68%, #fff); --c2: color-mix(in srgb, var(--c) 92%, #000);
+      position: relative; overflow: hidden; isolation: isolate; color: #121315;
+      background: linear-gradient(135deg, var(--c1) 0%, var(--c) 62%, var(--c2) 100%); box-shadow: 0 1px 0 rgba(255,255,255,.06) inset; }
+    :root.light .cp { box-shadow: 0 6px 18px -10px rgba(60,45,20,.35); }
+    .cp .wc-silk { position: absolute; right: -10px; top: 0; width: 70%; height: 100%; z-index: -1; pointer-events: none; }
+    .cp .wc-silk path { fill: none; stroke: #fff; stroke-linecap: round; }
+    .st.cp { border-radius: 20px; padding: 13px 14px; }
+    .st.cp .k { color: rgba(18,19,21,.68); font-weight: 600; }
+    .st.cp .v small { color: rgba(18,19,21,.6); }
+    .st.cp svg:not(.wc-silk) { color: #121315; opacity: .85; }
+    .achbtn.cp { box-shadow: none; border-radius: 20px; }
+    :root.light .achbtn.cp { box-shadow: 0 6px 18px -10px rgba(60,45,20,.35); }
+    .achbtn.cp .l small, .achbtn.cp .n { color: rgba(18,19,21,.68); }
+    .achbtn.cp .n { font-weight: 700; color: #121315; }
+    .achbtn.cp .pill { background: #121315; color: var(--c1); }
 
     /* Кнопка достижений */
     .achbtn { margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 10px;
@@ -974,8 +994,8 @@
       <section class="week-block">
         <div class="week-head">
           <div class="wk-l">
-            <button id="mtBtn" onclick="openMountain()" aria-controls="mtView"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20l6.5-11 4 6.5 2.5-4L21 20z"/><path d="M9.5 9l1.8 3"/></svg>Гора</button>
-            <button id="recBtn" class="hidden" onclick="openRecords()" aria-controls="recScreen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5V9.5M10 2.5h4M18.5 6.5l1.3-1.3"/></svg>Рекорды</button>
+            <button id="mtBtn" class="cp" style="--c:#7FE3E0" onclick="openMountain()" aria-controls="mtView"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20l6.5-11 4 6.5 2.5-4L21 20z"/><path d="M9.5 9l1.8 3"/></svg>Гора</button>
+            <button id="recBtn" class="cp hidden" style="--c:#FFC93D" onclick="openRecords()" aria-controls="recScreen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5V9.5M10 2.5h4M18.5 6.5l1.3-1.3"/></svg>Рекорды</button>
           </div>
           <button id="todayBtn" class="hidden" onclick="resetToToday()">К этой неделе ›</button>
         </div>
@@ -984,17 +1004,17 @@
       </section>
 
       <section class="stats" id="statsRow">
-        <button class="st" onclick="explainStat('wo')">
+        <button class="st cp" style="--c:#6FB7FF" onclick="explainStat('wo')"><svg class="wc-silk" viewBox="0 0 200 140" preserveAspectRatio="none" aria-hidden="true"><path d="M10 150 C60 90 110 120 210 20" stroke-width="1.2" opacity=".28"/><path d="M30 150 C80 96 130 118 210 40" stroke-width=".8" opacity=".2"/><path d="M60 150 C100 110 150 120 210 62" stroke-width="1.6" opacity=".14"/></svg>
           <span><span class="k">Тренировки</span><span class="v" style="display:block"><span id="woWeek">0</span><small>/3 в нед.</small></span></span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg>
         </button>
-        <button class="st" onclick="explainStat('streak')">
+        <button class="st cp" style="--c:#FF9A3D" onclick="explainStat('streak')"><svg class="wc-silk" viewBox="0 0 200 140" preserveAspectRatio="none" aria-hidden="true"><path d="M10 150 C60 90 110 120 210 20" stroke-width="1.2" opacity=".28"/><path d="M30 150 C80 96 130 118 210 40" stroke-width=".8" opacity=".2"/><path d="M60 150 C100 110 150 120 210 62" stroke-width="1.6" opacity=".14"/></svg>
           <span><span class="k">Серия замеров</span><span class="v" style="display:block"><span id="streakN">0</span><small> дн</small></span></span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c2.5 3.2 5 5.6 5 9.5A5 5 0 0 1 7 12.5c0-1.9.8-3.3 1.8-4.5.3 1.6 1.2 2.6 2.4 2.8C10.9 8.3 11 5.6 12 3z"/></svg>
         </button>
       </section>
 
-      <button class="achbtn" id="achRow" onclick="openAchScreen()">
+      <button class="achbtn cp" style="--c:#B48CFF" id="achRow" onclick="openAchScreen()"><svg class="wc-silk" viewBox="0 0 200 140" preserveAspectRatio="none" aria-hidden="true"><path d="M10 150 C60 90 110 120 210 20" stroke-width="1.2" opacity=".28"/><path d="M30 150 C80 96 130 118 210 40" stroke-width=".8" opacity=".2"/><path d="M60 150 C100 110 150 120 210 62" stroke-width="1.6" opacity=".14"/></svg>
         <span class="l"><b>Достижения</b><small id="achNextLine"></small></span>
         <span class="r"><span class="n" id="achCount">0</span><span class="pill"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></span></span>
       </button>
