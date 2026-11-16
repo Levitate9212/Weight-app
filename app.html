@@ -242,7 +242,17 @@
     .st-big small { font-size: 24px; color: var(--muted); font-weight: 700; margin-left: 2px; }
     .st-big.down { color: var(--down); } .st-big.up { color: var(--up); }
     .st-sub { color: var(--muted); font-size: 13.5px; margin-top: 6px; }
-    .st-chart { margin-top: 26px; }   /* запятая крупной цифры свисает ниже строки — график не должен на неё залезать */
+    .st-chart { margin-top: 26px; }
+    .st-chart.wk svg { height: auto; }
+    .wk-plate { border-radius: 20px; padding: 6px 10px 8px; }
+    .wk-plate svg { display: block; width: 100%; overflow: visible; }
+    .wk-plate .wl-ln { fill: none; stroke: var(--ln); stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+    .st-chart.wk .wk-plate text { font-family: var(--num); font-weight: 700; font-size: 15px; fill: var(--ink); }
+    .wk-days { display: grid; grid-template-columns: repeat(7, 1fr); margin: -2px 2px 0; font-size: 11px; font-weight: 600; color: var(--ink); opacity: .75; text-align: center; }
+    .st-chart.wk .wl-ln { stroke-dasharray: 1; }
+    .st-chart.wk.go .wl-ln { animation: wkDraw 1.2s .1s cubic-bezier(.45,0,.2,1) both; }
+    .st-chart.wk.go .wd { animation: stFadeUp .35s ease both; }
+    @keyframes wkDraw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }   /* запятая крупной цифры свисает ниже строки — график не должен на неё залезать */
     .st-chart svg { display: block; width: 100%; height: 96px; overflow: visible; }
     .st-chart .ln { fill: none; stroke: var(--volt); stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
     /* график рисуется, когда карточку видно (после обложки): линия идёт слева направо, под ней проявляется заливка,
@@ -383,10 +393,10 @@
     .st-poster .huge { font-family: var(--num); font-weight: 800; font-size: clamp(110px, 40vw, 190px); line-height: .85; letter-spacing: -.02em; margin-top: 12px; font-variant-numeric: tabular-nums; }
     .st-poster .huge.sm { font-size: clamp(60px, 22vw, 92px); text-transform: uppercase; font-family: var(--display); letter-spacing: -.02em; }
     /* на обложке график — часть фона: во всю ширину, без подписей дней и заливки, только текущие пряди и вес в начале и в конце */
-    .st-poster .st-chart.bare { margin: 26px -24px 0; }
+    .st-poster .st-chart.bare { margin: 26px 0 0; }
     .st-chart.bare { margin-top: 14px; }
     .st-slide > .st-chart.bare svg { height: auto; aspect-ratio: 300 / 120; }
-    .st-poster .st-chart.bare svg { height: 120px; }
+
     .st-poster .unit { font-family: var(--num); font-weight: 700; font-size: 22px; margin-top: 14px; color: var(--muted); letter-spacing: .02em; }
     .st-poster .st-k, .st-poster .huge, .st-poster .unit, .st-poster .say { text-align: center; }
     .st-poster .stats { justify-content: center; text-align: center; }
@@ -441,17 +451,26 @@
     #currDiffBadge.down { color: var(--down); } #currDiffBadge.up { color: var(--up); } #currDiffBadge.flat { color: var(--muted); }
     #diffGap { font-size: 12px; color: var(--muted); display: block; margin-top: 4px; }
 
-    /* Путь к цели: 30 сегментов */
+    /* Путь к цели — цветная плашка (Вадим, 16.11, вариант Б): крупный процент, сколько осталось, тёмная полоса.
+       Та же плашка — в итоге месяца в сторис (.g-card) */
     .goal { margin-top: 16px; }
+    .goal.cp, .g-card { border-radius: 20px; padding: 14px; }
+    .g-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
+    .g-pct { font-family: var(--num); font-weight: 800; font-size: 46px; line-height: .9; white-space: nowrap; }
+    .g-pct small { font-size: 22px; margin-left: 1px; }
+    .g-side { text-align: right; font-size: 12.5px; font-weight: 600; color: rgba(18,19,21,.72); line-height: 1.4; min-width: 0; }
+    .g-side b { font-family: var(--num); font-size: 18px; color: #121315; font-weight: 700; }
+    .g-bar { position: relative; height: 10px; margin-top: 12px; border-radius: 99px; background: rgba(18,19,21,.14); overflow: hidden; }
+    .g-bar i { position: absolute; inset: 0; border-radius: 99px; background: #121315; transform-origin: left center; transform: scaleX(var(--k, 0)); }
+    .g-bar.in i { animation: gGrow 1.1s cubic-bezier(.2,.7,.2,1) .25s both; }
+    @keyframes gGrow { from { transform: scaleX(0); } }
+    .goal.cp .eta, .g-card .eta { color: rgba(18,19,21,.72); font-weight: 600; }
+    .goal.cp .eta b, .g-card .eta b { color: #121315; }
+    .goal.cp .eta svg { stroke: #121315; }
+    .g-card { margin-top: 12px; width: 100%; text-align: left; }
+    .g-card .g-side { text-align: right; }
     .goal-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 12.5px; color: var(--muted); white-space: nowrap; }
     .goal-top b { font-family: var(--num); font-size: 18px; color: var(--ink); font-weight: 600; letter-spacing: .02em; }
-    .ticks { position: relative; height: 16px; margin-top: 6px; }
-    .ticks svg { display: block; width: 100%; height: 16px; overflow: visible; }
-    .ticks path, .ticks line { vector-effect: non-scaling-stroke; }
-    .ticks .tk-rest { stroke: var(--panel2); stroke-width: 2.5; stroke-linecap: round; }
-    .ticks .tk-end { position: absolute; top: 50%; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: var(--volt); }
-    .ticks .tk-end.in { animation: tkEnd .4s ease 1.2s both; }
-    @keyframes tkEnd { from { opacity: 0; transform: scale(.3); } to { opacity: 1; transform: none; } }
     .eta { margin-top: 7px; font-size: 12.5px; color: var(--muted); display: flex; align-items: center; gap: 5px; }
     .eta b { color: var(--ink); font-weight: 600; }
 
@@ -464,6 +483,10 @@
     #mtBtn, #recBtn { display: flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 600; color: var(--muted); padding: 2px 8px 2px 6px; border-radius: 8px; transition: color .2s ease, background .2s ease; }
     #mtBtn svg, #recBtn svg { width: 15px; height: 15px; }
     #mtBtn:active, #recBtn:active { color: var(--volt); background: var(--volt-dim); }
+    /* «Гора» и «Рекорды» — маленькие цветные таблетки */
+    #mtBtn.cp, #recBtn.cp { color: #121315; padding: 4px 10px 4px 8px; border-radius: 10px; }
+    #mtBtn.cp:active, #recBtn.cp:active { color: #121315; background: linear-gradient(135deg, var(--c1), var(--c)); opacity: .75; }
+    .wk-l { gap: 6px; }
 
     /* Восхождение: гора на весь экран поверх приложения */
     #mtView { position: fixed; inset: 0; z-index: 44; background: #121621; color: var(--ink); display: flex; flex-direction: column;
@@ -560,6 +583,22 @@
     .st .v small { font-size: 16px; color: var(--muted); font-weight: 600; }
     .st svg { width: 22px; height: 22px; color: var(--volt); flex-shrink: 0; }
     .st:active { opacity: .7; }
+    /* цветные плашки, как в сторис и «Рекордах» (Вадим, 16.11): градиент своего цвета + неподвижные шёлковые пряди */
+    .cp { --c1: color-mix(in srgb, var(--c) 68%, #fff); --c2: color-mix(in srgb, var(--c) 92%, #000);
+      position: relative; overflow: hidden; isolation: isolate; color: #121315;
+      background: linear-gradient(135deg, var(--c1) 0%, var(--c) 62%, var(--c2) 100%); box-shadow: 0 1px 0 rgba(255,255,255,.06) inset; }
+    :root.light .cp { box-shadow: 0 6px 18px -10px rgba(60,45,20,.35); }
+    .cp .wc-silk { position: absolute; right: -10px; top: 0; width: 70%; height: 100%; z-index: -1; pointer-events: none; }
+    .cp .wc-silk path { fill: none; stroke: #fff; stroke-linecap: round; }
+    .st.cp { border-radius: 20px; padding: 13px 14px; }
+    .st.cp .k { color: rgba(18,19,21,.68); font-weight: 600; }
+    .st.cp .v small { color: rgba(18,19,21,.6); }
+    .st.cp svg:not(.wc-silk) { color: #121315; opacity: .85; }
+    .achbtn.cp { box-shadow: none; border-radius: 20px; }
+    :root.light .achbtn.cp { box-shadow: 0 6px 18px -10px rgba(60,45,20,.35); }
+    .achbtn.cp .l small, .achbtn.cp .n { color: rgba(18,19,21,.68); }
+    .achbtn.cp .n { font-weight: 700; color: #121315; }
+    .achbtn.cp .pill { background: #121315; color: var(--c1); }
 
     /* Кнопка достижений */
     .achbtn { margin-top: 8px; display: flex; align-items: center; justify-content: space-between; gap: 10px;
@@ -950,12 +989,12 @@
         </div>
       </section>
 
-      <section class="goal">
-        <div class="goal-top">
-          <span>Путь к цели <b id="laneGoal">—</b></span>
-          <span><b id="progressText">—</b> · тренд <b id="trendWeight">—</b></span>
+      <section class="goal cp" style="--c:#9BE15D"><svg class="wc-silk" viewBox="0 0 200 140" preserveAspectRatio="none" aria-hidden="true"><path d="M10 150 C60 90 110 120 210 20" stroke-width="1.2" opacity=".28"/><path d="M30 150 C80 96 130 118 210 40" stroke-width=".8" opacity=".2"/><path d="M60 150 C100 110 150 120 210 62" stroke-width="1.6" opacity=".14"/></svg>
+        <div class="g-row">
+          <div class="g-pct" id="progressText">—</div>
+          <div class="g-side">пройдено к цели <b id="laneGoal">—</b><br><span id="goalLeftLine">осталось <b id="goalLeft">—</b> · </span>тренд <b id="trendWeight">—</b></div>
         </div>
-        <div class="ticks" id="ticks"></div>
+        <div class="g-bar" id="ticks"><i></i></div>
         <p class="eta"><span id="goalEtaLabel">Цель будет взята:</span> <b id="goalEtaText">—</b></p>
       </section>
 
@@ -974,8 +1013,8 @@
       <section class="week-block">
         <div class="week-head">
           <div class="wk-l">
-            <button id="mtBtn" onclick="openMountain()" aria-controls="mtView"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20l6.5-11 4 6.5 2.5-4L21 20z"/><path d="M9.5 9l1.8 3"/></svg>Гора</button>
-            <button id="recBtn" class="hidden" onclick="openRecords()" aria-controls="recScreen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5V9.5M10 2.5h4M18.5 6.5l1.3-1.3"/></svg>Рекорды</button>
+            <button id="mtBtn" class="cp" style="--c:#7FE3E0" onclick="openMountain()" aria-controls="mtView"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20l6.5-11 4 6.5 2.5-4L21 20z"/><path d="M9.5 9l1.8 3"/></svg>Гора</button>
+            <button id="recBtn" class="cp hidden" style="--c:#FFC93D" onclick="openRecords()" aria-controls="recScreen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5V9.5M10 2.5h4M18.5 6.5l1.3-1.3"/></svg>Рекорды</button>
           </div>
           <button id="todayBtn" class="hidden" onclick="resetToToday()">К этой неделе ›</button>
         </div>
@@ -984,17 +1023,17 @@
       </section>
 
       <section class="stats" id="statsRow">
-        <button class="st" onclick="explainStat('wo')">
+        <button class="st cp" style="--c:#6FB7FF" onclick="explainStat('wo')"><svg class="wc-silk" viewBox="0 0 200 140" preserveAspectRatio="none" aria-hidden="true"><path d="M10 150 C60 90 110 120 210 20" stroke-width="1.2" opacity=".28"/><path d="M30 150 C80 96 130 118 210 40" stroke-width=".8" opacity=".2"/><path d="M60 150 C100 110 150 120 210 62" stroke-width="1.6" opacity=".14"/></svg>
           <span><span class="k">Тренировки</span><span class="v" style="display:block"><span id="woWeek">0</span><small>/3 в нед.</small></span></span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.5 6.5v11M17.5 6.5v11M3.5 9v6M20.5 9v6M6.5 12h11"/></svg>
         </button>
-        <button class="st" onclick="explainStat('streak')">
+        <button class="st cp" style="--c:#FF9A3D" onclick="explainStat('streak')"><svg class="wc-silk" viewBox="0 0 200 140" preserveAspectRatio="none" aria-hidden="true"><path d="M10 150 C60 90 110 120 210 20" stroke-width="1.2" opacity=".28"/><path d="M30 150 C80 96 130 118 210 40" stroke-width=".8" opacity=".2"/><path d="M60 150 C100 110 150 120 210 62" stroke-width="1.6" opacity=".14"/></svg>
           <span><span class="k">Серия замеров</span><span class="v" style="display:block"><span id="streakN">0</span><small> дн</small></span></span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c2.5 3.2 5 5.6 5 9.5A5 5 0 0 1 7 12.5c0-1.9.8-3.3 1.8-4.5.3 1.6 1.2 2.6 2.4 2.8C10.9 8.3 11 5.6 12 3z"/></svg>
         </button>
       </section>
 
-      <button class="achbtn" id="achRow" onclick="openAchScreen()">
+      <button class="achbtn cp" style="--c:#B48CFF" id="achRow" onclick="openAchScreen()"><svg class="wc-silk" viewBox="0 0 200 140" preserveAspectRatio="none" aria-hidden="true"><path d="M10 150 C60 90 110 120 210 20" stroke-width="1.2" opacity=".28"/><path d="M30 150 C80 96 130 118 210 40" stroke-width=".8" opacity=".2"/><path d="M60 150 C100 110 150 120 210 62" stroke-width="1.6" opacity=".14"/></svg>
         <span class="l"><b>Достижения</b><small id="achNextLine"></small></span>
         <span class="r"><span class="n" id="achCount">0</span><span class="pill"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></span></span>
       </button>
@@ -4434,10 +4473,18 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       let path = null;
       if (u.target && u.start && startW != null && endW != null && u.start !== u.target) {
         const pc = w => Math.max(0, Math.min(100, Math.round((u.start - w) / (u.start - u.target) * 100)));
-        path = [pc(startW), pc(endW)];
+        path = [pc(startW), pc(endW), +Math.abs(endW - u.target).toFixed(1)];
       }
       return { y, m, losing, weeks, ws: mw, from: mFirst, to: mLast, ended: mLast < stDay(Date.now()), change: startW != null && endW != null ? +(endW - startW).toFixed(1) : null,
                weighIns: mw.length, medals: cat.filter(md => md.status === 'earned' && md.date && inR(stDay(new Date(md.date).getTime()), mFirst, mLast)).length, best, path, good };
+    }
+    // путь к цели в итоге месяца — та же цветная плашка, что на главном экране
+    function stGoalCard(u, b) {
+      if (!b.path) return '';
+      const [p0, p1, left] = b.path;
+      return `<div class="g-card cp" style="--c:#9BE15D">${WC_SILK}<div class="g-row"><div class="g-pct">${p1}<small>%</small></div>
+        <div class="g-side">пройдено к цели <b>${fmt(u.target)} кг</b>${left ? `<br>осталось <b>${fmt(left)} кг</b>` : ''}</div></div>
+        <div class="g-bar in" style="--k:${(p1 / 100).toFixed(4)}"><i></i></div><p class="eta">За ${ST_MONTHS[b.m]}: <b>${p0}% → ${p1}%</b></p></div>`;
     }
     const stKg = c => c == null ? '—' : (c > 0 ? '+' : c < 0 ? '−' : '') + fmt(Math.abs(c).toFixed(1));
     // расстояние точно, до метра (Вадим, 14.11: «1,3» вместо 1250 м — нельзя округлять); нули в конце не пишем
@@ -4526,7 +4573,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const sv = root.ownerSVGElement || root;
       if (sv.querySelectorAll) sv.querySelectorAll('linearGradient[data-gw]').forEach(gr => gr.__gl || SILK.grads.add(gr));
       // главный график, путь к цели, графики историй — на движок (SGL), когда пучок уже разложен
-      const HS = '.ms-svg, #ticks svg, .st-chart svg'; // кружок обновления и кольцо историй вращаются/прячутся сами — они остаются SVG
+      const HS = '.ms-svg'; // кружок обновления и кольцо историй вращаются/прячутся сами — они остаются SVG
       (sv.matches && sv.matches(HS) ? [sv] : sv.querySelectorAll ? [...sv.querySelectorAll(HS)] : []).forEach(h => SGL.adopt(h));
       if (!SILK.raf) SILK.raf = requestAnimationFrame(silkTick);
     }
@@ -4819,23 +4866,32 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       }
       return { ok: () => ok(), styles, view, adopt, kick };
     })();
-    function stChart(w, bare) {
-      if (w.ws.length < 2) return w.ws.length ? `<div class="st-chart"><svg viewBox="0 0 300 120"><circle cx="150" cy="60" r="6" fill="var(--volt)"/><text x="150" y="92" text-anchor="middle">${fmt(w.ws[0].w)} кг</text></svg></div>` : '';
-      const n = w.days, ws = w.ws, lo = Math.min(...ws.map(e => e.w)), hi = Math.max(...ws.map(e => e.w)), pad = Math.max(.3, (hi - lo) * .15);
-      const X = e => 16 + (e.d - w.from) / DAY_MS / Math.max(1, n - 1) * 268, Y = v => 14 + (hi + pad - v) / (hi - lo + 2 * pad) * 84;
+    // график веса в сторис — голубая плашка с одной белой линией (Вадим, 16.11: вариант Б, «только не чёрную»).
+    // Неделя: подписи у каждой точки, дни с тренировкой — кружок в цвете спорта. Месяц: подписаны первая и последняя точки
+    // плашки графиков — набор «Лайм» (Вадим, 16.11, вариант 3): фирменный лайм на тёмной плашке и тёмно-зелёный на светлой;
+    // соседние графики чередуются, чтобы плашки были разные. [фон от, фон до, линия, подписи]
+    const ST_DARK = ['#22303E', '#16212C', '#BDEB5B', '#E9EEF3'], ST_LIGHT = ['#E8F6D0', '#CBEA9A', '#4F8A10', '#2F5208'];
+    // тёмная плашка не понравилась (Вадим, 16.11) — все графики на светлой
+    const ST_PLATE = { cover: ST_LIGHT, days: ST_LIGHT, week: ST_LIGHT, month: ST_LIGHT };
+    function stChart(w, bare, s, col) {
+      const ws = w.ws, [g0, g1, ln, ink] = col || ST_PLATE.cover;
+      if (!ws.length) return '';
+      const n = w.days, week = n <= 7, H = bare ? 112 : 132, top = 30, bot = week && !bare ? 14 : 12;
+      const lo = Math.min(...ws.map(e => e.w)), hi = Math.max(...ws.map(e => e.w)), pad = Math.max(.2, (hi - lo) * .12);
+      const X = e => ws.length < 2 && week ? 150 : 22 + (e.d - w.from) / DAY_MS / Math.max(1, n - 1) * 256;
+      const Y = v => top + (hi + pad - v) / (hi - lo + 2 * pad) * (H - top - bot);
       const pts = ws.map(e => [X(e), Y(e.w)]);
-      const labels = bare ? '' : [...Array(n)].map((_, k) => `<text x="${(16 + k / Math.max(1, n - 1) * 268).toFixed(1)}" y="118" text-anchor="middle">${ST_DAYS[k].toLowerCase()}</text>`).join('');
-      const lastP = pts[pts.length - 1];
-      // подпись у точки — над ней; но если соседняя точка выше, линия приходит сверху, и подпись уходит под точку
-      const ly = (p, nb) => nb[1] < p[1] - 2 && p[1] + 19 <= 106 ? p[1] + 19 : p[1] - 10;
-      const gid = 'stG' + (++ST.gid), lineD = smoothD(pts);
-      return `<div class="st-chart${bare ? ' bare' : ''}"><svg viewBox="0 0 300 120"><defs>${silkGrad(gid, 300)}</defs>${labels}
-        ${bare ? '' : `<path class="ar" d="${lineD}L${lastP[0].toFixed(1)} 100L${pts[0][0].toFixed(1)} 100Z" style="fill:url(#${gid})"/>`}
-        ${silkRaw(silkCurve(pts), { ...LINE_SILK, gid })}
-        <circle class="rp" cx="${lastP[0].toFixed(1)}" cy="${lastP[1].toFixed(1)}" r="5"/>
-        <circle class="dt" cx="${lastP[0].toFixed(1)}" cy="${lastP[1].toFixed(1)}" r="5" fill="var(--volt)"/>
-        <text class="wl" x="${pts[0][0].toFixed(1)}" y="${ly(pts[0], pts[1]).toFixed(1)}" text-anchor="start">${fmt(ws[0].w)}</text>
-        <text class="wl" x="${lastP[0].toFixed(1)}" y="${ly(lastP, pts[pts.length - 2]).toFixed(1)}" text-anchor="end" style="fill:var(--ink);font-weight:600">${fmt(ws[ws.length - 1].w)}</text></svg></div>`;
+      const woOf = e => { const k = Math.round((e.d - w.from) / DAY_MS), d = s && s.days && s.days[k], wo = d && d.workouts && d.workouts[0]; return wo ? (wo.sport ? stSport(wo.sport).c : 'var(--volt)') : null; };
+      const lab = (i, e) => week || i === 0 || i === ws.length - 1;
+      const dots = pts.map(([x, y], i) => {
+        const c = week ? woOf(ws[i]) : null, dl = `animation-delay:${(.35 + i / Math.max(1, pts.length - 1) * .9).toFixed(2)}s`;
+        const anchor = !week && i === 0 ? 'start' : !week && i === pts.length - 1 ? 'end' : 'middle';
+        return `${week || i === pts.length - 1 ? `<circle class="wd" style="${dl}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${c ? 6.5 : 4.5}" fill="${c || ln}" stroke="#fff" stroke-width="2"/>` : ''}
+          ${lab(i) ? `<text class="wd" style="${dl}" x="${x.toFixed(1)}" y="${(y - 12).toFixed(1)}" text-anchor="${anchor}">${fmt(ws[i].w)}</text>` : ''}`;
+      }).join('');
+      const days = week && !bare ? `<div class="wk-days">${ST_DAYS.map(d => `<span>${d.toLowerCase()}</span>`).join('')}</div>` : '';
+      return `<div class="st-chart wk${bare ? ' bare' : ''}"><div class="wk-plate cp" style="background:linear-gradient(135deg,${g0},${g1});--ink:${ink};--ln:${ln}">${WC_SILK}<svg viewBox="0 0 300 ${H}">
+        ${pts.length > 1 ? `<path class="wl-ln" pathLength="1" d="${smoothD(pts)}"/>` : ''}${dots}</svg>${days}</div></div>`;
     }
     // виды спорта: свой цвет и значок; новый вид получает цвет из запасных и секундомер
     // значки видов спорта — цветные, в одном стиле с мячом: тёмный контур, яркая заливка
@@ -4985,7 +5041,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
             <div class="st-box"><div class="st-hero">
               <div><p class="st-k">Вес за неделю</p>${stChange(w.change, cls)}</div>
               <div class="side">${w.ws.length}/7 замеров<br>${s ? stWord(s.workouts, 'тренировка', 'тренировки', 'тренировок') : `${dots} тренировок`}${sl ? `<br>сон ${stHm(sl.avg)}` : ''}</div></div>
-              ${w.ws.length ? stChart(w, true) : '<p class="st-sub">На этой неделе замеров не было</p>'}</div>
+              ${w.ws.length ? stChart(w, true, s, ST_PLATE.week) : '<p class="st-sub">На этой неделе замеров не было</p>'}</div>
             ${failed ? '' : stTiles(s && s.distance, s ? s.workouts : 0, wait)}
             ${stCoach(p && p.workouts)}
             ${s && s.list && s.list.length ? `<div class="st-box"><p class="st-k">Тренировки недели</p>${s.list.map(stWoCard).join('')}</div>` : ''}
@@ -5042,7 +5098,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
             <p class="st-k">${b.ended ? 'Итоги месяца' : 'Месяц идёт'} · ${esc(u.name || '')}</p>
             <div class="st-month">${ST_MONTHS[b.m]}</div>
             ${stChange(b.change, cls)}<p class="st-sub">${stRange(b.from, b.to)}${b.ended ? '' : ' · месяц идёт'}${b.ended && b.best ? ` · лучшая неделя ${b.best.i + 1}-я` : ''}</p>
-            <div class="st-chips">${stChip(b.weighIns, ST_Z)}${stChip(sum ? sum.workouts : dots, ST_W)}${stChip(b.medals, ST_M)}${b.ended && b.path ? `<span class="st-chip"><b>${b.path[0]}% → ${b.path[1]}%</b>путь к цели</span>` : ''}</div>
+            <div class="st-chips">${stChip(b.weighIns, ST_Z)}${stChip(sum ? sum.workouts : dots, ST_W)}${stChip(b.medals, ST_M)}</div>
+            ${b.ended ? stGoalCard(u, b) : ''}
             ${stCoach(ph && (b.ended ? ph.final : ph.cover) || '', wait)}</div>
           ${failed ? '' : stTiles(sum && sum.distance, sum ? sum.workouts : 0, wait)}
           ${rows ? `<div class="st-box"><p class="st-k">Недели</p>${rows}</div>` : ''}
@@ -5061,8 +5118,9 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         S.push(`<p class="st-k">${b.ended ? 'Итоги месяца' : 'Месяц идёт'}${u.name ? ' · ' + esc(u.name) : ''}</p>
           <div class="st-huge">${b.change == null ? '—' : `${stKg(b.change)}<small> кг</small>`}</div>
           <div class="st-unit">${stCap(ST_MONTHS[b.m])} · ${stRange(b.from, b.to)}</div>
-          ${mw.ws.length > 1 ? stChart(mw, true).replace('class="st-chart', 'class="st-chart go') : ''}
-          <div class="st-chips">${stChip(b.weighIns, ST_Z)}${stChip(b.medals, ST_M)}${b.ended && b.path ? `<span class="st-chip"><b>${b.path[0]}% → ${b.path[1]}%</b>путь к цели</span>` : ''}</div>
+          ${mw.ws.length > 1 ? stChart(mw, true, null, ST_PLATE.month).replace('class="st-chart', 'class="st-chart go') : ''}
+          <div class="st-chips">${stChip(b.weighIns, ST_Z)}${stChip(b.medals, ST_M)}</div>
+          ${b.ended ? stGoalCard(u, b) : ''}
           ${say(ph && ph.cover)}`);
         if (wait || (sum && (sum.workouts || km)))
           S.push(`<p class="st-k">Движение за месяц</p>
@@ -5112,28 +5170,13 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const byKm = L.filter(x => x.km > 0);
       return (byKm.length ? byKm : L).reduce((a, x) => (byKm.length ? x.km > a.km : x.min > a.min) ? x : a);
     }
-    // дни недели — бусины на шёлковой нити: высота — вес, день с тренировкой — цветная бусина со значком
-    function stBeads(w, s) {
-      const days = [...Array(7)].map((_, d) => {
-        const day = new Date(w.from); day.setDate(day.getDate() + d);
-        const e = w.ws.filter(x => +x.d === +day).pop(), sd = s && s.days && s.days[d], wo = sd && sd.workouts && sd.workouts[0];
-        return { d, w: e ? e.w : null, m: wo ? (wo.sport ? stSport(wo.sport) : { c: 'var(--volt)', ic: null }) : null };
-      });
-      const ws = days.filter(x => x.w != null).map(x => x.w), lo = ws.length ? Math.min(...ws) : 0, hi = ws.length ? Math.max(...ws) : 1, pad = Math.max(.3, (hi - lo) * .2);
-      const X = d => 18 + d * 264 / 6, Y = v => v == null ? 92 : 44 + (hi + pad - v) / (hi - lo + 2 * pad) * 96;
-      const pts = days.filter(x => x.w != null).map(x => [X(x.d), Y(x.w)]);
-      const gid = 'stG' + (++ST.gid);
-      const svg = pts.length > 1 ? `<svg viewBox="0 0 300 170" preserveAspectRatio="none"><defs>${silkGrad(gid, 300)}</defs>${silkRaw(silkCurve(pts), { ...LINE_SILK, gid })}</svg>` : '';
-      const beads = days.map(x => `<div class="bd${x.w == null ? ' off' : ''}${x.m ? ' wo' : ''}" style="left:${(X(x.d) / 3).toFixed(2)}%;top:${(Y(x.w) / 1.7).toFixed(2)}%">
-          <b>${x.w == null ? '—' : fmt(x.w)}</b><i${x.m ? ` style="background:${x.m.c}"` : ''}>${x.m && x.m.ic ? stIcon(x.m.ic, '') : ''}</i><small>${ST_DAYS[x.d].toLowerCase()}</small></div>`).join('');
-      return `<div class="st-beads st-chart go">${svg}${beads}</div>`;
-    }
+    // «Неделя по дням» — тот же график недели на плашке, с днями и тренировками
+    function stBeads(w, s) { return stChart(w, false, s, ST_PLATE.days); }
     // яркая обложка: вес недели крупно, мини-график, замеры, тренировки, километры
     function stPosterHtml(v, b) {
       const w = v.week, s = ST.srv && ST.srv.weeks ? ST.srv.weeks.find(x => x.from === w.key) : null, dots = ST.srv && ST.srv.failed ? '—' : '…';
       // график — тот же живой, что в карточке недели: рисуется, бегут цвета, по линии пробегает искра, точка дышит
-      const spark = stChart(w, true);
-      const a = w.ws.length ? w.ws[0].w : null, z = w.ws.length ? w.ws[w.ws.length - 1].w : null;
+      const spark = stChart(w, true, s);
       // замеров не было — вместо пустого «Без замеров» лучшая тренировка недели (Вадим, 14.11)
       const bw = w.change == null && !w.ws.length ? stBestWo(s) : null;
       let top;
@@ -5147,7 +5190,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         <div class="unit">${m ? `<span class="st-bwi" style="background:${m.c}">${stIcon(m.ic, '')}</span>` : ''}${esc(m ? stCap(sp) : 'Тренировка')}${bw.km > 0 && T ? ' · ' + T.join(' ') : ''}${when ? ' · ' + when : ''}</div>`;
       } else top = `<p class="st-k">Вес за неделю</p>
         <div class="huge${w.change == null ? ' sm' : ''}">${w.change == null ? 'Без замеров' : stKg(w.change)}</div>
-        ${a != null ? `<div class="unit">КГ · ${fmt(a)} → ${fmt(z)}</div>` : ''}`;
+`;
       return `<div class="bar"><b id="stPosterBar"></b></div>
         <div class="st-head"><span class="t">Неделя ${w.i + 1} · ${stRange(w.from, w.to)}</span><button class="st-x" onclick="closeStory()" aria-label="Закрыть">×</button></div>
         ${top}
@@ -7182,9 +7225,11 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         const total = Math.abs(goal - start);
         const done = (start >= goal) ? start - target.weight : target.weight - start;
         const pct = Math.max(0, Math.min(100, total > 0 ? Math.round(done / total * 100) : 100));
-        $('progressText').textContent = `${pct}%`;
+        $('progressText').innerHTML = `${pct}<small>%</small>`;
         fillTicks(pct);
         const leftKg = parseFloat(Math.abs(target.weight - goal).toFixed(1));
+        $('goalLeft').textContent = `${fmt(leftKg)} кг`;
+        $('goalLeftLine').style.display = leftKg ? '' : 'none';
         $('laneGoal').textContent = `${fmt(goal)} кг`;
         // Цель взята, если вес дошёл до неё или прошёл дальше (раньше при весе ниже
         // цели писалось «нужен профицит калорий»)
@@ -7199,6 +7244,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         renderMountain(u, start, null, target.weight);
         $('progressText').textContent = '—';
         fillTicks(0);
+        $('goalLeftLine').style.display = 'none';
         $('laneGoal').textContent = 'не задана';
         $('goalEtaLabel').textContent = 'Цель будет взята:';
         $('goalEtaText').textContent = 'цель не задана';
@@ -7439,13 +7485,11 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       });
     }
 
-    // путь к цели — тонкая шёлковая нить до текущего процента (дальше — тихая дорожка); при открытии нить протягивается
+    // путь к цели — тёмная полоса в цветной плашке; при открытии приложения она вытягивается (только transform)
     function fillTicks(pct) {
-      const box = $('ticks'), k = Math.max(0, Math.min(1, pct / 100)), anim = intro && !calm(), xe = 2 + 296 * k;
-      const pts = [...Array(25)].map((_, i) => [2 + (xe - 2) * i / 24, 8]);
-      box.innerHTML = `<svg viewBox="0 0 300 16" preserveAspectRatio="none"><defs>${silkGrad('tkG', 300)}</defs><line class="tk-rest" x1="${xe.toFixed(1)}" y1="8" x2="298" y2="8"/>${k > .01 ? silkRaw(pts, { ...LINE_SILK, gid: 'tkG', full: !anim }) : ''}</svg>
-        ${k > .01 ? `<i class="tk-end${anim ? ' in' : ''}" style="left:${(xe / 3).toFixed(2)}%"></i>` : ''}`;
-      if (k > .01) silkStart(box);
+      const box = $('ticks'), k = Math.max(0, Math.min(1, pct / 100));
+      box.style.setProperty('--k', k.toFixed(4));
+      box.classList.toggle('in', intro && !calm());
     }
 
     // Крупный белый (тёмная тема) и чёрный (светлая) текст — заголовки и большие цифры — переливом лайм → мята → бирюза,
