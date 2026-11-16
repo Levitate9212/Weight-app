@@ -4345,7 +4345,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     // кружок показывает месяц последней закончившейся недели
     function storyMonth() { const s = stLastSunday(); return { y: s.getFullYear(), m: s.getMonth() }; }
     const stYm = ({ y, m }) => `${y}-${String(m + 1).padStart(2, '0')}`;
-    const stSeenKey = u => `story_seen_${u.id || activeUserId}_${stKey(stLastSunday())}`;
+    // 1-го числа кружок снова яркий: пришёл итог закончившегося месяца
+    const stSeenKey = u => { const mo = storyMonth(); return `story_seen_${u.id || activeUserId}_${stKey(stLastSunday())}${new Date(mo.y, mo.m + 1, 0) < stDay(Date.now()) ? '_m' : ''}`; };
     // закончившиеся недели месяца: воскресенье в этом месяце и уже позади
     function stWeeks(y, m) {
       const last = new Date(y, m + 1, 0), end = stLastSunday(), out = [];
@@ -4357,13 +4358,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       }
       return out;
     }
-    // границы месяца — его полные недели: с понедельника первой по воскресенье последней
-    // (октябрь 2026 — 28 сентября – 25 октября), так сумма недель всегда равна месяцу
-    function stMonthSpan(y, m) {
-      const from = new Date(y, m, 1); from.setDate(from.getDate() + (7 - from.getDay()) % 7 - 6);
-      const to = new Date(y, m + 1, 0); to.setDate(to.getDate() - to.getDay());
-      return { from, to };
-    }
+    // итоги месяца — по календарю, с 1-го по последнее число (Вадим, 16.11); недели — полные, по воскресенью
+    function stMonthSpan(y, m) { return { from: new Date(y, m, 1), to: new Date(y, m + 1, 0) }; }
     function renderStoryRing(u) {
       const mo = storyMonth(), ring = $('storyRing'), wk = stWeeks(mo.y, mo.m);
       const from = stMonthSpan(mo.y, mo.m).from;
@@ -4440,7 +4436,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         const pc = w => Math.max(0, Math.min(100, Math.round((u.start - w) / (u.start - u.target) * 100)));
         path = [pc(startW), pc(endW)];
       }
-      return { y, m, losing, weeks, from: mFirst, to: mLast, ended: mLast < stDay(Date.now()), change: startW != null && endW != null ? +(endW - startW).toFixed(1) : null,
+      return { y, m, losing, weeks, ws: mw, from: mFirst, to: mLast, ended: mLast < stDay(Date.now()), change: startW != null && endW != null ? +(endW - startW).toFixed(1) : null,
                weighIns: mw.length, medals: cat.filter(md => md.status === 'earned' && md.date && inR(stDay(new Date(md.date).getTime()), mFirst, mLast)).length, best, path, good };
     }
     const stKg = c => c == null ? '—' : (c > 0 ? '+' : c < 0 ? '−' : '') + fmt(Math.abs(c).toFixed(1));
@@ -5035,7 +5031,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           return S;
         } });
       });
-      V.push({ id: 'month', tab: stCap(ST_MONTHS[b.m]), html: () => {
+      // итог месяца — только когда календарный месяц закончился (Вадим, 16.11: «пусть и будет месяц просто»)
+      if (b.ended) V.push({ id: 'month', tab: stCap(ST_MONTHS[b.m]), html: () => {
         const rows = b.weeks.map((w, k) => {
           const s = sw(w);
           return `<button class="st-wk" onclick="stGo(${k})"><span>Неделя ${w.i + 1}<small>${stRange(w.from, w.to)}${s && s.distance.km ? ` · ${stKm(s.distance.km)} км` : ''}</small></span><b class="${cls(w.change)}">${stKg(w.change)}</b><em>›</em></button>`;
@@ -5058,7 +5055,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
           return `<button class="st-wk" onclick="stGo(${k})"><span>Неделя ${w.i + 1}<small>${stRange(w.from, w.to)}${s && s.distance.km ? ` · ${stKm(s.distance.km)} км` : ''}</small></span><b class="${cls(w.change)}">${stKg(w.change)}</b><em>›</em></button>`;
         }).join('');
         // месяц ещё идёт — график по уже прошедшим дням, во всю ширину (а не сжатый в левую часть до конца месяца)
-        const mws = b.weeks.flatMap(w => w.ws), mEnd = b.ended || !mws.length ? b.to : mws[mws.length - 1].d;
+        const mws = b.ws, mEnd = b.ended || !mws.length ? b.to : mws[mws.length - 1].d;
         const mw = { days: Math.round((mEnd - b.from) / DAY_MS) + 1, ws: mws, from: b.from };
         const km = sum && sum.distance && sum.distance.km, close = `<button class="st-close" onclick="closeStory()">${b.ended ? `Вперёд, в ${ST_MONTHS[(b.m + 1) % 12]}` : 'Закрыть'}</button>`;
         S.push(`<p class="st-k">${b.ended ? 'Итоги месяца' : 'Месяц идёт'}${u.name ? ' · ' + esc(u.name) : ''}</p>
@@ -5278,8 +5275,8 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       ST.views = stViews(u, b);
       $('stTitle').innerHTML = `Итоги · <b>${ST_MONTHS[b.m]}</b>`;
       $('story').classList.add('open'); $('story').setAttribute('aria-hidden', 'false');
-      // начинаем с самой свежей недели (с яркой обложкой); если недель ещё нет — с месяца
-      ST.i = b.weeks.length ? b.weeks.length - 1 : 0;
+      // начинаем с самой свежей недели (с яркой обложкой); месяц закончился — с его итога
+      ST.i = b.ended || !b.weeks.length ? Math.min(b.weeks.length, ST.views.length - 1) : b.weeks.length - 1;
       stGo(ST.i);
       stPoster(ST.views[ST.i], b);
       navPush(closeStory);
