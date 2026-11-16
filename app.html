@@ -242,7 +242,17 @@
     .st-big small { font-size: 24px; color: var(--muted); font-weight: 700; margin-left: 2px; }
     .st-big.down { color: var(--down); } .st-big.up { color: var(--up); }
     .st-sub { color: var(--muted); font-size: 13.5px; margin-top: 6px; }
-    .st-chart { margin-top: 26px; }   /* запятая крупной цифры свисает ниже строки — график не должен на неё залезать */
+    .st-chart { margin-top: 26px; }
+    .st-chart.wk svg { height: auto; }
+    .wk-plate { border-radius: 20px; padding: 6px 10px 8px; }
+    .wk-plate svg { display: block; width: 100%; overflow: visible; }
+    .wk-plate .wl-ln { fill: none; stroke: #fff; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+    .st-chart.wk .wk-plate text { font-family: var(--num); font-weight: 700; font-size: 15px; fill: #0B1F4D; }
+    .wk-days { display: grid; grid-template-columns: repeat(7, 1fr); margin: -2px 2px 0; font-size: 11px; font-weight: 600; color: rgba(11,31,77,.7); text-align: center; }
+    .st-chart.wk .wl-ln { stroke-dasharray: 1; }
+    .st-chart.wk.go .wl-ln { animation: wkDraw 1.2s .1s cubic-bezier(.45,0,.2,1) both; }
+    .st-chart.wk.go .wd { animation: stFadeUp .35s ease both; }
+    @keyframes wkDraw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }   /* запятая крупной цифры свисает ниже строки — график не должен на неё залезать */
     .st-chart svg { display: block; width: 100%; height: 96px; overflow: visible; }
     .st-chart .ln { fill: none; stroke: var(--volt); stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
     /* график рисуется, когда карточку видно (после обложки): линия идёт слева направо, под ней проявляется заливка,
@@ -383,10 +393,10 @@
     .st-poster .huge { font-family: var(--num); font-weight: 800; font-size: clamp(110px, 40vw, 190px); line-height: .85; letter-spacing: -.02em; margin-top: 12px; font-variant-numeric: tabular-nums; }
     .st-poster .huge.sm { font-size: clamp(60px, 22vw, 92px); text-transform: uppercase; font-family: var(--display); letter-spacing: -.02em; }
     /* на обложке график — часть фона: во всю ширину, без подписей дней и заливки, только текущие пряди и вес в начале и в конце */
-    .st-poster .st-chart.bare { margin: 26px -24px 0; }
+    .st-poster .st-chart.bare { margin: 26px 0 0; }
     .st-chart.bare { margin-top: 14px; }
     .st-slide > .st-chart.bare svg { height: auto; aspect-ratio: 300 / 120; }
-    .st-poster .st-chart.bare svg { height: 120px; }
+
     .st-poster .unit { font-family: var(--num); font-weight: 700; font-size: 22px; margin-top: 14px; color: var(--muted); letter-spacing: .02em; }
     .st-poster .st-k, .st-poster .huge, .st-poster .unit, .st-poster .say { text-align: center; }
     .st-poster .stats { justify-content: center; text-align: center; }
@@ -4563,7 +4573,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const sv = root.ownerSVGElement || root;
       if (sv.querySelectorAll) sv.querySelectorAll('linearGradient[data-gw]').forEach(gr => gr.__gl || SILK.grads.add(gr));
       // главный график, путь к цели, графики историй — на движок (SGL), когда пучок уже разложен
-      const HS = '.ms-svg, .st-chart svg'; // кружок обновления и кольцо историй вращаются/прячутся сами — они остаются SVG
+      const HS = '.ms-svg'; // кружок обновления и кольцо историй вращаются/прячутся сами — они остаются SVG
       (sv.matches && sv.matches(HS) ? [sv] : sv.querySelectorAll ? [...sv.querySelectorAll(HS)] : []).forEach(h => SGL.adopt(h));
       if (!SILK.raf) SILK.raf = requestAnimationFrame(silkTick);
     }
@@ -4856,23 +4866,27 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       }
       return { ok: () => ok(), styles, view, adopt, kick };
     })();
-    function stChart(w, bare) {
-      if (w.ws.length < 2) return w.ws.length ? `<div class="st-chart"><svg viewBox="0 0 300 120"><circle cx="150" cy="60" r="6" fill="var(--volt)"/><text x="150" y="92" text-anchor="middle">${fmt(w.ws[0].w)} кг</text></svg></div>` : '';
-      const n = w.days, ws = w.ws, lo = Math.min(...ws.map(e => e.w)), hi = Math.max(...ws.map(e => e.w)), pad = Math.max(.3, (hi - lo) * .15);
-      const X = e => 16 + (e.d - w.from) / DAY_MS / Math.max(1, n - 1) * 268, Y = v => 14 + (hi + pad - v) / (hi - lo + 2 * pad) * 84;
+    // график веса в сторис — голубая плашка с одной белой линией (Вадим, 16.11: вариант Б, «только не чёрную»).
+    // Неделя: подписи у каждой точки, дни с тренировкой — кружок в цвете спорта. Месяц: подписаны первая и последняя точки
+    function stChart(w, bare, s) {
+      const ws = w.ws;
+      if (!ws.length) return '';
+      const n = w.days, week = n <= 7, H = bare ? 112 : 132, top = 30, bot = week && !bare ? 14 : 12;
+      const lo = Math.min(...ws.map(e => e.w)), hi = Math.max(...ws.map(e => e.w)), pad = Math.max(.2, (hi - lo) * .12);
+      const X = e => ws.length < 2 && week ? 150 : 22 + (e.d - w.from) / DAY_MS / Math.max(1, n - 1) * 256;
+      const Y = v => top + (hi + pad - v) / (hi - lo + 2 * pad) * (H - top - bot);
       const pts = ws.map(e => [X(e), Y(e.w)]);
-      const labels = bare ? '' : [...Array(n)].map((_, k) => `<text x="${(16 + k / Math.max(1, n - 1) * 268).toFixed(1)}" y="118" text-anchor="middle">${ST_DAYS[k].toLowerCase()}</text>`).join('');
-      const lastP = pts[pts.length - 1];
-      // подпись у точки — над ней; но если соседняя точка выше, линия приходит сверху, и подпись уходит под точку
-      const ly = (p, nb) => nb[1] < p[1] - 2 && p[1] + 19 <= 106 ? p[1] + 19 : p[1] - 10;
-      const gid = 'stG' + (++ST.gid), lineD = smoothD(pts);
-      return `<div class="st-chart${bare ? ' bare' : ''}"><svg viewBox="0 0 300 120"><defs>${silkGrad(gid, 300)}</defs>${labels}
-        ${bare ? '' : `<path class="ar" d="${lineD}L${lastP[0].toFixed(1)} 100L${pts[0][0].toFixed(1)} 100Z" style="fill:url(#${gid})"/>`}
-        ${silkRaw(silkCurve(pts), { ...LINE_SILK, gid })}
-        <circle class="rp" cx="${lastP[0].toFixed(1)}" cy="${lastP[1].toFixed(1)}" r="5"/>
-        <circle class="dt" cx="${lastP[0].toFixed(1)}" cy="${lastP[1].toFixed(1)}" r="5" fill="var(--volt)"/>
-        <text class="wl" x="${pts[0][0].toFixed(1)}" y="${ly(pts[0], pts[1]).toFixed(1)}" text-anchor="start">${fmt(ws[0].w)}</text>
-        <text class="wl" x="${lastP[0].toFixed(1)}" y="${ly(lastP, pts[pts.length - 2]).toFixed(1)}" text-anchor="end" style="fill:var(--ink);font-weight:600">${fmt(ws[ws.length - 1].w)}</text></svg></div>`;
+      const woOf = e => { const k = Math.round((e.d - w.from) / DAY_MS), d = s && s.days && s.days[k], wo = d && d.workouts && d.workouts[0]; return wo ? (wo.sport ? stSport(wo.sport).c : 'var(--volt)') : null; };
+      const lab = (i, e) => week || i === 0 || i === ws.length - 1;
+      const dots = pts.map(([x, y], i) => {
+        const c = week ? woOf(ws[i]) : null, dl = `animation-delay:${(.35 + i / Math.max(1, pts.length - 1) * .9).toFixed(2)}s`;
+        const anchor = !week && i === 0 ? 'start' : !week && i === pts.length - 1 ? 'end' : 'middle';
+        return `${week || i === pts.length - 1 ? `<circle class="wd" style="${dl}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${c ? 6.5 : 4.5}" fill="${c || '#fff'}" stroke="#fff" stroke-width="${c ? 2.5 : 0}"/>` : ''}
+          ${lab(i) ? `<text class="wd" style="${dl}" x="${x.toFixed(1)}" y="${(y - 12).toFixed(1)}" text-anchor="${anchor}">${fmt(ws[i].w)}</text>` : ''}`;
+      }).join('');
+      const days = week && !bare ? `<div class="wk-days">${ST_DAYS.map(d => `<span>${d.toLowerCase()}</span>`).join('')}</div>` : '';
+      return `<div class="st-chart wk${bare ? ' bare' : ''}"><div class="wk-plate cp" style="--c:#6FB7FF">${WC_SILK}<svg viewBox="0 0 300 ${H}">
+        ${pts.length > 1 ? `<path class="wl-ln" pathLength="1" d="${smoothD(pts)}"/>` : ''}${dots}</svg>${days}</div></div>`;
     }
     // виды спорта: свой цвет и значок; новый вид получает цвет из запасных и секундомер
     // значки видов спорта — цветные, в одном стиле с мячом: тёмный контур, яркая заливка
@@ -5022,7 +5036,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
             <div class="st-box"><div class="st-hero">
               <div><p class="st-k">Вес за неделю</p>${stChange(w.change, cls)}</div>
               <div class="side">${w.ws.length}/7 замеров<br>${s ? stWord(s.workouts, 'тренировка', 'тренировки', 'тренировок') : `${dots} тренировок`}${sl ? `<br>сон ${stHm(sl.avg)}` : ''}</div></div>
-              ${w.ws.length ? stChart(w, true) : '<p class="st-sub">На этой неделе замеров не было</p>'}</div>
+              ${w.ws.length ? stChart(w, true, s) : '<p class="st-sub">На этой неделе замеров не было</p>'}</div>
             ${failed ? '' : stTiles(s && s.distance, s ? s.workouts : 0, wait)}
             ${stCoach(p && p.workouts)}
             ${s && s.list && s.list.length ? `<div class="st-box"><p class="st-k">Тренировки недели</p>${s.list.map(stWoCard).join('')}</div>` : ''}
@@ -5151,27 +5165,13 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const byKm = L.filter(x => x.km > 0);
       return (byKm.length ? byKm : L).reduce((a, x) => (byKm.length ? x.km > a.km : x.min > a.min) ? x : a);
     }
-    // дни недели — бусины на шёлковой нити: высота — вес, день с тренировкой — цветная бусина со значком
-    function stBeads(w, s) {
-      const days = [...Array(7)].map((_, d) => {
-        const day = new Date(w.from); day.setDate(day.getDate() + d);
-        const e = w.ws.filter(x => +x.d === +day).pop(), sd = s && s.days && s.days[d], wo = sd && sd.workouts && sd.workouts[0];
-        return { d, w: e ? e.w : null, m: wo ? (wo.sport ? stSport(wo.sport) : { c: 'var(--volt)', ic: null }) : null };
-      });
-      const ws = days.filter(x => x.w != null).map(x => x.w), lo = ws.length ? Math.min(...ws) : 0, hi = ws.length ? Math.max(...ws) : 1, pad = Math.max(.3, (hi - lo) * .2);
-      const X = d => 18 + d * 264 / 6, Y = v => v == null ? 92 : 44 + (hi + pad - v) / (hi - lo + 2 * pad) * 96;
-      const pts = days.filter(x => x.w != null).map(x => [X(x.d), Y(x.w)]);
-      const gid = 'stG' + (++ST.gid);
-      const svg = pts.length > 1 ? `<svg viewBox="0 0 300 170" preserveAspectRatio="none"><defs>${silkGrad(gid, 300)}</defs>${silkRaw(silkCurve(pts), { ...LINE_SILK, gid })}</svg>` : '';
-      const beads = days.map(x => `<div class="bd${x.w == null ? ' off' : ''}${x.m ? ' wo' : ''}" style="left:${(X(x.d) / 3).toFixed(2)}%;top:${(Y(x.w) / 1.7).toFixed(2)}%">
-          <b>${x.w == null ? '—' : fmt(x.w)}</b><i${x.m ? ` style="background:${x.m.c}"` : ''}>${x.m && x.m.ic ? stIcon(x.m.ic, '') : ''}</i><small>${ST_DAYS[x.d].toLowerCase()}</small></div>`).join('');
-      return `<div class="st-beads st-chart go">${svg}${beads}</div>`;
-    }
+    // «Неделя по дням» — тот же график недели на плашке, с днями и тренировками
+    function stBeads(w, s) { return stChart(w, false, s); }
     // яркая обложка: вес недели крупно, мини-график, замеры, тренировки, километры
     function stPosterHtml(v, b) {
       const w = v.week, s = ST.srv && ST.srv.weeks ? ST.srv.weeks.find(x => x.from === w.key) : null, dots = ST.srv && ST.srv.failed ? '—' : '…';
       // график — тот же живой, что в карточке недели: рисуется, бегут цвета, по линии пробегает искра, точка дышит
-      const spark = stChart(w, true);
+      const spark = stChart(w, true, s);
       const a = w.ws.length ? w.ws[0].w : null, z = w.ws.length ? w.ws[w.ws.length - 1].w : null;
       // замеров не было — вместо пустого «Без замеров» лучшая тренировка недели (Вадим, 14.11)
       const bw = w.change == null && !w.ws.length ? stBestWo(s) : null;
