@@ -5172,7 +5172,6 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const w = v.week, s = ST.srv && ST.srv.weeks ? ST.srv.weeks.find(x => x.from === w.key) : null, dots = ST.srv && ST.srv.failed ? '—' : '…';
       // график — тот же живой, что в карточке недели: рисуется, бегут цвета, по линии пробегает искра, точка дышит
       const spark = stChart(w, true, s);
-      const a = w.ws.length ? w.ws[0].w : null, z = w.ws.length ? w.ws[w.ws.length - 1].w : null;
       // замеров не было — вместо пустого «Без замеров» лучшая тренировка недели (Вадим, 14.11)
       const bw = w.change == null && !w.ws.length ? stBestWo(s) : null;
       let top;
@@ -5186,7 +5185,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         <div class="unit">${m ? `<span class="st-bwi" style="background:${m.c}">${stIcon(m.ic, '')}</span>` : ''}${esc(m ? stCap(sp) : 'Тренировка')}${bw.km > 0 && T ? ' · ' + T.join(' ') : ''}${when ? ' · ' + when : ''}</div>`;
       } else top = `<p class="st-k">Вес за неделю</p>
         <div class="huge${w.change == null ? ' sm' : ''}">${w.change == null ? 'Без замеров' : stKg(w.change)}</div>
-        ${a != null ? `<div class="unit">КГ · ${fmt(a)} → ${fmt(z)}</div>` : ''}`;
+`;
       return `<div class="bar"><b id="stPosterBar"></b></div>
         <div class="st-head"><span class="t">Неделя ${w.i + 1} · ${stRange(w.from, w.to)}</span><button class="st-x" onclick="closeStory()" aria-label="Закрыть">×</button></div>
         ${top}
