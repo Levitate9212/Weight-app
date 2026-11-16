@@ -246,9 +246,9 @@
     .st-chart.wk svg { height: auto; }
     .wk-plate { border-radius: 20px; padding: 6px 10px 8px; }
     .wk-plate svg { display: block; width: 100%; overflow: visible; }
-    .wk-plate .wl-ln { fill: none; stroke: #fff; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
-    .st-chart.wk .wk-plate text { font-family: var(--num); font-weight: 700; font-size: 15px; fill: #0B1F4D; }
-    .wk-days { display: grid; grid-template-columns: repeat(7, 1fr); margin: -2px 2px 0; font-size: 11px; font-weight: 600; color: rgba(11,31,77,.7); text-align: center; }
+    .wk-plate .wl-ln { fill: none; stroke: var(--ink); stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+    .st-chart.wk .wk-plate text { font-family: var(--num); font-weight: 700; font-size: 15px; fill: var(--ink); }
+    .wk-days { display: grid; grid-template-columns: repeat(7, 1fr); margin: -2px 2px 0; font-size: 11px; font-weight: 600; color: var(--ink); opacity: .75; text-align: center; }
     .st-chart.wk .wl-ln { stroke-dasharray: 1; }
     .st-chart.wk.go .wl-ln { animation: wkDraw 1.2s .1s cubic-bezier(.45,0,.2,1) both; }
     .st-chart.wk.go .wd { animation: stFadeUp .35s ease both; }
@@ -4868,8 +4868,10 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
     })();
     // график веса в сторис — голубая плашка с одной белой линией (Вадим, 16.11: вариант Б, «только не чёрную»).
     // Неделя: подписи у каждой точки, дни с тренировкой — кружок в цвете спорта. Месяц: подписаны первая и последняя точки
-    function stChart(w, bare, s) {
-      const ws = w.ws;
+    // у каждого графика своя плашка (Вадим, 16.11: «плашки везде разным цветом»); линия — тёмный тон того же цвета
+    const ST_PLATE = { cover: '#6FB7FF', days: '#B48CFF', week: '#FF9A3D', month: '#4DE3B5' };
+    function stChart(w, bare, s, col) {
+      const ws = w.ws, c0 = col || ST_PLATE.cover, ink = wcMix(c0, 'b', .62);
       if (!ws.length) return '';
       const n = w.days, week = n <= 7, H = bare ? 112 : 132, top = 30, bot = week && !bare ? 14 : 12;
       const lo = Math.min(...ws.map(e => e.w)), hi = Math.max(...ws.map(e => e.w)), pad = Math.max(.2, (hi - lo) * .12);
@@ -4881,11 +4883,11 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       const dots = pts.map(([x, y], i) => {
         const c = week ? woOf(ws[i]) : null, dl = `animation-delay:${(.35 + i / Math.max(1, pts.length - 1) * .9).toFixed(2)}s`;
         const anchor = !week && i === 0 ? 'start' : !week && i === pts.length - 1 ? 'end' : 'middle';
-        return `${week || i === pts.length - 1 ? `<circle class="wd" style="${dl}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${c ? 6.5 : 4.5}" fill="${c || '#fff'}" stroke="#fff" stroke-width="${c ? 2.5 : 0}"/>` : ''}
+        return `${week || i === pts.length - 1 ? `<circle class="wd" style="${dl}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${c ? 6.5 : 4.5}" fill="${c || ink}" stroke="#fff" stroke-width="${c ? 2.5 : 2}"/>` : ''}
           ${lab(i) ? `<text class="wd" style="${dl}" x="${x.toFixed(1)}" y="${(y - 12).toFixed(1)}" text-anchor="${anchor}">${fmt(ws[i].w)}</text>` : ''}`;
       }).join('');
       const days = week && !bare ? `<div class="wk-days">${ST_DAYS.map(d => `<span>${d.toLowerCase()}</span>`).join('')}</div>` : '';
-      return `<div class="st-chart wk${bare ? ' bare' : ''}"><div class="wk-plate cp" style="--c:#6FB7FF">${WC_SILK}<svg viewBox="0 0 300 ${H}">
+      return `<div class="st-chart wk${bare ? ' bare' : ''}"><div class="wk-plate cp" style="--c:${c0};--ink:${ink}">${WC_SILK}<svg viewBox="0 0 300 ${H}">
         ${pts.length > 1 ? `<path class="wl-ln" pathLength="1" d="${smoothD(pts)}"/>` : ''}${dots}</svg>${days}</div></div>`;
     }
     // виды спорта: свой цвет и значок; новый вид получает цвет из запасных и секундомер
@@ -5036,7 +5038,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
             <div class="st-box"><div class="st-hero">
               <div><p class="st-k">Вес за неделю</p>${stChange(w.change, cls)}</div>
               <div class="side">${w.ws.length}/7 замеров<br>${s ? stWord(s.workouts, 'тренировка', 'тренировки', 'тренировок') : `${dots} тренировок`}${sl ? `<br>сон ${stHm(sl.avg)}` : ''}</div></div>
-              ${w.ws.length ? stChart(w, true, s) : '<p class="st-sub">На этой неделе замеров не было</p>'}</div>
+              ${w.ws.length ? stChart(w, true, s, ST_PLATE.week) : '<p class="st-sub">На этой неделе замеров не было</p>'}</div>
             ${failed ? '' : stTiles(s && s.distance, s ? s.workouts : 0, wait)}
             ${stCoach(p && p.workouts)}
             ${s && s.list && s.list.length ? `<div class="st-box"><p class="st-k">Тренировки недели</p>${s.list.map(stWoCard).join('')}</div>` : ''}
@@ -5113,7 +5115,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         S.push(`<p class="st-k">${b.ended ? 'Итоги месяца' : 'Месяц идёт'}${u.name ? ' · ' + esc(u.name) : ''}</p>
           <div class="st-huge">${b.change == null ? '—' : `${stKg(b.change)}<small> кг</small>`}</div>
           <div class="st-unit">${stCap(ST_MONTHS[b.m])} · ${stRange(b.from, b.to)}</div>
-          ${mw.ws.length > 1 ? stChart(mw, true).replace('class="st-chart', 'class="st-chart go') : ''}
+          ${mw.ws.length > 1 ? stChart(mw, true, null, ST_PLATE.month).replace('class="st-chart', 'class="st-chart go') : ''}
           <div class="st-chips">${stChip(b.weighIns, ST_Z)}${stChip(b.medals, ST_M)}</div>
           ${b.ended ? stGoalCard(u, b) : ''}
           ${say(ph && ph.cover)}`);
@@ -5166,7 +5168,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
       return (byKm.length ? byKm : L).reduce((a, x) => (byKm.length ? x.km > a.km : x.min > a.min) ? x : a);
     }
     // «Неделя по дням» — тот же график недели на плашке, с днями и тренировками
-    function stBeads(w, s) { return stChart(w, false, s); }
+    function stBeads(w, s) { return stChart(w, false, s, ST_PLATE.days); }
     // яркая обложка: вес недели крупно, мини-график, замеры, тренировки, километры
     function stPosterHtml(v, b) {
       const w = v.week, s = ST.srv && ST.srv.weeks ? ST.srv.weeks.find(x => x.from === w.key) : null, dots = ST.srv && ST.srv.failed ? '—' : '…';
