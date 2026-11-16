@@ -248,6 +248,7 @@
     .wk-plate svg { display: block; width: 100%; overflow: visible; }
     .wk-ar { position: relative; }
     .wk-wo { position: absolute; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; box-shadow: 0 0 0 2px #fff; display: grid; place-items: center; }
+    .wk-wo.sm { width: 14px; height: 14px; margin: -7px 0 0 -7px; }   /* вид спорта не указан — просто отметка */
     .wk-wo svg { width: 18px !important; height: 18px; position: static; }
     .wk-plate .wl-ln { fill: none; stroke: var(--ln); stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
     .st-chart.wk .wk-plate text { font-family: var(--num); font-weight: 700; font-size: 15px; fill: var(--ink); }
@@ -4898,7 +4899,7 @@ void main(){vec2 uv=gl_FragCoord.xy/R; vec3 b=texture2D(FB,uv).rgb, g=vec3(0.);
         const dot = wos[i] ? '' : week || i === pts.length - 1 ? `<circle class="wd" style="${dl(i)}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${full ? 4.5 : 3}" fill="${ln}"${full ? ' stroke="#fff" stroke-width="2"' : ''}/>` : '';
         return `${dot}${lab(i) ? `<text class="wd" style="${dl(i)}" x="${x.toFixed(1)}" y="${(y - (wos[i] ? 20 : 11)).toFixed(1)}" text-anchor="${anchor}">${fmt(ws[i].w)}</text>` : ''}`;
       }).join('');
-      const badges = pts.map(([x, y], i) => wos[i] ? `<i class="wk-wo wd" style="${dl(i)};left:${(x / 3).toFixed(2)}%;top:${(y / H * 100).toFixed(2)}%;background:${wos[i].c}">${wos[i].ic ? stIcon(wos[i].ic, '') : ''}</i>` : '').join('');
+      const badges = pts.map(([x, y], i) => wos[i] ? `<i class="wk-wo wd${wos[i].ic ? '' : ' sm'}" style="${dl(i)};left:${(x / 3).toFixed(2)}%;top:${(y / H * 100).toFixed(2)}%;background:${wos[i].c}">${wos[i].ic ? stIcon(wos[i].ic, '') : ''}</i>` : '').join('');
       const days = full ? `<div class="wk-days">${ST_DAYS.map(d => `<span>${d.toLowerCase()}</span>`).join('')}</div>` : '';
       return `<div class="st-chart wk${bare ? ' bare' : ''}"><div class="wk-plate cp" style="background:linear-gradient(135deg,${g0},${g1});--ink:${ink};--ln:${ln}">${WC_SILK}<div class="wk-ar"><svg viewBox="0 0 300 ${H}">
         ${pts.length > 1 ? `<path class="wl-ln" pathLength="1" d="${smoothD(pts)}"/>` : ''}${dots}</svg>${badges}</div>${days}</div></div>`;
